@@ -1,0 +1,75 @@
+{
+  "suppliers": [
+    {
+      "id": "sup-1",
+      "nit": "900.123.456-1",
+      "name": "Proveedor ABC",
+      "contact": "Carlos Pérez",
+      "phone": "3001234567",
+      "email": "contacto@proveedorabc.com",
+      "createdAt": "2026-08-29T18:49:12.895Z",
+      "updatedAt": "2026-08-29T18:49:12.895Z"
+    },
+    {
+      "id": "sup-2",
+      "nit": "800.987.654-2",
+      "name": "Distribuidora Lácteos Enriko",
+      "contact": "María Gómez",
+      "phone": "3109876543",
+      "email": "ventas@lacteosenriko.com",
+      "createdAt": "2026-08-29T18:49:12.895Z",
+      "updatedAt": "2026-08-29T18:49:12.895Z"
+    },
+    {
+      "id": "sup-3",
+      "nit": "901.555.777-3",
+      "name": "Empaques e Insumos SAS",
+      "contact": "Juan Rodriguez",
+      "phone": "3205557777",
+      "email": "pedidos@empaques.com",
+      "createdAt": "2026-08-29T18:49:12.895Z",
+      "updatedAt": "2026-08-29T18:49:12.895Z"
+    }
+  ],
+  "invoices": [
+    {
+      "supplierId": "sup-1",
+      "supplierName": "Proveedor ABC",
+      "type": "INVOICE",
+      "description": "Factura de embutidos y carnes frias",
+      "invoiceCode": "FAC-00125",
+      "remissionDate": "2026-08-25",
+      "amount": 1500000,
+      "quotationSigned": false,
+      "invoiceSigned": false,
+      "factureReceived": "SÍ",
+      "management": false,
+      "delivered": false,
+      "id": "inv-1788029364052-463",
+      "createdAt": "2026-08-29T18:49:24.052Z",
+      "updatedAt": "2026-08-29T18:49:24.064Z",
+      "factureReceivedDate": "2026-08-29T18:49:24.063Z",
+      "factureReceivedBy": "Usuario Administrador"
+    }
+  ],
+  "documents": [],
+  "documentHistory": [],
+  "auditLogs": [
+    {
+      "id": "log-1788029364052-673",
+      "invoiceId": "inv-1788029364052-463",
+      "action": "Factura registrada",
+      "user": "Usuario Administrador",
+      "details": "Código: FAC-00125",
+      "createdAt": "2026-08-29T18:49:24.052Z"
+    },
+    {
+      "id": "log-1788029364063-315",
+      "invoiceId": "inv-1788029364052-463",
+      "action": "Llegada confirmada en Facture",
+      "user": "Usuario Administrador",
+      "details": "Registrado por Usuario Administrador",
+      "createdAt": "2026-08-29T18:49:24.063Z"
+    }
+  ]
+}

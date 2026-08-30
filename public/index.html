@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alimentos Enriko — Control de Facturas & Roles por Área</title>
+  <style>
+    *, ::before, ::after { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #e2e8f0; }
+    html { line-height: 1.5; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background-color: #f8fafc; color: #1f2937; height: 100vh; overflow: hidden; display: flex; }
+
+    /* MODO OSCURO */
+    body.dark-mode { background-color: #0f172a; color: #f8fafc; }
+    body.dark-mode .sidebar { background-color: #1e293b; border-right-color: #334155; }
+    body.dark-mode .top-header { background-color: #1e293b; border-bottom-color: #334155; color: #f8fafc; }
+    body.dark-mode .card-panel, body.dark-mode .table-section, body.dark-mode .stat-card { background-color: #1e293b; border-color: #334155; color: #f8fafc; }
+    body.dark-mode .stat-value { color: #f8fafc; }
+
+    /* PANTALLA DE LOGIN CON ESTILOS ELEGANTES */
+    .login-wrapper { 
+      position: fixed; 
+      inset: 0; 
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 100;
+      padding: 1rem;
+    }
+    .login-box { 
+      background: #ffffff; 
+      border-radius: 1.25rem; 
+      padding: 2.75rem 2.25rem; 
+      width: 100%; 
+      max-width: 440px; 
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); 
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .login-logo { 
+      text-align: center; 
+      font-size: 2.1rem; 
+      font-weight: 900; 
+      color: #dc2626; 
+      margin-bottom: 0.2rem;
+      letter-spacing: -0.025em;
+    }
+    .login-subtitle { 
+      text-align: center; 
+      font-size: 0.825rem; 
+      color: #64748b; 
+      margin-bottom: 1.75rem; 
+      font-weight: 600; 
+    }
+    .form-group { margin-bottom: 1.15rem; }
+    .form-group label { 
+      display: block; 
+      font-size: 0.75rem; 
+      font-weight: 800; 
+      color: #475569; 
+      margin-bottom: 0.4rem; 
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-control { 
+      width: 100%; 
+      padding: 0.75rem 1rem; 
+      border-radius: 0.6rem; 
+      border: 1px solid #cbd5e1; 
+      font-size: 0.9rem; 
+      outline: none; 
+      background: #f8fafc;
+    }
+
+    .btn-red-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #ffffff;
+      border-radius: 0.6rem;
+      padding: 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+    }
+
+    /* BARRA LATERAL Y HEADER */
+    .sidebar { width: 240px; background-color: #ffffff; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
+    .sidebar-header { padding: 1.25rem 1rem; border-bottom: 1px solid #f3f4f6; text-align: center; }
+    .brand-logo { font-weight: 800; color: #dc2626; font-size: 1.2rem; }
+    .brand-tagline { font-size: 0.65rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; }
+
+    .nav-section { padding: 1rem 0.5rem; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.85rem; border-radius: 0.5rem; color: #4b5563; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; cursor: pointer; }
+    .nav-item:hover { background-color: #fff5f5; color: #dc2626; }
+    .nav-item.active { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; }
+
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: #f8fafc; }
+
+    .top-header { background-color: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .page-title { font-size: 1.2rem; font-weight: 800; color: #111827; }
+    .page-subtitle { font-size: 0.75rem; color: #6b7280; }
+
+    .header-actions { display: flex; align-items: center; gap: 0.85rem; }
+    .select-sm { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 700; color: #374151; }
+
+    .dashboard-body { padding: 1.5rem; }
+
+    /* TARJETAS DEL DASHBOARD */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    .stat-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-header { font-size: 0.725rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.65rem; font-weight: 900; color: #111827; line-height: 1; }
+    .stat-subtext { font-size: 0.65rem; color: #64748b; margin-top: 0.35rem; font-weight: 600; }
+
+    .alert-panel { background: #fff5f5; border: 1px solid #fca5a5; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.25rem; }
+    body.dark-mode .alert-panel { background: #450a0a; border-color: #991b1b; }
+    .alert-title { font-size: 0.85rem; font-weight: 800; color: #b91c1c; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+    body.dark-mode .alert-title { color: #fca5a5; }
+
+    .card-panel { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); margin-bottom: 1.25rem; }
+    .panel-title { font-size: 1rem; font-weight: 800; margin-bottom: 1rem; color: #111827; }
+
+    /* FILTROS Y PESTAÑAS ORIGINALES */
+    .filter-bar { padding: 0.85rem 1rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background-color: #ffffff; }
+    .search-input-box { display: flex; align-items: center; gap: 0.5rem; background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.4rem 0.75rem; flex: 1; max-width: 320px; }
+    .search-input-box input { background: transparent; border: none; outline: none; font-size: 0.75rem; width: 100%; }
+
+    .btn-capture-preview { background-color: #107c41; color: #ffffff; border-radius: 0.5rem; padding: 0.35rem 0.75rem; font-size: 0.725rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem; cursor: pointer; border: none; }
+
+    .tabs-bar { display: flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1rem; border-bottom: 1px solid #e5e7eb; background-color: #f9fafb; overflow-x: auto; }
+    .tab-pill { padding: 0.35rem 0.75rem; border-radius: 0.4rem; font-size: 0.725rem; font-weight: 700; color: #4b5563; background-color: #ffffff; border: 1px solid #e5e7eb; cursor: pointer; white-space: nowrap; }
+    .tab-pill.active { background-color: #dc2626; color: #ffffff; border-color: #dc2626; }
+
+    .table-container { overflow-x: auto; }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.725rem; }
+    .data-table thead { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; font-weight: 700; }
+    .data-table th { padding: 0.65rem 0.75rem; text-transform: uppercase; font-size: 0.65rem; }
+    .data-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+    .data-table tbody tr:hover { background-color: #fff5f5; }
+    .data-table td { padding: 0.65rem 0.75rem; vertical-align: middle; }
+
+    .badge { padding: 0.15rem 0.45rem; border-radius: 0.25rem; font-size: 0.65rem; font-weight: 800; display: inline-block; cursor: pointer; }
+    .badge-yes { background-color: #d1fae5; color: #047857; }
+    .badge-no { background-color: #fee2e2; color: #dc2626; }
+    .badge-area { background-color: #e0e7ff; color: #3730a3; }
+
+    .text-type-plain { font-weight: 800; font-size: 0.725rem; padding: 0.15rem 0.4rem; border-radius: 0.25rem; }
+    .type-cot-plain { color: #1e40af; background-color: #dbeafe; }
+    .type-fac-plain { color: #92400e; background-color: #fef3c7; }
+
+    .alert-chip { padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; }
+    .alert-yellow { background-color: #fef3c7; color: #92400e; border: 1px solid #fde047; }
+    .alert-green { background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+
+    .btn-red { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border-radius: 0.5rem; padding: 0.6rem 1.2rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: none; }
+    .btn-white { background: #fff; border: 1px solid #d1d5db; padding: 0.6rem 1rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .text-input-inline, .date-input-inline { font-size: 0.7rem; padding: 0.2rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 0.25rem; outline: none; }
+
+    /* MODAL EXCEL PREVIEW */
+    .excel-preview-modal { background-color: #ffffff; width: 100%; max-width: 950px; border-radius: 0.5rem; border: 2px solid #107c41; overflow: hidden; }
+    .excel-header-bar { background-color: #107c41; color: #ffffff; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+    .excel-table { width: 100%; border-collapse: collapse; font-family: Calibri, sans-serif; font-size: 0.85rem; }
+    .excel-table th { background-color: #107c41; color: #ffffff; border: 1px solid #0b5c30; padding: 0.6rem; text-transform: uppercase; }
+    .excel-table td { border: 1px solid #d0d7de; padding: 0.55rem; }
+
+    /* MODAL GENERAL */
+    .modal-overlay { position: fixed; inset: 0; background-color: rgba(15, 23, 42, 0.65); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+  <!-- PANTALLA LOGIN ELEGANTE -->
+  <div id="loginView" class="login-wrapper">
+    <div class="login-box">
+      <div class="login-logo">Alimentos ENRIKO</div>
+      <div class="login-subtitle">Control Integrado por Áreas & Roles</div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>USUARIO *</label>
+          <input type="text" id="userInput" class="form-control" placeholder="ej: superadmin, admin_ti..." required value="superadmin">
+        </div>
+        <div class="form-group">
+          <label>CONTRASEÑA *</label>
+          <input type="password" id="passInput" class="form-control" placeholder="••••••••" required value="superadmin123">
+        </div>
+        <button type="submit" class="btn-red-submit">
+          🚀 Iniciar Sesión Segura
+        </button>
+      </form>
+
+      <div style="font-size: 0.725rem; color: #64748b; margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+        <strong>Usuarios Demo por Nivel:</strong>
+        <ul style="text-align: left; margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.7rem; line-height: 1.5;">
+          <li><code>superadmin / superadmin123</code> (SuperAdmin - Ve todas las áreas)</li>
+          <li><code>admin_ti / admin123</code> (Admin TI - Solo ve área Tecnología)</li>
+          <li><code>admin_compras / compras123</code> (Admin Compras - Solo ve área Compras)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL -->
+  <div id="appView" class="app-container" style="display: none; width: 100vw;">
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-header">
+          <div class="brand-logo">Alimentos ENRIKO</div>
+          <div class="brand-tagline">Calidad que Alimenta</div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-item active" id="navDashboard" onclick="switchTab('dashboard')">
+            <span>📊</span> <span>Dashboard</span>
+          </div>
+          <div class="nav-item" id="navInvoices" onclick="switchTab('invoices')">
+            <span>📄</span> <span>Facturas / Cotizaciones</span>
+          </div>
+          <div class="nav-item" id="navBot" onclick="switchTab('bot')">
+            <span>🤖</span> <span>Automatización Bot RPA</span>
+          </div>
+          <div class="nav-item" id="navSuppliers" onclick="switchTab('suppliers')">
+            <span>👥</span> <span>Proveedores</span>
+          </div>
+          <div class="nav-item" id="navUsers" onclick="switchTab('users')">
+            <span>👤</span> <span>Gestión de Usuarios</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 0.85rem; text-align: center; background: #dc2626; color: #fff; font-size: 0.7rem; font-weight: 700;">
+        Control por Áreas v1.0.0
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div>
+          <div class="page-title" id="userHeaderName">Alimentos Enriko — Dashboard</div>
+          <div class="page-subtitle" id="userHeaderRole">Cargando datos...</div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-white" onclick="toggleDark()">🌙 Modo Oscuro</button>
+          
+          <select id="areaSelectorHeader" class="select-sm" onchange="changeGlobalArea(this.value)">
+            <option value="Todas las Áreas">Todas las Áreas</option>
+            <option value="Tecnología (TI)">Tecnología (TI)</option>
+            <option value="Contabilidad & Finanzas">Contabilidad & Finanzas</option>
+            <option value="Adquisiciones & Compras">Adquisiciones & Compras</option>
+            <option value="Mantenimiento & Planta">Mantenimiento & Planta</option>
+            <option value="Marketing & Publicidad">Marketing & Publicidad</option>
+          </select>
+
+          <button class="btn-red" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="logout()">🔒 Salir</button>
+        </div>
+      </header>
+
+      <div class="dashboard-body">
+
+        <!-- MÓDULO DASHBOARD EJECUTIVO COMPLETO CON ALERTAS Y PROVEEDORES PENDIENTES -->
+        <div id="moduleDashboard">
+          <!-- 5 TARJETAS PRINCIPALES DE MÉTRICAS -->
+          <div class="dashboard-grid">
+            <div class="stat-card">
+              <div class="stat-header">Facturas Totales</div>
+              <div class="stat-value" id="dashTotalCount">0</div>
+              <div class="stat-subtext">Mes en curso</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">Gestionadas</div>
+              <div class="stat-value" style="color: #2563eb;" id="dashManagedCount">0</div>
+              <div class="stat-subtext">Gestión SÍ</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">Por Firmar</div>
+              <div class="stat-value" style="color: #d97706;" id="dashToSignCount">0</div>
+              <div class="stat-subtext">Firmada NO</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header"><span class="stat-header" style="color: #dc2626;">Pendientes</span></div>
+              <div class="stat-value" style="color: #dc2626;" id="dashPendingCount">0</div>
+              <div class="stat-subtext">Facture o Gestión NO</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">Entregadas Todo SÍ</div>
+              <div class="stat-value" style="color: #047857;" id="dashDeliveredCount">0</div>
+              <div class="stat-subtext">Proceso completo</div>
+            </div>
+          </div>
+
+          <!-- PANEL DE ALERTAS EN TIEMPO REAL -->
+          <div class="alert-panel">
+            <div class="alert-title">
+              <span>⚠</span>
+              <span>ALERTAS DE FACTURACIÓN & GESTIÓN DEL ÁREA</span>
+            </div>
+            <div id="alertMessagesContainer" style="font-size: 0.775rem; color: #7f1d1d; line-height: 1.6;">
+              <!-- Se generan dinámicamente -->
+            </div>
+          </div>
+
+          <!-- PROVEEDORES PENDIENTES POR FACTURAR EN EL MES (ABAJO) -->
+          <div class="card-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <div>
+                <div class="panel-title" style="margin: 0; color: #dc2626;">👥 Proveedores Pendientes por Enviar Factura en el Mes</div>
+                <div style="font-size: 0.75rem; color: #64748b;">Proveedores del área autorizados que aún no registran comprobantes en el periodo actual.</div>
+              </div>
+              <span class="badge badge-no" id="pendingSuppliersBadgeCount">0 pendientes</span>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>NIT / RUT</th>
+                    <th>Proveedor / Razón Social</th>
+                    <th>Contacto Asesor</th>
+                    <th>Teléfono</th>
+                    <th>Áreas Atendidas</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingSuppliersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- MÓDULO 1: FACTURAS / COTIZACIONES -->
+        <div id="moduleInvoices" class="card-panel" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <div class="panel-title" style="margin: 0;">📑 Control General de Facturas & Cotizaciones</div>
+              <div style="font-size: 0.75rem; color: #6b7280;">Cotizaciones: Al marcar FIRMADA SÍ habilita GESTIÓN. Facturas: Requiere EN FACTURE SÍ para GESTIÓN.</div>
+            </div>
+            <button class="btn-red" onclick="openInvoiceModal()">+ Registrar Documento</button>
+          </div>
+
+          <div class="filter-bar">
+            <div class="search-input-box">
+              <span>🔍</span>
+              <input type="text" id="searchInput" placeholder="Buscar por código, proveedor..." oninput="renderInvoices()">
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.725rem; color: #6b7280; font-weight: 600;">Entrega:</span>
+              <select id="deliveredSelectFilter" class="select-sm" onchange="renderInvoices()">
+                <option value="Todos">Todos</option>
+                <option value="Entregadas (Todo SÍ)">Entregadas (Todo SÍ)</option>
+                <option value="Pendientes">Pendientes</option>
+              </select>
+              <button class="btn-capture-preview" onclick="openExcelPreview()">📷 Vista Previa Captura</button>
+            </div>
+          </div>
+
+          <div class="tabs-bar">
+            <button class="tab-pill active" id="tabAll" onclick="setTabFilter('Todos')">Todos (<span id="cntAll">0</span>)</button>
+            <button class="tab-pill" id="tabFac" onclick="setTabFilter('Facturas')">Facturas (<span id="cntFac">0</span>)</button>
+            <button class="tab-pill" id="tabCot" onclick="setTabFilter('Cotizaciones')">Cotizaciones (<span id="cntCot">0</span>)</button>
+            <button class="tab-pill" id="tabPen" onclick="setTabFilter('Pendientes')">Pendientes (<span id="cntPen">0</span>)</button>
+            <button class="tab-pill" id="tabDel" onclick="setTabFilter('Entregadas (Todo SÍ)')">Entregadas - Todo SÍ (<span id="cntDel">0</span>)</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 30px;"><input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this)"></th>
+                  <th>Proveedor</th>
+                  <th>Tipo</th>
+                  <th>Descripción ↕</th>
+                  <th>Código ↕</th>
+                  <th>EN FACTURE ↕</th>
+                  <th>Fac / Cot. Firmada</th>
+                  <th>Gestión ↕</th>
+                  <th>Remisión ↕</th>
+                  <th>Fecha Entrega ↕</th>
+                  <th>Valor ↕</th>
+                  <th>Entregada ↕</th>
+                  <th>Alerta</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="invoicesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MÓDULO 2: AUTOMATIZACIÓN BOT RPA -->
+        <div id="moduleBot" class="card-panel" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <div class="panel-title" style="margin: 0;">🤖 Bot RPA — Facturas Autodescargadas por Área</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Sincronizado únicamente con las facturas del área del usuario logueado.</div>
+            </div>
+            <button class="btn-red" onclick="triggerScanBot()">⚡ Escanear Facturas Ahora</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Área</th>
+                  <th>NIT Proveedor</th>
+                  <th>Nombre Proveedor</th>
+                  <th>Nº Factura</th>
+                  <th>Ruta Carpetas Locales por Área</th>
+                  <th>Estado SAP</th>
+                </tr>
+              </thead>
+              <tbody id="botTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MÓDULO 3: PROVEEDORES MULTI-ÁREA -->
+        <div id="moduleSuppliers" class="card-panel" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <div class="panel-title" style="margin: 0;">👥 Directorio Oficial de Proveedores por Área</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Un mismo proveedor puede atender varias áreas de Alimentos Enriko.</div>
+            </div>
+            <button class="btn-red" onclick="openSupplierModal()">+ Registrar Proveedor Multi-Área</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>NIT / RUT</th>
+                  <th>Proveedor / Razón Social</th>
+                  <th>Contacto Asesor</th>
+                  <th>Áreas Atendidas</th>
+                </tr>
+              </thead>
+              <tbody id="suppliersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MÓDULO 4: GESTIÓN DE USUARIOS -->
+        <div id="moduleUsers" class="card-panel" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <div class="panel-title" style="margin: 0;">👤 Módulo de Usuarios & Asignación de Roles por Área</div>
+              <div style="font-size: 0.75rem; color: #64748b;">SuperAdmin (Global) | Admin de Área (Restringido a su Área).</div>
+            </div>
+            <button class="btn-red" onclick="openUserModal()">+ Crear Nuevo Usuario</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Usuario (Login)</th>
+                  <th>Nombre Completo</th>
+                  <th>Rol Asignado</th>
+                  <th>Área de Trabajo</th>
+                  <th>Permisos</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL EXCEL PREVIEW CAPTURA -->
+  <div id="excelModalView" class="modal-overlay" style="display: none;">
+    <div class="excel-preview-modal">
+      <div class="excel-header-bar">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.2rem;">📊</span>
+          <span id="excelModalTitle">VISTA PREVIA EXCEL — REPORTES DE ENTREGADAS</span>
+        </div>
+        <button onclick="closeExcelPreview()" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; font-weight: 700;">✕</button>
+      </div>
+
+      <div style="padding: 1.25rem; overflow-x: auto; background: #ffffff;">
+        <table class="excel-table">
+          <thead>
+            <tr>
+              <th>PROVEEDOR</th>
+              <th>DESCRIPCIÓN</th>
+              <th>NUMERO FACTURA</th>
+              <th>FECHA REMISION</th>
+              <th>FECHA ENTREGA</th>
+              <th>VALOR</th>
+            </tr>
+          </thead>
+          <tbody id="excelPreviewTableBody"></tbody>
+        </table>
+
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e5e7eb; padding-top: 0.75rem;">
+          <span style="font-size: 0.75rem; color: #6b7280;">💡 Presione <strong>Win + Shift + S</strong> en Windows para tomar una captura limpia.</span>
+          <button class="btn-red" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const usersDB = [
+      { id: 'usr-1', username: 'superadmin', name: 'Super Administrador', role: 'SuperAdmin', area: 'Todas las Áreas', pass: 'superadmin123' },
+      { id: 'usr-2', username: 'admin_ti', name: 'Juan Rodríguez (Admin TI)', role: 'Administrador', area: 'Tecnología (TI)', pass: 'admin123' },
+      { id: 'usr-3', username: 'admin_compras', name: 'María Fernanda Ruiz (Admin Compras)', role: 'Administrador', area: 'Adquisiciones & Compras', pass: 'compras123' }
+    ];
+
+    const invoicesDB = [
+      { id: 'inv-1', supplierName: 'Servicios de Tecnología S.A.S.', type: 'INVOICE', area: 'Tecnología (TI)', description: 'Mantenimiento Servidores', invoiceCode: 'FAC-2026-4412', factureReceived: 'SÍ', invoiceSigned: true, management: true, remissionDate: '2026-08-29', deliveredDate: '2026-08-29 16:01', amount: 3200000, delivered: true },
+      { id: 'inv-2', supplierName: 'Distribuidora Carnes Enriko', type: 'INVOICE', area: 'Adquisiciones & Compras', description: 'Carne vacuna insumos', invoiceCode: 'FAC-2026-9901', factureReceived: 'SÍ', invoiceSigned: true, management: true, remissionDate: '2026-08-28', deliveredDate: '2026-08-28 14:20', amount: 8450000, delivered: true },
+      { id: 'inv-3', supplierName: 'Mantenimiento e Insumos Industriales', type: 'QUOTATION', area: 'Mantenimiento & Planta', description: 'Repuesto Caldera Planta', invoiceCode: 'COT-2026-7788', factureReceived: 'NO', invoiceSigned: true, management: true, remissionDate: '2026-08-25', deliveredDate: null, amount: 5600000, delivered: false }
+    ];
+
+    const suppliersDB = [
+      { id: 'sup-1', nit: '800.789.012-4', name: 'Servicios de Tecnología S.A.S.', contact: 'Laura Restrepo', phone: '+57 300 123 4567', areas: ['Tecnología (TI)', 'Contabilidad & Finanzas'] },
+      { id: 'sup-2', nit: '900.123.456-1', name: 'Distribuidora Carnes Enriko', contact: 'Carlos Mendoza', phone: '+57 310 455 8899', areas: ['Adquisiciones & Compras', 'Operaciones & Logística'] },
+      { id: 'sup-3', nit: '890.334.112-9', name: 'Mantenimiento e Insumos Industriales', contact: 'Roberto Gómez', phone: '+57 315 789 1234', areas: ['Mantenimiento & Planta', 'Tecnología (TI)'] },
+      { id: 'sup-4', nit: '860.001.245-8', name: 'Soluciones Financieras & Contables', contact: 'Diana Páez', phone: '+57 312 998 7766', areas: ['Contabilidad & Finanzas'] },
+      { id: 'sup-5', nit: '901.442.889-0', name: 'Agencia Marketing Creativo', contact: 'Felipe Silva', phone: '+57 318 654 3210', areas: ['Marketing & Publicidad'] }
+    ];
+
+    let currentUser = null;
+    let selectedAreaFilter = 'Todas las Áreas';
+    let currentTabFilter = 'Todos';
+    let selectedInvoiceIds = [];
+    let currentFilteredInvoicesList = [];
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const uVal = document.getElementById('userInput').value.trim();
+      const pVal = document.getElementById('passInput').value.trim();
+
+      const found = usersDB.find(u => u.username === uVal && u.pass === pVal);
+      if (found) {
+        currentUser = found;
+        selectedAreaFilter = found.area;
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('appView').style.display = 'flex';
+        initDashboard();
+        Swal.fire({ icon: 'success', title: `Bienvenido ${found.name}`, timer: 1500, showConfirmButton: false });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Credenciales Incorrectas', text: 'Verifique su usuario y clave.' });
+      }
+    });
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('loginView').style.display = 'flex';
+      document.getElementById('appView').style.display = 'none';
+    }
+
+    function initDashboard() {
+      document.getElementById('userHeaderName').innerText = `Alimentos Enriko — ${currentUser.name}`;
+      document.getElementById('userHeaderRole').innerHTML = `Rol: <strong>${currentUser.role}</strong> | Área Asignada: <strong>${currentUser.area}</strong>`;
+
+      const selector = document.getElementById('areaSelectorHeader');
+      if (currentUser.role === 'SuperAdmin') {
+        selector.style.display = 'inline-block';
+        selector.value = selectedAreaFilter;
+      } else {
+        selector.style.display = 'none';
+      }
+
+      renderDashboardStats();
+      renderInvoices();
+      renderBot();
+      renderSuppliers();
+      renderUsers();
+    }
+
+    function changeGlobalArea(val) {
+      selectedAreaFilter = val;
+      renderDashboardStats();
+      renderInvoices();
+      renderBot();
+      renderSuppliers();
+    }
+
+    // MÓDULO DASHBOARD: MÉTRICAS COMPLETAS, ALERTAS Y PROVEEDORES SIN FACTURA EN EL MES
+    function renderDashboardStats() {
+      const isSuper = currentUser.role === 'SuperAdmin';
+      const targetArea = isSuper ? selectedAreaFilter : currentUser.area;
+
+      // 1. FACTURAS FILTRADAS POR ÁREA
+      const areaInvoices = invoicesDB.filter(inv => {
+        if (isSuper) {
+          if (targetArea !== 'Todas las Áreas' && inv.area !== targetArea) return false;
+          return true;
+        }
+        return inv.area === targetArea;
+      });
+
+      const totalCount = areaInvoices.length;
+      const managedCount = areaInvoices.filter(i => i.management).length;
+      const toSignCount = areaInvoices.filter(i => !i.invoiceSigned).length;
+      const pendingCount = areaInvoices.filter(i => i.factureReceived === 'NO' || !i.management).length;
+      const deliveredCount = areaInvoices.filter(i => isFullyDelivered(i)).length;
+
+      document.getElementById('dashTotalCount').innerText = totalCount;
+      document.getElementById('dashManagedCount').innerText = managedCount;
+      document.getElementById('dashToSignCount').innerText = toSignCount;
+      document.getElementById('dashPendingCount').innerText = pendingCount;
+      document.getElementById('dashDeliveredCount').innerText = deliveredCount;
+
+      // 2. ALERTAS DE FACTURAS PENDIENTES POR GESTIONAR O LLEGAR
+      const alertBox = document.getElementById('alertMessagesContainer');
+      const notArrived = areaInvoices.filter(i => i.factureReceived === 'NO');
+      const notManaged = areaInvoices.filter(i => !i.management);
+
+      let alertHTML = '';
+      if (notArrived.length > 0) {
+        alertHTML += `<div>🔴 <strong>${notArrived.length} comprobante(s)</strong> no han llegado EN FACTURE: ${notArrived.map(i => i.invoiceCode).join(', ')}.</div>`;
+      }
+      if (notManaged.length > 0) {
+        alertHTML += `<div>🟡 <strong>${notManaged.length} comprobante(s)</strong> pendientes por GESTIONAR en el sistema.</div>`;
+      }
+      if (alertHTML === '') {
+        alertHTML = '<div style="color: #047857;">🟢 ¡Al día! No hay facturas pendientes por llegar ni por gestionar en esta área.</div>';
+      }
+      alertBox.innerHTML = alertHTML;
+
+      // 3. PROVEEDORES QUE NO TIENEN FACTURAS AÚN EN EL MES
+      const areaSuppliers = suppliersDB.filter(sup => {
+        if (isSuper) {
+          if (targetArea !== 'Todas las Áreas' && !sup.areas.includes(targetArea)) return false;
+          return true;
+        }
+        return sup.areas.includes(targetArea);
+      });
+
+      const suppliersWithInvoices = new Set(areaInvoices.map(i => i.supplierName));
+      const pendingSuppliers = areaSuppliers.filter(sup => !suppliersWithInvoices.has(sup.name));
+
+      document.getElementById('pendingSuppliersBadgeCount').innerText = `${pendingSuppliers.length} pendientes por facturar`;
+
+      const tbodyPending = document.getElementById('pendingSuppliersTableBody');
+      tbodyPending.innerHTML = '';
+
+      if (pendingSuppliers.length > 0) {
+        pendingSuppliers.forEach(sup => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-family: monospace; font-weight: 700;">${sup.nit}</td>
+            <td style="font-weight: 700; color: #dc2626;">${sup.name}</td>
+            <td>${sup.contact}</td>
+            <td>${sup.phone}</td>
+            <td>${sup.areas.map(a => `<span class="badge badge-area">${a}</span>`).join(' ')}</td>
+            <td><span class="badge badge-no">⚠ Sin Factura en Mes</span></td>
+          `;
+          tbodyPending.appendChild(tr);
+        });
+      } else {
+        tbodyPending.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #047857; padding: 1.5rem; font-weight: 700;">🟢 Todos los proveedores autorizados del área ya registraron su factura este mes.</td></tr>`;
+      }
+    }
+
+    function setTabFilter(tab) {
+      currentTabFilter = tab;
+      selectedInvoiceIds = [];
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      if(tab === 'Todos') document.getElementById('tabAll').classList.add('active');
+      if(tab === 'Facturas') document.getElementById('tabFac').classList.add('active');
+      if(tab === 'Cotizaciones') document.getElementById('tabCot').classList.add('active');
+      if(tab === 'Pendientes') document.getElementById('tabPen').classList.add('active');
+      if(tab === 'Entregadas (Todo SÍ)') document.getElementById('tabDel').classList.add('active');
+      renderInvoices();
+    }
+
+    function isFullyDelivered(inv) {
+      return inv.invoiceSigned && inv.factureReceived === 'SÍ' && inv.management && inv.delivered;
+    }
+
+    function renderInvoices() {
+      const tbody = document.getElementById('invoicesTableBody');
+      tbody.innerHTML = '';
+
+      const isSuper = currentUser.role === 'SuperAdmin';
+      const targetArea = isSuper ? selectedAreaFilter : currentUser.area;
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+      const delFilter = document.getElementById('deliveredSelectFilter').value;
+
+      const areaList = invoicesDB.filter(inv => {
+        if (isSuper) {
+          if (targetArea !== 'Todas las Áreas' && inv.area !== targetArea) return false;
+          return true;
+        }
+        return inv.area === targetArea;
+      });
+
+      document.getElementById('cntAll').innerText = areaList.length;
+      document.getElementById('cntFac').innerText = areaList.filter(i => i.type === 'INVOICE').length;
+      document.getElementById('cntCot').innerText = areaList.filter(i => i.type === 'QUOTATION').length;
+      document.getElementById('cntPen').innerText = areaList.filter(i => !i.management).length;
+      document.getElementById('cntDel').innerText = areaList.filter(i => isFullyDelivered(i)).length;
+
+      currentFilteredInvoicesList = areaList.filter(inv => {
+        const matchSearch = inv.supplierName.toLowerCase().includes(searchVal) || inv.invoiceCode.toLowerCase().includes(searchVal) || inv.description.toLowerCase().includes(searchVal);
+        if (!matchSearch) return false;
+
+        if (delFilter === 'Entregadas (Todo SÍ)' && !isFullyDelivered(inv)) return false;
+        if (delFilter === 'Pendientes' && isFullyDelivered(inv)) return false;
+
+        if (currentTabFilter === 'Facturas' && inv.type !== 'INVOICE') return false;
+        if (currentTabFilter === 'Cotizaciones' && inv.type !== 'QUOTATION') return false;
+        if (currentTabFilter === 'Pendientes' && inv.management) return false;
+        if (currentTabFilter === 'Entregadas (Todo SÍ)' && !isFullyDelivered(inv)) return false;
+
+        return true;
+      });
+
+      currentFilteredInvoicesList.forEach(inv => {
+        const isChecked = selectedInvoiceIds.includes(inv.id);
+        const tr = document.createElement('tr');
+        if (isChecked) tr.style.background = '#fef2f2';
+
+        tr.innerHTML = `
+          <td><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleSelectInvoice('${inv.id}')"></td>
+          <td style="font-weight: 700;">
+            <div>${inv.supplierName}</div>
+            <span class="badge badge-area" style="font-size: 0.55rem;">${inv.area}</span>
+          </td>
+          <td><span class="text-type-plain ${inv.type === 'QUOTATION' ? 'type-cot-plain' : 'type-fac-plain'}">${inv.type === 'QUOTATION' ? 'Cotización' : 'Factura'}</span></td>
+          <td>${inv.description}</td>
+          <td><input type="text" class="text-input-inline" value="${inv.invoiceCode}" onchange="updateInvCode('${inv.id}', this.value)"></td>
+          <td><span class="badge ${inv.factureReceived === 'SÍ' ? 'badge-yes' : 'badge-no'}" onclick="toggleFacture('${inv.id}')">${inv.factureReceived}</span></td>
+          <td><span class="badge ${inv.invoiceSigned ? 'badge-yes' : 'badge-no'}" onclick="toggleSigned('${inv.id}')">${inv.invoiceSigned ? 'SÍ' : 'NO'}</span></td>
+          <td><span class="badge ${inv.management ? 'badge-yes' : 'badge-no'}" onclick="toggleManagement('${inv.id}')">${inv.management ? 'SÍ' : 'NO'}</span></td>
+          <td><input type="date" class="date-input-inline" value="${inv.remissionDate}" onchange="updateRemDate('${inv.id}', this.value)"></td>
+          <td style="font-family: monospace; font-weight: 700; color: ${inv.delivered ? '#047857' : '#9ca3af'};">${inv.delivered ? (inv.deliveredDate || '29/08/2026 16:01') : '—'}</td>
+          <td style="font-weight: 800;">$${inv.amount.toLocaleString('es-CO')}</td>
+          <td><span class="badge ${inv.delivered ? 'badge-yes' : 'badge-no'}" onclick="toggleDelivered('${inv.id}')">${inv.delivered ? 'SÍ' : 'NO'}</span></td>
+          <td><span class="alert-chip ${isFullyDelivered(inv) ? 'alert-green' : 'alert-yellow'}">${isFullyDelivered(inv) ? '🟢 Entregada Completa' : '🟡 En Proceso'}</span></td>
+          <td style="text-align: right;"><button class="icon-btn" onclick="viewAudit('${inv.id}')">👁</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      renderDashboardStats();
+    }
+
+    function toggleSelectInvoice(id) {
+      if (selectedInvoiceIds.includes(id)) {
+        selectedInvoiceIds = selectedInvoiceIds.filter(i => i !== id);
+      } else {
+        selectedInvoiceIds.push(id);
+      }
+      renderInvoices();
+    }
+
+    function toggleAllCheckboxes(master) {
+      if (master.checked) {
+        selectedInvoiceIds = currentFilteredInvoicesList.map(i => i.id);
+      } else {
+        selectedInvoiceIds = [];
+      }
+      renderInvoices();
+    }
+
+    function toggleFacture(id) {
+      const inv = invoicesDB.find(i => i.id === id);
+      if (inv.type === 'QUOTATION' && inv.factureReceived === 'NO') {
+        Swal.fire({
+          title: 'Conversión a Factura',
+          text: '¿Confirmar llegada EN FACTURE SÍ? Pasará a Factura y requerirá refirmar.',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, confirmar'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            inv.factureReceived = 'SÍ';
+            inv.type = 'INVOICE';
+            inv.invoiceSigned = false;
+            renderInvoices();
+            renderBot();
+          }
+        });
+      } else {
+        inv.factureReceived = inv.factureReceived === 'SÍ' ? 'NO' : 'SÍ';
+        renderInvoices();
+      }
+    }
+
+    function toggleSigned(id) { const inv = invoicesDB.find(i => i.id === id); inv.invoiceSigned = !inv.invoiceSigned; renderInvoices(); }
+    function toggleManagement(id) { const inv = invoicesDB.find(i => i.id === id); inv.management = !inv.management; renderInvoices(); }
+    function toggleDelivered(id) { const inv = invoicesDB.find(i => i.id === id); inv.delivered = !inv.delivered; inv.deliveredDate = inv.delivered ? '2026-08-30 10:00' : null; renderInvoices(); }
+    function updateInvCode(id, val) { const inv = invoicesDB.find(i => i.id === id); inv.invoiceCode = val; renderInvoices(); }
+    function updateRemDate(id, val) { const inv = invoicesDB.find(i => i.id === id); inv.remissionDate = val; renderInvoices(); }
+
+    function openExcelPreview() {
+      const tbody = document.getElementById('excelPreviewTableBody');
+      tbody.innerHTML = '';
+
+      const list = selectedInvoiceIds.length > 0 
+        ? currentFilteredInvoicesList.filter(i => selectedInvoiceIds.includes(i.id))
+        : currentFilteredInvoicesList;
+
+      document.getElementById('excelModalTitle').innerText = `VISTA PREVIA EXCEL — REPORTES DE ${currentTabFilter.toUpperCase()} (${list.length} REGISTROS)`;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 1.5rem;">No hay filas seleccionadas en la vista actual.</td></tr>`;
+      } else {
+        list.forEach(inv => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-weight: 700;">${inv.supplierName}</td>
+            <td>${inv.description}</td>
+            <td style="font-family: monospace; font-weight: 700;">${inv.invoiceCode}</td>
+            <td>${inv.remissionDate}</td>
+            <td style="font-family: monospace; font-weight: 700; color: #047857;">${inv.deliveredDate || (inv.delivered ? '29/08/2026 16:01' : '—')}</td>
+            <td style="font-weight: 800; text-align: right;">$${inv.amount.toLocaleString('es-CO')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.getElementById('excelModalView').style.display = 'flex';
+    }
+
+    function closeExcelPreview() { document.getElementById('excelModalView').style.display = 'none'; }
+
+    function renderBot() {
+      const tbody = document.getElementById('botTableBody');
+      tbody.innerHTML = '';
+      const isSuper = currentUser.role === 'SuperAdmin';
+      const targetArea = isSuper ? selectedAreaFilter : currentUser.area;
+
+      const filtered = invoicesDB.filter(inv => isSuper ? (targetArea !== 'Todas las Áreas' ? inv.area === targetArea : true) : inv.area === targetArea);
+
+      filtered.forEach(inv => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="badge badge-area">${inv.area}</span></td>
+          <td style="font-family: monospace; font-weight: 700;">900.123.456-1</td>
+          <td style="font-weight: 700; color: #dc2626;">${inv.supplierName}</td>
+          <td style="font-weight: 700;">${inv.invoiceCode}</td>
+          <td style="font-family: monospace; font-size: 0.7rem; color: #047857;">/carpetas_proveedores/${inv.area.replace(/[^a-zA-Z]/g, '')}/${inv.invoiceCode}.pdf</td>
+          <td><span style="font-family: monospace; font-weight: 800; color: #2563eb;">SAP-SO-88391</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderSuppliers() {
+      const tbody = document.getElementById('suppliersTableBody');
+      tbody.innerHTML = '';
+      const isSuper = currentUser.role === 'SuperAdmin';
+      const targetArea = isSuper ? selectedAreaFilter : currentUser.area;
+
+      const filtered = suppliersDB.filter(sup => isSuper ? (targetArea !== 'Todas las Áreas' ? sup.areas.includes(targetArea) : true) : sup.areas.includes(targetArea));
+
+      filtered.forEach(sup => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: monospace; font-weight: 700;">${sup.nit}</td>
+          <td style="font-weight: 700; color: #dc2626;">${sup.name}</td>
+          <td>${sup.contact}</td>
+          <td>${sup.areas.map(a => `<span class="badge badge-area">${a}</span>`).join(' ')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
+      usersDB.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: monospace; font-weight: 700;">${u.username}</td>
+          <td style="font-weight: 700;">${u.name}</td>
+          <td><span class="badge ${u.role === 'SuperAdmin' ? 'badge-no' : 'badge-yes'}">${u.role}</span></td>
+          <td><span class="badge badge-area">${u.area}</span></td>
+          <td style="font-weight: 700; color: ${u.role === 'SuperAdmin' ? '#dc2626' : '#059669'};">${u.role === 'SuperAdmin' ? '🌐 Acceso Total' : '🔒 Restringido a su Área'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function switchTab(mod) {
+      document.getElementById('moduleDashboard').style.display = mod === 'dashboard' ? 'block' : 'none';
+      document.getElementById('moduleInvoices').style.display = mod === 'invoices' ? 'block' : 'none';
+      document.getElementById('moduleBot').style.display = mod === 'bot' ? 'block' : 'none';
+      document.getElementById('moduleSuppliers').style.display = mod === 'suppliers' ? 'block' : 'none';
+      document.getElementById('moduleUsers').style.display = mod === 'users' ? 'block' : 'none';
+
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      if(mod === 'dashboard') document.getElementById('navDashboard').classList.add('active');
+      if(mod === 'invoices') document.getElementById('navInvoices').classList.add('active');
+      if(mod === 'bot') document.getElementById('navBot').classList.add('active');
+      if(mod === 'suppliers') document.getElementById('navSuppliers').classList.add('active');
+      if(mod === 'users') document.getElementById('navUsers').classList.add('active');
+    }
+
+    function toggleDark() { document.body.classList.toggle('dark-mode'); }
+
+    function openInvoiceModal() {
+      Swal.fire({
+        title: 'Registrar Factura / Cotización',
+        html: `
+          <select id="swalType" class="swal2-input" style="font-size: 0.9rem; font-weight: 700;">
+            <option value="INVOICE">📄 Factura de Compra</option>
+            <option value="QUOTATION">📋 Cotización de Proveedor</option>
+          </select>
+          <input id="swalCode" class="swal2-input" placeholder="Código (ej: FAC-2026-102)">
+          <input id="swalDesc" class="swal2-input" placeholder="Descripción insumos">
+          <input id="swalAmount" type="number" class="swal2-input" placeholder="Monto ($)">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        confirmButtonColor: '#dc2626'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const type = document.getElementById('swalType').value;
+          const code = document.getElementById('swalCode').value || 'FAC-2026-NUEVA';
+          const desc = document.getElementById('swalDesc').value || 'Factura de compra';
+          const amount = Number(document.getElementById('swalAmount').value) || 1200000;
+          const targetArea = currentUser.role === 'SuperAdmin' ? (selectedAreaFilter !== 'Todas las Áreas' ? selectedAreaFilter : 'Tecnología (TI)') : currentUser.area;
+
+          invoicesDB.unshift({
+            id: 'inv-' + Date.now(),
+            supplierName: 'Proveedor Corporativo S.A.S.',
+            type: type,
+            area: targetArea,
+            description: desc,
+            invoiceCode: code,
+            factureReceived: 'SÍ',
+            invoiceSigned: true,
+            management: true,
+            remissionDate: '2026-08-30',
+            deliveredDate: '2026-08-30 10:00',
+            amount: amount,
+            delivered: true
+          });
+
+          renderInvoices();
+          renderBot();
+          Swal.fire('Registrado', 'Documento guardado y sincronizado con Bot RPA.', 'success');
+        }
+      });
+    }
+
+    function openSupplierModal() {
+      Swal.fire({
+        title: 'Registrar Proveedor Multi-Área',
+        html: `
+          <input id="swalNit" class="swal2-input" placeholder="NIT (ej: 900.887.123-9)">
+          <input id="swalName" class="swal2-input" placeholder="Razón Social">
+          <input id="swalContact" class="swal2-input" placeholder="Asesor Comercial">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Proveedor',
+        confirmButtonColor: '#059669'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const nit = document.getElementById('swalNit').value || '900.000.000-1';
+          const name = document.getElementById('swalName').value || 'Nuevo Proveedor';
+          const contact = document.getElementById('swalContact').value || 'Contacto General';
+          const targetArea = currentUser.role === 'SuperAdmin' ? (selectedAreaFilter !== 'Todas las Áreas' ? selectedAreaFilter : 'Tecnología (TI)') : currentUser.area;
+
+          suppliersDB.unshift({
+            id: 'sup-' + Date.now(),
+            nit: nit,
+            name: name,
+            contact: contact,
+            areas: [targetArea]
+          });
+
+          renderSuppliers();
+          renderDashboardStats();
+          Swal.fire('Registrado', 'Proveedor agregado al área.', 'success');
+        }
+      });
+    }
+
+    function openUserModal() {
+      Swal.fire({
+        title: 'Crear Nuevo Usuario',
+        html: `
+          <input id="swalUser" class="swal2-input" placeholder="Usuario (Login)">
+          <input id="swalNameUser" class="swal2-input" placeholder="Nombre Completo">
+          <input id="swalPass" type="password" class="swal2-input" placeholder="Contraseña">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Usuario',
+        confirmButtonColor: '#dc2626'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const u = document.getElementById('swalUser').value || 'nuevo_user';
+          const n = document.getElementById('swalNameUser').value || 'Nuevo Usuario';
+          const p = document.getElementById('swalPass').value || '123456';
+          const targetArea = currentUser.role === 'SuperAdmin' ? 'Tecnología (TI)' : currentUser.area;
+
+          usersDB.push({
+            id: 'usr-' + Date.now(),
+            username: u,
+            name: n,
+            role: 'Gestor de Área',
+            area: targetArea,
+            pass: p
+          });
+
+          renderUsers();
+          Swal.fire('Creado', 'Usuario guardado.', 'success');
+        }
+      });
+    }
+
+    function triggerScanBot() {
+      Swal.fire({
+        title: '🤖 Bot RPA Escaneando...',
+        text: 'Buscando facturas para el área asignada...',
+        timer: 1500,
+        didOpen: () => { Swal.showLoading(); }
+      }).then(() => {
+        Swal.fire('Escaneo Completado', 'Facturas autodescargadas en carpetas locales.', 'success');
+      });
+    }
+
+    function viewAudit(id) {
+      const inv = invoicesDB.find(i => i.id === id);
+      Swal.fire({
+        title: 'Auditoría & Timeline',
+        html: `<div style="text-align:left; font-size:0.8rem;">
+          <p><strong>Comprobante:</strong> ${inv.invoiceCode}</p>
+          <p><strong>Proveedor:</strong> ${inv.supplierName}</p>
+          <p><strong>Monto:</strong> $${inv.amount.toLocaleString('es-CO')}</p>
+          <hr>
+          <p style="color:#047857; font-weight:700;">🟢 Registrado en sistema y firmado.</p>
+        </div>`,
+        confirmButtonColor: '#dc2626'
+      });
+    }
+  </script>
+</body>
+</html>

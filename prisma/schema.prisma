@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = "mysql://root:root@localhost:3306/GESTION_FACTURAS"
+}
+
+model Supplier {
+  id        String    @id @default(uuid())
+  nit       String    @unique
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("suppliers")
+}
+
+model Invoice {
+  id                  String     @id @default(uuid())
+  supplierId          String
+  supplier            Supplier   @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierName        String
+  type                String     // "QUOTATION" | "INVOICE"
+  description         String     @db.Text
+  invoiceCode         String     // ej: COT-2026-0058 o FAC-2026-0085
+  remissionDate       DateTime
+  deliveryDate        DateTime?
+  amount              Float
+
+  // Cotización
+  quotationSigned     Boolean    @default(false)
+  quotationSignedDate DateTime?
+  quotationSignedBy   String?
+
+  // Factura
+  invoiceSigned       Boolean    @default(false)
+  invoiceSignedDate   DateTime?
+  invoiceSignedBy     String?
+
+  // Facture
+  factureReceived     String     @default("AÚN NO") // "SÍ" | "AÚN NO"
+  factureReceivedDate DateTime?
+  factureReceivedBy   String?
+
+  // Gestión & Entrega
+  management          Boolean    @default(false)
+  managementDate      DateTime?
+  managedBy           String?
+  delivered           Boolean    @default(false)
+  deliveredDate       DateTime?
+  deliveredBy         String?
+
+  // Cotización Relacionada (para facturas)
+  relatedQuotationId  String?
+  relatedQuotationCode String?
+
+  // Documentos adjuntos
+  quotationDocumentPath       String? @db.Text
+  invoiceDocumentPath         String? @db.Text
+  signedQuotationDocumentPath String? @db.Text
+  signedInvoiceDocumentPath   String? @db.Text
+
+  documents           Document[]
+  history             AuditLog[]
+
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@map("invoices")
+}
+
+model Document {
+  id           String            @id @default(uuid())
+  invoiceId    String
+  invoice      Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type         String            // "QUOTATION" | "INVOICE" | "SIGNED_QUOTATION" | "SIGNED_INVOICE" | "OTHER"
+  originalName String
+  storedName   String
+  relativePath String            @db.Text
+  mimeType     String
+  size         Int
+  uploadedBy   String            @default("Usuario Sistema")
+  createdAt    DateTime          @default(now())
+
+  @@map("documents")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  action      String
+  user        String   @default("Usuario Administrador")
+  details     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
