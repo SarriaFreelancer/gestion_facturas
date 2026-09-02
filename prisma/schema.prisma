@@ -102,3 +102,15 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  name      String
+  role      String
+  status    String   @default("Activo")
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
+

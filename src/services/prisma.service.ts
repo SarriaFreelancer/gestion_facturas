@@ -260,7 +260,72 @@ export class PrismaService {
     };
   }
 
+  public async deleteSupplier(id: string): Promise<boolean> {
+    await prisma.supplier.delete({ where: { id } });
+    return true;
+  }
+
+  public async deleteInvoice(id: string): Promise<boolean> {
+    await prisma.invoice.delete({ where: { id } });
+    return true;
+  }
+
+  public async convertQuotationToInvoice(id: string, invoiceCode: string, currentUser = 'Usuario Administrador'): Promise<Invoice | null> {
+    const quote = await this.getInvoiceById(id);
+    if (!quote) return null;
+
+    const newInvoice = await this.addInvoice({
+      supplierId: quote.supplierId,
+      supplierName: quote.supplierName,
+      type: 'INVOICE',
+      description: `Factura generada desde Cotización ${quote.invoiceCode}: ${quote.description}`,
+      invoiceCode,
+      remissionDate: new Date().toISOString(),
+      deliveryDate: quote.deliveryDate,
+      amount: quote.amount,
+      quotationSigned: true,
+      invoiceSigned: false,
+      factureReceived: 'AÚN NO',
+      management: false,
+      delivered: false,
+      relatedQuotationId: quote.id,
+      relatedQuotationCode: quote.invoiceCode,
+      quotationDocumentPath: quote.quotationDocumentPath
+    });
+
+    await this.addAuditLog(quote.id, `Cotización convertida a Factura (${invoiceCode})`, currentUser);
+    return newInvoice;
+  }
+
+  // Users
+  public async getUsers(): Promise<any[]> {
+    return await prisma.user.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  public async addUser(user: { username: string; name: string; role: string }): Promise<any> {
+    return await prisma.user.create({
+      data: {
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        status: 'Activo'
+      }
+    });
+  }
+
   // Audit Logs
+  public async getAllAuditLogs(): Promise<AuditLogRecord[]> {
+    const logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+    return logs.map(l => ({
+      ...l,
+      details: l.details || undefined,
+      createdAt: l.createdAt.toISOString()
+    }));
+  }
+
   public async getAuditLogsByInvoiceId(invoiceId: string): Promise<AuditLogRecord[]> {
     const logs = await prisma.auditLog.findMany({
       where: { invoiceId },
@@ -292,3 +357,4 @@ export class PrismaService {
 }
 
 export const prismaService = PrismaService.getInstance();
+

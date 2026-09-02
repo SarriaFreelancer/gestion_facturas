@@ -9,10 +9,12 @@ import { calculateInvoiceStatus } from './utils/statusCalculator';
 import { Invoice, DocumentType } from './types';
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 
 // Configuración Multer para recibir archivos en memoria y guardarlos mediante fileStorageService
 const storage = multer.memoryStorage();
@@ -53,6 +55,15 @@ app.post('/api/suppliers', async (req: Request, res: Response) => {
   try {
     const newSupplier = await prismaService.addSupplier({ nit, name, contact, phone, email });
     res.status(201).json(newSupplier);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/suppliers/:id', async (req: Request, res: Response) => {
+  try {
+    await prismaService.deleteSupplier(String(req.params.id));
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -449,6 +460,63 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`✅ Servidor Express con Prisma ORM corriendo en puerto ${PORT}`);
+// Eliminar Invoice / Cotización
+app.delete('/api/invoices/:id', async (req: Request, res: Response) => {
+  try {
+    await prismaService.deleteInvoice(String(req.params.id));
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+// Convertir Cotización a Factura
+app.post('/api/invoices/:id/convert', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { invoiceCode } = req.body;
+  try {
+    const converted = await prismaService.convertQuotationToInvoice(String(id), invoiceCode || `FAC-${Date.now().toString().slice(-4)}`);
+    res.status(201).json(converted);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Usuarios
+app.get('/api/users', async (req: Request, res: Response) => {
+  try {
+    const users = await prismaService.getUsers();
+    res.json(users);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users', async (req: Request, res: Response) => {
+  const { username, name, role } = req.body;
+  try {
+    const newUser = await prismaService.addUser({ username, name, role });
+    res.status(201).json(newUser);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Historial & Auditoría
+app.get('/api/history', async (req: Request, res: Response) => {
+  try {
+    const logs = await prismaService.getAllAuditLogs();
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, async () => {
+  console.log(`\n=============================================================`);
+  console.log(`🚀 SISTEMA ALIMENTOS ENRIKO (EXPRESS + PRISMA ORM)`);
+  console.log(`🌐 Acceso Web: http://localhost:${PORT}`);
+  console.log(`🗄️ Base de datos: MySQL GESTION_FACTURAS (localhost:3306)`);
+  console.log(`=============================================================\n`);
+});
+
