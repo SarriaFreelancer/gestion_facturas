@@ -175,7 +175,7 @@ function InvoicesTable({
                     {/* ACCIONES */}
                     <td style={{textAlign: 'right'}}>
                       <div className="action-icons-wrap" style={{justifyContent: 'flex-end'}}>
-                        <i className="fa-regular fa-eye" title="Ver detalle" onClick={() => onViewDetail(row)}></i>
+                        <i className="fa-solid fa-pen-to-square" style={{color: '#2563eb', cursor: 'pointer'}} title="Editar Factura" onClick={() => onViewDetail(row)}></i>
                         <i className="fa-solid fa-paperclip" title="Adjuntar PDF local" onClick={() => onUploadPdf(row.id)}></i>
                         <i className="fa-solid fa-trash" style={{color: '#e11d48'}} title="Eliminar de BD" onClick={() => onDeleteInvoice(row.id)}></i>
                       </div>

@@ -1,4 +1,27 @@
-function FiltersBar({ searchTerm, setSearchTerm, selectedSupplier, setSelectedSupplier, selectedFactureFilter, setSelectedFactureFilter, suppliersList, onClean, onExportExcel, onOpenExcelPreview, selectedCount }) {
+function FiltersBar({ 
+  searchTerm, 
+  setSearchTerm, 
+  selectedSupplier, 
+  setSelectedSupplier, 
+  selectedFactureFilter, 
+  setSelectedFactureFilter, 
+  selectedMonth,
+  setSelectedMonth,
+  selectedYear,
+  setSelectedYear,
+  suppliersList, 
+  onClean, 
+  onExportExcel, 
+  onOpenExcelPreview, 
+  selectedCount 
+}) {
+  const allMonths = [
+    'Todos', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const allYears = ['Todos', '2026', '2027', '2028', '2029', '2030'];
+
   return (
     <div className="filters-row">
       <div className="search-input-wrap">
@@ -11,6 +34,27 @@ function FiltersBar({ searchTerm, setSearchTerm, selectedSupplier, setSelectedSu
         />
       </div>
 
+      {/* FILTRO DE MESES */}
+      <div className="dropdown-filter">
+        <span>Mes:</span>
+        <select value={selectedMonth || 'Todos'} onChange={e => setSelectedMonth && setSelectedMonth(e.target.value)}>
+          {allMonths.map(m => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* FILTRO DE AÑOS FUTUROS */}
+      <div className="dropdown-filter">
+        <span>Año:</span>
+        <select value={selectedYear || 'Todos'} onChange={e => setSelectedYear && setSelectedYear(e.target.value)}>
+          {allYears.map(y => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* FILTRO DE PROVEEDORES */}
       <div className="dropdown-filter">
         <span>Proveedor:</span>
         <select value={selectedSupplier} onChange={e => setSelectedSupplier(e.target.value)}>
@@ -21,8 +65,9 @@ function FiltersBar({ searchTerm, setSearchTerm, selectedSupplier, setSelectedSu
         </select>
       </div>
 
+      {/* FILTRO FACTURE */}
       <div className="dropdown-filter">
-        <span>Llegó en Facture:</span>
+        <span>En Facture:</span>
         <select value={selectedFactureFilter} onChange={e => setSelectedFactureFilter(e.target.value)}>
           <option value="Todos">Todos</option>
           <option value="SÍ">SÍ</option>

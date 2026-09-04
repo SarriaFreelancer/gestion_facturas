@@ -1,20 +1,118 @@
-const { useState, useMemo, useEffect } = React;
+const { useState, useMemo, useEffect, useCallback } = React;
+
+// Mapeo de rutas web limpias a vistas internas
+const ROUTE_MAP = {
+  '/': 'dashboard',
+  '/dashboard': 'dashboard',
+  '/facturas': 'invoices',
+  '/proveedores': 'suppliers',
+  '/crm': 'crm',
+  '/reportes': 'reports',
+  '/alertas': 'alerts',
+  '/usuarios': 'users',
+  '/configuracion': 'settings',
+  '/carpetas': 'folders',
+  '/historial': 'history'
+};
+
+const VIEW_TO_PATH = {
+  'dashboard': '/dashboard',
+  'invoices': '/facturas',
+  'suppliers': '/proveedores',
+  'crm': '/crm',
+  'reports': '/reportes',
+  'alerts': '/alertas',
+  'users': '/usuarios',
+  'settings': '/configuracion',
+  'folders': '/carpetas',
+  'history': '/historial'
+};
+
+function getInitialView() {
+  const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+  return ROUTE_MAP[path] || 'dashboard';
+}
 
 function App() {
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [selectedMonth, setSelectedMonth] = useState('Agosto');
-  const [selectedYear, setSelectedYear] = useState('2026');
+  const [currentView, setCurrentViewInternal] = useState(getInitialView);
+
+  // Función de navegación con actualización de la URL en la barra de direcciones
+  const navigateTo = useCallback((view, replace = false) => {
+    setCurrentViewInternal(view);
+    const targetPath = VIEW_TO_PATH[view] || '/dashboard';
+    if (window.location.pathname !== targetPath) {
+      if (replace) {
+        window.history.replaceState({ view }, '', targetPath);
+      } else {
+        window.history.pushState({ view }, '', targetPath);
+      }
+    }
+  }, []);
+
+  // Escuchar eventos de navegación del navegador (flechas atrás / adelante)
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        setCurrentViewInternal(event.state.view);
+      } else {
+        const viewFromPath = getInitialView();
+        setCurrentViewInternal(viewFromPath);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Asegurar que la URL actual tenga el estado inicial
+    const currentPath = VIEW_TO_PATH[currentView] || '/dashboard';
+    window.history.replaceState({ view: currentView }, '', currentPath);
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const setCurrentView = (view) => navigateTo(view);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('Todos');
+  const [selectedYear, setSelectedYear] = useState('Todos');
   const [currentTab, setCurrentTab] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('Todos');
   const [selectedFactureFilter, setSelectedFactureFilter] = useState('Todos');
   
-  // ESTADO DE SELECCIÓN DE FILAS Y VISTA PREVIA EXCEL
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [isExcelPreviewOpen, setIsExcelPreviewOpen] = useState(false);
 
-  // MODO OSCURO CON PERSISTENCIA
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ae_dark') === 'true');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ae_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch(e) {
+      return null;
+    }
+  });
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    localStorage.setItem('ae_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    Swal.fire({
+      title: '¿Cerrar Sesión?',
+      text: 'Tendrás que iniciar sesión nuevamente para acceder.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, Salir',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#e11d48'
+    }).then(res => {
+      if (res.isConfirmed) {
+        setCurrentUser(null);
+        localStorage.removeItem('ae_user');
+      }
+    });
+  };
 
   useEffect(() => {
     if (darkMode) {
@@ -25,218 +123,141 @@ function App() {
     localStorage.setItem('ae_dark', darkMode.toString());
   }, [darkMode]);
 
-  // 1. PROVEEDORES (CON SERVICIOS Y CUOTA MENSUAL)
-  const [suppliers, setSuppliers] = useState([
-    { 
-      id: 's1', 
-      nit: '800.789.012-4', 
-      name: 'Distribuidora Lácteos Enriko', 
-      contact: 'Laura Restrepo', 
-      phone: '+57 300 123 4567', 
-      monthlyCount: 2, 
-      area: 'Contabilidad & Finanzas',
-      services: [
-        { id: 'srv-1-1', serviceName: 'Servicios de Hosting', enabled: true },
-        { id: 'srv-1-2', serviceName: 'Mantenimiento de Servidores', enabled: true }
-      ]
-    },
-    { 
-      id: 's2', 
-      nit: '900.123.456-1', 
-      name: 'Frigorífico del Valle', 
-      contact: 'Carlos Mendoza', 
-      phone: '+57 310 455 8899', 
-      monthlyCount: 3, 
-      area: 'Adquisiciones & Compras',
-      services: [
-        { id: 'srv-2-1', serviceName: 'Compra de carnes', enabled: true },
-        { id: 'srv-2-2', serviceName: 'Suministro de embutidos', enabled: true },
-        { id: 'srv-2-3', serviceName: 'Transporte refrigerado', enabled: false }
-      ]
-    },
-    { 
-      id: 's3', 
-      nit: '890.334.112-9', 
-      name: 'Insumos Agroalimentarios', 
-      contact: 'Roberto Gómez', 
-      phone: '+57 315 789 1234', 
-      monthlyCount: 1, 
-      area: 'Mantenimiento & Planta',
-      services: [
-        { id: 'srv-3-1', serviceName: 'Insumos varios', enabled: true }
-      ]
-    },
-    { 
-      id: 's4', 
-      nit: '860.001.245-8', 
-      name: 'Empaques Colombia', 
-      contact: 'Diana Páez', 
-      phone: '+57 312 998 7766', 
-      monthlyCount: 2, 
-      area: 'Operaciones & Logística',
-      services: [
-        { id: 'srv-4-1', serviceName: 'Empaques plásticos', enabled: true },
-        { id: 'srv-4-2', serviceName: 'Cajas de cartón corrugado', enabled: false }
-      ]
-    },
-    { 
-      id: 's5', 
-      nit: '901.442.889-0', 
-      name: 'Frutas del Pacífico', 
-      contact: 'Felipe Silva', 
-      phone: '+57 318 654 3210', 
-      monthlyCount: 1, 
-      area: 'Adquisiciones & Compras',
-      services: [
-        { id: 'srv-5-1', serviceName: 'Frutas y verduras', enabled: true }
-      ]
+  const [suppliers, setSuppliers] = useState([]);
+  const [manualInvoices, setManualInvoices] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [users, setUsers] = useState([]);
+
+  const loadInitialData = async () => {
+    try {
+      const [supData, invData, crmData, usrData] = await Promise.all([
+        window.API.suppliers.getAll(),
+        window.API.invoices.getAll(),
+        window.API.crm.getAll(),
+        window.API.users.getAll()
+      ]);
+      if (Array.isArray(supData)) setSuppliers(supData);
+      if (Array.isArray(invData)) setManualInvoices(invData);
+      if (Array.isArray(crmData)) setQuotations(crmData);
+      if (Array.isArray(usrData) && usrData.length > 0) setUsers(usrData);
+    } catch (e) {
+      console.error('Error cargando datos iniciales:', e);
     }
-  ]);
+  };
 
-  // 2. FACTURAS RADICADAS / MANUALES (CON ADJUNTO PDF FÍSICO)
-  const [manualInvoices, setManualInvoices] = useState([
-    { 
-      id: 'inv-1', 
-      logoText: 'DL', 
-      supplier: 'Distribuidora Lácteos Enriko', 
-      service: 'Servicios de Hosting', 
-      invoiceNumber: 'FAC2235', 
-      emissionDate: '2026-08-28', 
-      deliveryDate: '2026-08-30', 
-      value: 4500000, 
-      signed: 'NO', 
-      orderStd: 'NO', 
-      oc: 'OC-2026-091', 
-      enFacture: 'AÚN NO', 
-      delivered: 'NO',
-      pdfPath: null,
-      pdfOriginalName: null
-    },
-    { 
-      id: 'inv-2', 
-      logoIcon: 'fa-snowflake', 
-      supplier: 'Frigorífico del Valle', 
-      service: 'Compra de carnes', 
-      invoiceNumber: 'COT0487', 
-      emissionDate: '2026-08-27', 
-      deliveryDate: '2026-08-29', 
-      value: 3250000, 
-      signed: 'SÍ', 
-      orderStd: 'SÍ', 
-      oc: 'OC-2026-084', 
-      enFacture: 'SÍ', 
-      delivered: 'SÍ',
-      pdfPath: null,
-      pdfOriginalName: null
-    },
-    { 
-      id: 'inv-3', 
-      logoIcon: 'fa-wheat-awn', 
-      supplier: 'Insumos Agroalimentarios', 
-      service: 'Insumos varios', 
-      invoiceNumber: 'FAC2201', 
-      emissionDate: '2026-08-26', 
-      deliveryDate: '2026-08-28', 
-      value: 1890000, 
-      signed: 'SÍ', 
-      orderStd: 'SÍ', 
-      oc: 'OC-2026-079', 
-      enFacture: 'SÍ', 
-      delivered: 'SÍ',
-      pdfPath: null,
-      pdfOriginalName: null
-    },
-    { 
-      id: 'inv-4', 
-      logoIcon: 'fa-circle-notch', 
-      supplier: 'Empaques Colombia', 
-      service: 'Empaques plásticos', 
-      invoiceNumber: 'FAC2185', 
-      emissionDate: '2026-08-25', 
-      deliveryDate: '2026-08-27', 
-      value: 2760000, 
-      signed: 'NO', 
-      orderStd: 'NO', 
-      oc: 'OC-2026-065', 
-      enFacture: 'AÚN NO', 
-      delivered: 'NO',
-      pdfPath: null,
-      pdfOriginalName: null
-    },
-    { 
-      id: 'inv-5', 
-      logoIcon: 'fa-apple-whole', 
-      supplier: 'Frutas del Pacífico', 
-      service: 'Frutas y verduras', 
-      invoiceNumber: 'FAC2199', 
-      emissionDate: '2026-08-28', 
-      deliveryDate: '2026-09-01', 
-      value: 6450000, 
-      signed: 'SÍ', 
-      orderStd: 'SÍ', 
-      oc: 'OC-2026-088', 
-      enFacture: 'SÍ', 
-      delivered: 'NO',
-      pdfPath: null,
-      pdfOriginalName: null
+  const handleSaveQuotation = async (quotationObj) => {
+    try {
+      await window.API.crm.save(quotationObj);
+      const data = await window.API.crm.getAll();
+      if (Array.isArray(data)) setQuotations(data);
+    } catch (e) {
+      console.error('Error guardando cotización:', e);
     }
-  ]);
+  };
 
-  // 3. USUARIOS
-  const [users, setUsers] = useState([
-    { id: 'u1', username: 'JR', name: 'Juan Rodríguez', role: 'Administrador General', area: 'Todas las Áreas', status: 'Activo' },
-    { id: 'u2', username: 'maria_c', name: 'María Fernanda Ruiz', role: 'Gestor de Compras', area: 'Adquisiciones & Compras', status: 'Activo' },
-    { id: 'u3', username: 'carlos_ti', name: 'Carlos Morales', role: 'Gestor TI', area: 'Tecnología (TI)', status: 'Activo' }
-  ]);
+  const handleDeleteQuotation = async (quotationId) => {
+    try {
+      await window.API.crm.delete(quotationId);
+      setQuotations(prev => prev.filter(q => q.id !== quotationId));
+      Swal.fire('Eliminado', 'Solicitud removida.', 'success');
+    } catch (e) {
+      console.error('Error eliminando cotización:', e);
+    }
+  };
 
-  // CARGAR DATOS DESDE EL BACKEND MYSQL AL INICIAR
   useEffect(() => {
-    fetch('/api/suppliers')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setSuppliers(data);
-      })
-      .catch(() => {});
+    loadInitialData();
 
-    fetch('/api/invoices')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setManualInvoices(data);
-      })
-      .catch(() => {});
+    // LIVE REAL-TIME SSE: Sincronización instantánea entre pestañas/navegadores sin recargar
+    let eventSource = null;
+    let reconnectTimeout = null;
 
-    fetch('/api/users')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setUsers(data);
-      })
-      .catch(() => {});
+    const setupSSE = () => {
+      try {
+        eventSource = new EventSource('/api/events');
+        eventSource.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.type === 'SUPPLIERS_UPDATED') {
+              window.API.suppliers.getAll()
+                .then(data => { if (Array.isArray(data)) setSuppliers(data); });
+            } else if (parsed.type === 'INVOICES_UPDATED') {
+              window.API.invoices.getAll()
+                .then(data => { if (Array.isArray(data)) setManualInvoices(data); });
+            } else if (parsed.type === 'CRM_UPDATED') {
+              window.API.crm.getAll()
+                .then(data => { if (Array.isArray(data)) setQuotations(data); });
+            }
+          } catch (e) {}
+        };
+        eventSource.onerror = () => {
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Reintentar suavemente cada 10 segundos si el servidor se reinicia
+          if (!reconnectTimeout) {
+            reconnectTimeout = setTimeout(() => {
+              reconnectTimeout = null;
+              setupSSE();
+            }, 10000);
+          }
+        };
+      } catch(e) {}
+    };
+
+    setupSSE();
+
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (eventSource) eventSource.close();
+    };
   }, []);
 
-  // GENERAR LA LISTA FINAL DE FACTURAS COMBINANDO:
-  // A) LAS FACTURAS QUE TIENEN SERVICIO HABILITADO EN EL PROVEEDOR
-  // B) LAS FACTURAS AGREGADAS DIRECTAMENTE DESDE EL MÓDULO DE FACTURAS
-  const activeInvoices = useMemo(() => {
-    let list = [...manualInvoices];
+  const monthMap = {
+    'Enero': '01', 'Febrero': '02', 'Marzo': '03', 'Abril': '04',
+    'Mayo': '05', 'Junio': '06', 'Julio': '07', 'Agosto': '08',
+    'Septiembre': '09', 'Octubre': '10', 'Noviembre': '11', 'Diciembre': '12'
+  };
 
-    suppliers.forEach(sup => {
+  const activeInvoices = useMemo(() => {
+    let list = [...(manualInvoices || [])];
+    const targetYear = selectedYear !== 'Todos' ? selectedYear : '2026';
+    const targetMonthNum = (selectedMonth !== 'Todos' && monthMap[selectedMonth]) ? monthMap[selectedMonth] : '';
+
+    (suppliers || []).forEach(sup => {
       const services = sup.services || [];
       services.forEach((srv, idx) => {
         if (srv.enabled !== false) {
-          const exists = list.some(i => i.supplier === sup.name && i.service === srv.serviceName);
+          const supName = sup.name || '';
+          const srvName = srv.serviceName || `Servicio #${idx + 1}`;
+          
+          const exists = list.some(i => {
+            const sameSup = (i.supplier || '') === supName;
+            const sameSrv = (i.service || '') === srvName;
+            if (!sameSup || !sameSrv) return false;
+
+            if (targetMonthNum) {
+              const iMonth = (i.emissionDate || '').substring(5, 7) || (i.deliveryDate || '').substring(5, 7);
+              const iYear = (i.emissionDate || '').substring(0, 4) || (i.deliveryDate || '').substring(0, 4);
+              return (!iMonth || iMonth === targetMonthNum) && (!iYear || iYear === targetYear);
+            }
+            return true;
+          });
+
           if (!exists) {
             list.push({
-              id: `auto-${sup.id}-${idx}`,
-              logoText: sup.name.substring(0, 2).toUpperCase(),
-              supplier: sup.name,
-              service: srv.serviceName || `Servicio #${idx + 1}`,
-              invoiceNumber: `FAC-ESP-${idx + 1}`,
-              emissionDate: '2026-08-01',
-              deliveryDate: '2026-08-30',
-              value: 1500000,
+              id: `auto-${sup.id}-${idx}-${targetYear}-${targetMonthNum || 'all'}`,
+              logoText: (supName.substring(0, 2) || 'PR').toUpperCase(),
+              supplier: supName,
+              service: srvName,
+              invoiceNumber: '',
+              emissionDate: '',
+              deliveryDate: '',
+              value: 0,
               signed: 'NO',
-              orderStd: 'SÍ',
-              oc: `OC-2026-${Math.floor(100 + Math.random() * 899)}`,
+              orderStd: 'NO',
+              oc: '',
               enFacture: 'AÚN NO',
               delivered: 'NO',
               pdfPath: null,
@@ -248,7 +269,7 @@ function App() {
     });
 
     return list;
-  }, [suppliers, manualInvoices]);
+  }, [suppliers, manualInvoices, selectedMonth, selectedYear]);
 
   // PROVEEDORES DISPONIBLES EN EL DROPDOWN
   const suppliersList = useMemo(() => {
@@ -294,17 +315,35 @@ function App() {
     return list;
   }, [activeInvoices]);
 
-  // FILTRADO DINÁMICO DE FACTURAS
+  // FILTRADO DINÁMICO DE FACTURAS POR TEXTO, PROVEEDOR, FACTURE, PESTAÑAS, MES Y AÑO
   const filteredRows = useMemo(() => {
     return activeInvoices.filter(inv => {
-      const matchText = inv.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        inv.service.toLowerCase().includes(searchTerm.toLowerCase());
+      // 1. Filtro por texto
+      const matchText = (inv.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (inv.service || '').toLowerCase().includes(searchTerm.toLowerCase());
       if (!matchText) return false;
 
+      // 2. Filtro por proveedor
       if (selectedSupplier !== 'Todos' && inv.supplier !== selectedSupplier) return false;
+
+      // 3. Filtro por estado en Facture
       if (selectedFactureFilter !== 'Todos' && inv.enFacture !== selectedFactureFilter) return false;
 
+      // 4. Filtro por Año
+      if (selectedYear !== 'Todos') {
+        const invYear = (inv.emissionDate || '').substring(0, 4) || (inv.deliveryDate || '').substring(0, 4);
+        if (invYear && invYear !== selectedYear) return false;
+      }
+
+      // 5. Filtro por Mes
+      if (selectedMonth !== 'Todos') {
+        const monthNum = monthMap[selectedMonth];
+        const invMonth = (inv.emissionDate || '').substring(5, 7) || (inv.deliveryDate || '').substring(5, 7);
+        if (monthNum && invMonth && invMonth !== monthNum) return false;
+      }
+
+      // 6. Filtro por Pestañas
       if (currentTab === 'Facturas' && !inv.invoiceNumber.startsWith('FAC')) return false;
       if (currentTab === 'Cotizaciones' && !inv.invoiceNumber.startsWith('COT')) return false;
       if (currentTab === 'Pendientes' && inv.delivered === 'SÍ') return false;
@@ -316,7 +355,7 @@ function App() {
 
       return true;
     });
-  }, [activeInvoices, searchTerm, selectedSupplier, selectedFactureFilter, currentTab]);
+  }, [activeInvoices, searchTerm, selectedSupplier, selectedFactureFilter, selectedMonth, selectedYear, currentTab]);
 
   // CONTEO PARA TABS
   const tabCounts = useMemo(() => {
@@ -349,8 +388,6 @@ function App() {
     }
   };
 
-  // OBTENER LAS FACTURAS QUE SE MOSTRARÁN EN LA VISTA PREVIA TIPO EXCEL:
-  // Si hay seleccionadas, muestra las seleccionadas. Si no, muestra por defecto las ENTREGADAS o todas las visibles.
   const invoicesForExcelPreview = useMemo(() => {
     if (selectedInvoiceIds.length > 0) {
       return activeInvoices.filter(i => selectedInvoiceIds.includes(i.id));
@@ -359,7 +396,7 @@ function App() {
     return delivered.length > 0 ? delivered : filteredRows;
   }, [selectedInvoiceIds, activeInvoices, filteredRows]);
 
-  // SUBIR ARCHIVO PDF FÍSICO AL SERVIDOR LOCAL (/uploads) Y ASOCIAR A LA FACTURA
+  // SUBIR ARCHIVO PDF FÍSICO AL SERVIDOR LOCAL (/uploads)
   const handleUploadPdf = (invoiceId) => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -373,23 +410,13 @@ function App() {
 
       try {
         Swal.fire({ title: 'Guardando archivo PDF en el dispositivo...', didOpen: () => Swal.showLoading() });
-        const res = await fetch('/api/upload-pdf', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
+        const data = await window.API.invoices.uploadPdf(file);
 
         if (data.success) {
-          // Actualizar estado local y guardar en MySQL
           const updated = manualInvoices.map(inv => {
             if (inv.id === invoiceId) {
               const updatedInv = { ...inv, pdfPath: data.relativePath, pdfOriginalName: data.originalName };
-              // Guardar en MySQL
-              fetch('/api/invoices', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedInv)
-              }).catch(() => {});
+              window.API.invoices.save(updatedInv).catch(() => {});
               return updatedInv;
             }
             return inv;
@@ -407,13 +434,9 @@ function App() {
     fileInput.click();
   };
 
-  // TOGGLES INTERACTIVOS CON PERSISTENCIA EN MYSQL
+  // PERSISTENCIA EN MYSQL
   const saveInvoiceToDb = (invoice) => {
-    fetch('/api/invoices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(invoice)
-    }).catch(() => {});
+    window.API.invoices.save(invoice).catch(() => {});
   };
 
   const handleToggleSigned = (id) => {
@@ -472,10 +495,10 @@ function App() {
       showCancelButton: true,
       confirmButtonColor: '#e11d48',
       confirmButtonText: 'Sí, eliminar'
-    }).then(res => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
         setManualInvoices(manualInvoices.filter(i => i.id !== id));
-        fetch(`/api/invoices/${id}`, { method: 'DELETE' }).catch(() => {});
+        await window.API.invoices.delete(id).catch(() => {});
         Swal.fire('Eliminado', 'Comprobante removido de la base de datos.', 'success');
       }
     });
@@ -502,7 +525,7 @@ function App() {
     });
   };
 
-  // REGISTRO DE FACTURA CON PERSISTENCIA EN MYSQL
+  // REGISTRO DE FACTURA CON FECHA PERSONALIZADA
   const handleQuickRegister = () => {
     Swal.fire({
       title: 'Registrar Factura / Cotización',
@@ -558,13 +581,9 @@ function App() {
     });
   };
 
-  // PROVEEDORES CON PERSISTENCIA EN MYSQL
+  // PROVEEDORES
   const saveSupplierToDb = (sup) => {
-    fetch('/api/suppliers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sup)
-    }).catch(() => {});
+    window.API.suppliers.save(sup).catch(() => {});
   };
 
   const handleAddSupplier = () => {
@@ -580,7 +599,7 @@ function App() {
           </div>
           <div>
             <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Razón Social del Proveedor *</label>
-            <input id="swName" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px;" placeholder="ej: Cárnicos y Lácteos del Norte S.A.S.">
+            <input id="swName" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px;" placeholder="ej: Cárnicos del Norte S.A.S.">
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
@@ -594,8 +613,8 @@ function App() {
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
-              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">N° Facturas Esperadas / Mes *</label>
-              <input id="swMonthly" type="number" min="1" max="20" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:800; border-radius:8px; color:#2563eb;" value="2">
+              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">N° Servicios Recurrentes / Mes</label>
+              <input id="swMonthly" type="number" min="0" max="20" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:800; border-radius:8px; color:#2563eb;" value="0" placeholder="0">
             </div>
             <div>
               <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Área Asignada</label>
@@ -615,90 +634,100 @@ function App() {
       confirmButtonColor: '#e11d48'
     }).then((res) => {
       if (res.isConfirmed) {
-        const nit = document.getElementById('swNit').value || '900.000.000-1';
-        const name = document.getElementById('swName').value || 'Nuevo Proveedor S.A.S.';
-        const contact = document.getElementById('swContact').value || 'Asesor General';
-        const phone = document.getElementById('swPhone').value || '+57 300 000 0000';
-        const monthlyCount = Math.max(1, Number(document.getElementById('swMonthly').value) || 1);
+        const nit = (document.getElementById('swNit').value || '').trim();
+        const name = (document.getElementById('swName').value || '').trim();
+        const contact = document.getElementById('swContact').value || '';
+        const phone = document.getElementById('swPhone').value || '';
+        const monthlyCount = Math.max(0, Number(document.getElementById('swMonthly').value) || 0);
         const area = document.getElementById('swArea').value;
+
+        if (!nit || !name) {
+          return Swal.fire('Campos requeridos', 'Debes ingresar el NIT y la Razón Social.', 'warning');
+        }
+
+        const existsNit = suppliers.some(s => s.nit && s.nit.toLowerCase().replace(/[^a-z0-9]/g, '') === nit.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const existsName = suppliers.some(s => s.name && s.name.trim().toLowerCase() === name.toLowerCase());
+
+        if (existsNit) {
+          return Swal.fire('NIT Ya Registrado', `Ya existe un proveedor registrado con el NIT/RUT "${nit}".`, 'error');
+        }
+        if (existsName) {
+          return Swal.fire('Nombre Ya Registrado', `Ya existe un proveedor con la Razón Social "${name}".`, 'error');
+        }
 
         const newServices = [];
         for (let i = 1; i <= monthlyCount; i++) {
-          newServices.push({
-            id: `srv-${Date.now()}-${i}`,
-            serviceName: `Servicio #${i} - ${name}`,
-            enabled: true
-          });
+          newServices.push({ id: `srv-${Date.now()}-${i}`, serviceName: `Servicio #${i} - ${name}`, enabled: true });
         }
 
-        const newSup = {
-          id: 'sup-' + Date.now(),
-          nit,
-          name,
-          contact,
-          phone,
-          monthlyCount,
-          area,
-          services: newServices
-        };
-
+        const newSup = { id: 'sup-' + Date.now(), nit, name, contact, phone, monthlyCount, area, services: newServices };
         setSuppliers([newSup, ...suppliers]);
         saveSupplierToDb(newSup);
-        Swal.fire('Registrado', `Proveedor guardado en la base de datos con ${monthlyCount} facturas esperadas.`, 'success');
+        Swal.fire('Registrado', `Proveedor "${name}" guardado exitosamente en MySQL.`, 'success');
       }
     });
   };
 
   const handleEditSupplier = (sup) => {
     Swal.fire({
-      title: `Editar Proveedor: ${sup.name}`,
+      title: `✏️ Editar Proveedor: ${sup.name || ''}`,
       width: '540px',
       customClass: { popup: 'modal-card-box' },
       html: `
-        <div style="text-align:left; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:left; font-size:12px; display:flex; flex-direction:column; gap:10px; margin-top:8px;">
           <div>
-            <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">NIT</label>
-            <input id="swEditNit" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700;" value="${sup.nit}">
+            <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">NIT / Identificación</label>
+            <input id="swEditNit" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px;" value="${sup.nit || ''}">
           </div>
           <div>
             <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Razón Social</label>
-            <input id="swEditName" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700;" value="${sup.name}">
+            <input id="swEditName" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px;" value="${sup.name || ''}">
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
-              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Contacto</label>
-              <input id="swEditContact" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px;" value="${sup.contact}">
+              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Contacto Asesor</label>
+              <input id="swEditContact" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; border-radius:8px;" value="${sup.contact || ''}">
             </div>
             <div>
               <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Teléfono</label>
-              <input id="swEditPhone" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px;" value="${sup.phone}">
+              <input id="swEditPhone" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; border-radius:8px;" value="${sup.phone || ''}">
             </div>
           </div>
           <div>
             <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">N° Facturas Esperadas / Mes</label>
-            <input id="swEditCount" type="number" min="1" max="20" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:800; color:#2563eb;" value="${sup.monthlyCount || sup.services?.length || 1}">
+            <input id="swEditCount" type="number" min="1" max="20" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:800; color:#e11d48; border-radius:8px;" value="${sup.monthlyCount || sup.services?.length || 1}">
           </div>
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: 'Actualizar en Base de Datos',
-      confirmButtonColor: '#2563eb'
+      confirmButtonColor: '#e11d48'
     }).then((res) => {
       if (res.isConfirmed) {
-        const nit = document.getElementById('swEditNit').value;
-        const name = document.getElementById('swEditName').value;
+        const nit = (document.getElementById('swEditNit').value || '').trim();
+        const name = (document.getElementById('swEditName').value || '').trim();
         const contact = document.getElementById('swEditContact').value;
         const phone = document.getElementById('swEditPhone').value;
         const count = Math.max(1, Number(document.getElementById('swEditCount').value) || 1);
 
+        if (!nit || !name) {
+          return Swal.fire('Campos requeridos', 'Debes ingresar el NIT y la Razón Social.', 'warning');
+        }
+
+        const existsNit = suppliers.some(s => s.id !== sup.id && s.nit && s.nit.toLowerCase().replace(/[^a-z0-9]/g, '') === nit.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const existsName = suppliers.some(s => s.id !== sup.id && s.name && s.name.trim().toLowerCase() === name.toLowerCase());
+
+        if (existsNit) {
+          return Swal.fire('NIT Ya Registrado', `Otro proveedor ya tiene registrado el NIT/RUT "${nit}".`, 'error');
+        }
+        if (existsName) {
+          return Swal.fire('Nombre Ya Registrado', `Otro proveedor ya tiene la Razón Social "${name}".`, 'error');
+        }
+
         let currentServices = [...(sup.services || [])];
         if (currentServices.length < count) {
           for (let i = currentServices.length + 1; i <= count; i++) {
-            currentServices.push({
-              id: `srv-${sup.id}-${i}`,
-              serviceName: `Servicio #${i} - ${name}`,
-              enabled: true
-            });
+            currentServices.push({ id: `srv-${sup.id}-${i}`, serviceName: `Servicio #${i} - ${name}`, enabled: true });
           }
         } else if (currentServices.length > count) {
           currentServices = currentServices.slice(0, count);
@@ -719,10 +748,10 @@ function App() {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#e11d48'
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
         setSuppliers(suppliers.filter(s => s.id !== id));
-        fetch(`/api/suppliers/${id}`, { method: 'DELETE' }).catch(() => {});
+        await window.API.suppliers.delete(id).catch(() => {});
         Swal.fire('Eliminado', 'Proveedor removido.', 'success');
       }
     });
@@ -743,43 +772,103 @@ function App() {
   // USUARIOS
   const handleAddUser = () => {
     Swal.fire({
-      title: 'Crear Nuevo Usuario',
+      title: '👤 Crear Nuevo Usuario',
+      width: '500px',
       html: `
-        <input id="swUUser" class="swal2-input" placeholder="Usuario (Login)">
-        <input id="swUName" class="swal2-input" placeholder="Nombre Completo">
-        <select id="swURole" class="swal2-input">
-          <option value="Administrador General">Administrador General</option>
-          <option value="Gestor de Compras">Gestor de Compras</option>
-          <option value="Gestor TI">Gestor TI</option>
-        </select>
+        <div style="text-align:left; font-size:12px; display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+          <div>
+            <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Usuario (Login) *</label>
+            <input id="swUUser" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700;" placeholder="ej: asesor_compras">
+          </div>
+          <div>
+            <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Nombre Completo *</label>
+            <input id="swUName" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px;" placeholder="ej: Andrea Valbuena">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Contraseña *</label>
+              <input id="swUPass" type="password" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px;" placeholder="••••••••">
+            </div>
+            <div>
+              <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Rol de Sistema *</label>
+              <select id="swURole" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px; font-weight:700;">
+                <option value="admin">🛡️ Admin (Gestión)</option>
+                <option value="superadmin">👑 Superadmin (Control Total)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:700; color:#64748b; text-transform:uppercase; font-size:10px;">Área Asignada</label>
+            <select id="swUArea" class="swal2-input" style="width:100%; margin:4px 0 0; padding:8px 12px; font-size:13px;">
+              <option value="Adquisiciones & Compras">Adquisiciones & Compras</option>
+              <option value="Contabilidad & Finanzas">Contabilidad & Finanzas</option>
+              <option value="Tecnología (TI)">Tecnología (TI)</option>
+              <option value="Operaciones & Planta">Operaciones & Planta</option>
+              <option value="Dirección General">Dirección General</option>
+            </select>
+          </div>
+        </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'Guardar',
+      confirmButtonText: 'Crear Usuario',
       confirmButtonColor: '#e11d48'
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
-        const username = document.getElementById('swUUser').value || 'nuevo_user';
-        const name = document.getElementById('swUName').value || 'Nuevo Usuario';
+        const username = (document.getElementById('swUUser').value || '').trim();
+        const name = (document.getElementById('swUName').value || '').trim();
+        const password = (document.getElementById('swUPass').value || '').trim();
         const role = document.getElementById('swURole').value;
+        const area = document.getElementById('swUArea').value;
 
-        const newU = { id: 'usr-' + Date.now(), username, name, role, area: 'Tecnología (TI)', status: 'Activo' };
+        if (!username || !name || !password) {
+          return Swal.fire('Campos Obligatorios', 'Por favor ingresa usuario, nombre y contraseña.', 'warning');
+        }
+
+        const newU = { id: 'usr-' + Date.now(), username, name, password, role, area, status: 'Activo' };
         setUsers([...users, newU]);
-        fetch('/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newU)
-        }).catch(() => {});
-        Swal.fire('Creado', 'Usuario añadido a la base de datos.', 'success');
+        await window.API.users.save(newU).catch(() => {});
+        Swal.fire('Usuario Creado', `La cuenta de ${name} ha sido registrada con rol ${role.toUpperCase()}.`, 'success');
       }
     });
   };
 
+  const handleDeleteUser = (id) => {
+    Swal.fire({
+      title: '¿Eliminar Usuario?',
+      text: 'Este usuario ya no podrá iniciar sesión en el sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      confirmButtonText: 'Sí, Eliminar'
+    }).then(async (res) => {
+      if (res.isConfirmed) {
+        setUsers(users.filter(u => u.id !== id));
+        await window.API.users.delete(id).catch(() => {});
+        Swal.fire('Eliminado', 'Usuario removido correctamente.', 'success');
+      }
+    });
+  };
+
+  if (!currentUser) {
+    return <LoginModal onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="app-wrapper">
+      {/* TELÓN DE FONDO PARA DISPOSITIVOS MÓVILES */}
+      <div 
+        className={`sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`} 
+        onClick={() => setIsSidebarOpen(false)}
+      ></div>
+
       <Sidebar 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
-        alertCount={realAlerts.length} 
+        alertCount={realAlerts.length}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       <main className="main-content">
@@ -793,6 +882,9 @@ function App() {
           onOpenUsers={() => setCurrentView('users')}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* VISTA 1: DASHBOARD */}
@@ -827,10 +919,21 @@ function App() {
               setSelectedSupplier={setSelectedSupplier}
               selectedFactureFilter={selectedFactureFilter}
               setSelectedFactureFilter={setSelectedFactureFilter}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
               suppliersList={suppliersList}
               selectedCount={selectedInvoiceIds.length}
               onOpenExcelPreview={() => setIsExcelPreviewOpen(true)}
-              onClean={() => { setSearchTerm(''); setSelectedSupplier('Todos'); setSelectedFactureFilter('Todos'); setSelectedInvoiceIds([]); }}
+              onClean={() => { 
+                setSearchTerm(''); 
+                setSelectedSupplier('Todos'); 
+                setSelectedFactureFilter('Todos'); 
+                setSelectedMonth('Todos');
+                setSelectedYear('Todos');
+                setSelectedInvoiceIds([]); 
+              }}
               onExportExcel={() => Swal.fire('Excel Exportado', 'Reporte descargado correctamente.', 'success')}
             />
 
@@ -853,16 +956,31 @@ function App() {
           </div>
         )}
 
-        {/* VISTA 2: FACTURAS */}
+        {/* VISTA 2: FACTURAS CON FILTROS DE MESES Y AÑOS FUTUROS */}
         {currentView === 'invoices' && (
           <InvoicesModule 
-            invoices={activeInvoices}
+            invoices={filteredRows}
             onQuickRegister={handleQuickRegister}
             onToggleSigned={handleToggleSigned}
             onToggleOrderStd={handleToggleOrderStd}
             onToggleFacture={handleToggleFacture}
             onToggleDelivered={handleToggleDelivered}
             onDeleteInvoice={handleDeleteInvoice}
+            onUploadPdf={handleUploadPdf}
+            onViewDetail={handleViewDetail}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedSupplier={selectedSupplier}
+            setSelectedSupplier={setSelectedSupplier}
+            selectedFactureFilter={selectedFactureFilter}
+            setSelectedFactureFilter={setSelectedFactureFilter}
+            suppliersList={suppliersList}
+            onOpenExcelPreview={() => setIsExcelPreviewOpen(true)}
+            selectedCount={selectedInvoiceIds.length}
           />
         )}
 
@@ -870,10 +988,21 @@ function App() {
         {currentView === 'suppliers' && (
           <SuppliersModule 
             suppliers={suppliers}
+            invoices={manualInvoices}
             onAddSupplier={handleAddSupplier}
             onEditSupplier={handleEditSupplier}
             onDeleteSupplier={handleDeleteSupplier}
             onUpdateSupplierServices={handleUpdateSupplierServices}
+          />
+        )}
+
+        {/* VISTA CRM: CRM DE COTIZACIONES Y PROVEEDORES EN PROCESO */}
+        {currentView === 'crm' && (
+          <CrmModule 
+            suppliers={suppliers}
+            quotations={quotations}
+            onSaveQuotation={handleSaveQuotation}
+            onDeleteQuotation={handleDeleteQuotation}
           />
         )}
 
@@ -882,6 +1011,8 @@ function App() {
           <UsersModule 
             users={users}
             onAddUser={handleAddUser}
+            onDeleteUser={handleDeleteUser}
+            currentUser={currentUser}
           />
         )}
 

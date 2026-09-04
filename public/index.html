@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -12,29 +12,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/styles.css">
   
-  <!-- React 18 & Babel Standalone -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- React 18, React DOM & SweetAlert2 Locales/Seguros -->
+  <script src="vendor/react.min.js"></script>
+  <script src="vendor/react-dom.min.js"></script>
+  <script src="vendor/sweetalert2.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- Componentes Modulares -->
-  <script type="text/babel" src="components/Sidebar.js"></script>
-  <script type="text/babel" src="components/TopNavbar.js"></script>
-  <script type="text/babel" src="components/KpiCards.js"></script>
-  <script type="text/babel" src="components/ChartsSection.js"></script>
-  <script type="text/babel" src="components/FiltersBar.js"></script>
-  <script type="text/babel" src="components/InvoicesTable.js"></script>
-  <script type="text/babel" src="components/InvoicesModule.js"></script>
-  <script type="text/babel" src="components/SuppliersModule.js"></script>
-  <script type="text/babel" src="components/UsersModule.js"></script>
-  <script type="text/babel" src="components/AlertsModule.js"></script>
-  <script type="text/babel" src="components/ExcelPreviewModal.js"></script>
-
-  <!-- App Principal -->
-  <script type="text/babel" src="App.js"></script>
+  <!-- BUNDLE JS PRECOMPILADO (CARGA INSTANTÁNEA Y 100% INDEPENDIENTE DE RED) -->
+  <script src="bundle.js"></script>
 </body>
 </html>
