@@ -1,0 +1,236 @@
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  FileText, 
+  Search, 
+  Trash2, 
+  Calendar, 
+  DollarSign, 
+  Building2,
+  FileCheck,
+  CheckCircle,
+  Eye,
+  Hash
+} from 'lucide-react';
+import { Invoice } from '../app/types';
+
+interface InvoicesModuleProps {
+  invoices: Invoice[];
+  onUpdateField: (id: string, field: string, value: any) => void;
+  onDeleteInvoice: (id: string) => void;
+}
+
+export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
+  invoices,
+  onUpdateField,
+  onDeleteInvoice
+}) => {
+  const [currentTab, setCurrentTab] = useState<'Todos' | 'Facturas' | 'Cotizaciones'>('Todos');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredInvoices = invoices.filter(inv => {
+    // Tab filter
+    const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || (inv.service || '').toUpperCase().startsWith('COT');
+    if (currentTab === 'Facturas' && isCot) return false;
+    if (currentTab === 'Cotizaciones' && !isCot) return false;
+
+    // Search filter
+    const term = searchTerm.toLowerCase();
+    return (
+      (inv.supplier || '').toLowerCase().includes(term) ||
+      (inv.invoiceNumber || '').toLowerCase().includes(term) ||
+      (inv.service || '').toLowerCase().includes(term) ||
+      (inv.oc || '').toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div className="w-full">
+      {/* TABS Y BUSCADOR */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-6">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/80">
+          {(['Todos', 'Facturas', 'Cotizaciones'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setCurrentTab(tab)}
+              className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                currentTab === tab 
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-sm shadow-red-600/20' 
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 w-full sm:w-80 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
+          <Search className="w-4 h-4 text-slate-400" />
+          <input 
+            type="text"
+            placeholder="Buscar por proveedor, N° documento, OC..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full placeholder:text-slate-400"
+          />
+        </div>
+      </div>
+
+      {/* TABLA PRINCIPAL DE FACTURAS */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
+                <th className="px-4 py-3.5 text-white">Proveedor</th>
+                <th className="px-4 py-3.5 text-white">Servicio / Concepto</th>
+                <th className="px-4 py-3.5 text-white">N° Documento</th>
+                <th className="px-4 py-3.5 text-white">Fecha Emisión</th>
+                <th className="px-4 py-3.5 text-right text-white">Valor ($)</th>
+                <th className="px-4 py-3.5 text-center text-white">Firmado</th>
+                <th className="px-4 py-3.5 text-center text-white">Orden Compra</th>
+                <th className="px-4 py-3.5 text-center text-white">En Facture</th>
+                <th className="px-4 py-3.5 text-center text-white">Entregado</th>
+                <th className="px-4 py-3.5 text-center text-white">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium">
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="text-center py-16 text-slate-400 dark:text-zinc-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FileText className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
+                      <span>No hay documentos registrados para este filtro.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredInvoices.map((inv) => {
+                  const isSigned = (inv.signed || '').toUpperCase() === 'SÍ';
+                  const isEnFacture = (inv.enFacture || '').toUpperCase() === 'SÍ';
+                  const isDelivered = (inv.delivered || '').toUpperCase() === 'SÍ';
+
+                  return (
+                    <tr key={inv.id} className="hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors">
+                      {/* PROVEEDOR */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                          <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[9px] font-black flex items-center justify-center flex-shrink-0">
+                            {(inv.supplier || 'PR').substring(0, 2).toUpperCase()}
+                          </span>
+                          <span>{inv.supplier}</span>
+                        </div>
+                      </td>
+
+                      {/* SERVICIO */}
+                      <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
+                        {inv.service || '—'}
+                      </td>
+
+                      {/* N° FACTURA / COTIZACIÓN */}
+                      <td className="px-4 py-3">
+                        <input 
+                          type="text"
+                          value={inv.invoiceNumber || ''}
+                          onChange={(e) => onUpdateField(inv.id, 'invoiceNumber', e.target.value)}
+                          placeholder="FAC-..."
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-24 focus:border-red-500"
+                        />
+                      </td>
+
+                      {/* FECHA */}
+                      <td className="px-4 py-3 font-mono text-[11px] text-slate-600 dark:text-zinc-300">
+                        {inv.emissionDate || '—'}
+                      </td>
+
+                      {/* VALOR */}
+                      <td className="px-4 py-3 text-right">
+                        <input 
+                          type="number"
+                          value={inv.value ?? 0}
+                          onChange={(e) => onUpdateField(inv.id, 'value', parseFloat(e.target.value) || 0)}
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-800 dark:text-zinc-100 outline-none w-24 focus:border-red-500"
+                        />
+                      </td>
+
+                      {/* SWITCH FIRMADO */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => onUpdateField(inv.id, 'signed', isSigned ? 'NO' : 'SÍ')}
+                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                            isSigned 
+                              ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                              : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
+                          }`}
+                        >
+                          <span className={`text-[8.5px] font-black mr-1 ${isSigned ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8.5px] font-black ml-1 ${isSigned ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                        </button>
+                      </td>
+
+                      {/* ORDEN DE COMPRA (OC) */}
+                      <td className="px-4 py-3 text-center">
+                        <input 
+                          type="text"
+                          value={inv.oc || ''}
+                          onChange={(e) => onUpdateField(inv.id, 'oc', e.target.value)}
+                          placeholder="OC-..."
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-20 focus:border-red-500 text-center"
+                        />
+                      </td>
+
+                      {/* SWITCH EN FACTURE */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => onUpdateField(inv.id, 'enFacture', isEnFacture ? 'AÚN NO' : 'SÍ')}
+                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                            isEnFacture 
+                              ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                              : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
+                          }`}
+                        >
+                          <span className={`text-[8.5px] font-black mr-1 ${isEnFacture ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8.5px] font-black ml-1 ${isEnFacture ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                        </button>
+                      </td>
+
+                      {/* SWITCH ENTREGADO */}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => onUpdateField(inv.id, 'delivered', isDelivered ? 'NO' : 'SÍ')}
+                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                            isDelivered 
+                              ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                              : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
+                          }`}
+                        >
+                          <span className={`text-[8.5px] font-black mr-1 ${isDelivered ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8.5px] font-black ml-1 ${isDelivered ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                        </button>
+                      </td>
+
+                      {/* ACCIONES */}
+                      <td className="px-4 py-3 text-center">
+                        <button 
+                          onClick={() => onDeleteInvoice(inv.id)}
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors cursor-pointer"
+                          title="Eliminar factura"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};

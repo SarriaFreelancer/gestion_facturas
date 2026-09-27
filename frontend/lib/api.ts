@@ -1,0 +1,85 @@
+import { Invoice, Supplier, DashboardMetrics } from '../app/types';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+export const api = {
+  // Invoices
+  async getInvoices(): Promise<Invoice[]> {
+    const res = await fetch(`${API_BASE_URL}/invoices`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar facturas');
+    return res.json();
+  },
+
+  async updateInvoiceField(id: string, field: string, value: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, value })
+    });
+    if (!res.ok) throw new Error('Error al actualizar factura');
+    return res.json();
+  },
+
+  async createOrUpdateInvoice(invoice: Partial<Invoice>): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoice)
+    });
+    if (!res.ok) throw new Error('Error al guardar factura');
+    return res.json();
+  },
+
+  async deleteInvoice(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar factura');
+    return res.json();
+  },
+
+  // Suppliers
+  async getSuppliers(): Promise<Supplier[]> {
+    const res = await fetch(`${API_BASE_URL}/suppliers`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar proveedores');
+    return res.json();
+  },
+
+  async createOrUpdateSupplier(supplier: Partial<Supplier>): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/suppliers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(supplier)
+    });
+    if (!res.ok) throw new Error('Error al guardar proveedor');
+    return res.json();
+  },
+
+  async updateSupplierServices(id: string, services: any[]): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/suppliers/${id}/services`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ services })
+    });
+    if (!res.ok) throw new Error('Error al actualizar servicios del proveedor');
+    return res.json();
+  },
+
+  async deleteSupplier(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/suppliers/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar proveedor');
+    return res.json();
+  },
+
+  // Dashboard Metrics
+  async getMetrics(): Promise<DashboardMetrics> {
+    const res = await fetch(`${API_BASE_URL}/dashboard/metrics`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar métricas');
+    return res.json();
+  },
+
+  // Clean Database
+  async cleanDatabase(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/clean-database`, { method: 'POST' });
+    if (!res.ok) throw new Error('Error al limpiar base de datos');
+    return res.json();
+  }
+};
