@@ -36,6 +36,32 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   const [currentTab, setCurrentTab] = useState<'Todos' | 'Facturas' | 'Cotizaciones'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Función utilitaria para fecha de hoy en formato YYYY-MM-DD
+  const getTodayFormatted = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // Manejo especial cuando se conmuta el switch de "Entregado":
+  // Si pasa a 'SÍ', se asigna automáticamente la fecha de hoy como deliveryDate si está vacía.
+  const handleToggleDelivered = (inv: Invoice) => {
+    const isCurrentlyDelivered = (inv.delivered || '').toUpperCase() === 'SÍ';
+    if (!isCurrentlyDelivered) {
+      // Activar entregado: SÍ y fecha automática de entrega hoy
+      const today = getTodayFormatted();
+      onUpdateField(inv.id, 'delivered', 'SÍ');
+      if (!inv.deliveryDate) {
+        onUpdateField(inv.id, 'deliveryDate', today);
+      }
+    } else {
+      // Desactivar entregado: NO
+      onUpdateField(inv.id, 'delivered', 'NO');
+    }
+  };
+
   const filteredInvoices = invoices.filter(inv => {
     // Filtro de Tab
     const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || (inv.service || '').toUpperCase().startsWith('COT');
@@ -70,12 +96,12 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
               )}
             </h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-              Registro y control mensual de documentos. Puedes emitir facturas no recurrentes para proveedores autorizados.
+              Registro y control mensual de documentos. Al marcar "Entregado: SÍ", la fecha de entrega se monta automáticamente.
             </p>
           </div>
         </div>
 
-        {/* BOTÓN SOLICITADO: AGREGAR FACTURA O COTIZACIÓN */}
+        {/* BOTÓN: AGREGAR FACTURA O COTIZACIÓN */}
         <button 
           onClick={onAddInvoice}
           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer"
@@ -115,28 +141,29 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
         </div>
       </div>
 
-      {/* TABLA PRINCIPAL DE FACTURAS */}
+      {/* TABLA PRINCIPAL DE FACTURAS CON FECHA EMISIÓN EDITABLE Y FECHA ENTREGA AUTOMÁTICA */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
-                <th className="px-4 py-3.5 text-white">Proveedor</th>
-                <th className="px-4 py-3.5 text-white">Servicio / Concepto</th>
-                <th className="px-4 py-3.5 text-white">N° Documento</th>
-                <th className="px-4 py-3.5 text-white">Fecha Emisión</th>
-                <th className="px-4 py-3.5 text-right text-white">Valor ($)</th>
-                <th className="px-4 py-3.5 text-center text-white">Firmado</th>
-                <th className="px-4 py-3.5 text-center text-white">Orden Compra</th>
-                <th className="px-4 py-3.5 text-center text-white">En Facture</th>
-                <th className="px-4 py-3.5 text-center text-white">Entregado</th>
-                <th className="px-4 py-3.5 text-center text-white">Acciones</th>
+                <th className="px-3.5 py-3.5 text-white">Proveedor</th>
+                <th className="px-3 py-3.5 text-white">Servicio / Concepto</th>
+                <th className="px-3 py-3.5 text-white">N° Documento</th>
+                <th className="px-3.5 py-3.5 text-white">Fecha Emisión</th>
+                <th className="px-3.5 py-3.5 text-white">Fecha Entrega</th>
+                <th className="px-3 py-3.5 text-right text-white">Valor ($)</th>
+                <th className="px-3 py-3.5 text-center text-white">Firmado</th>
+                <th className="px-3 py-3.5 text-center text-white">Orden Compra</th>
+                <th className="px-3 py-3.5 text-center text-white">En Facture</th>
+                <th className="px-3 py-3.5 text-center text-white">Entregado</th>
+                <th className="px-3 py-3.5 text-center text-white">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-16 text-slate-400 dark:text-zinc-500">
+                  <td colSpan={11} className="text-center py-16 text-slate-400 dark:text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FileText className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
                       <span>No hay documentos registrados para este filtro ({selectedMonth} {selectedYear}).</span>
@@ -152,107 +179,132 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                   return (
                     <tr key={inv.id} className="hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors">
                       {/* PROVEEDOR */}
-                      <td className="px-4 py-3">
+                      <td className="px-3.5 py-3">
                         <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
                           <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[9px] font-black flex items-center justify-center flex-shrink-0">
                             {(inv.supplier || 'PR').substring(0, 2).toUpperCase()}
                           </span>
-                          <span>{inv.supplier}</span>
+                          <span className="truncate max-w-[140px]" title={inv.supplier}>{inv.supplier}</span>
                         </div>
                       </td>
 
                       {/* SERVICIO */}
-                      <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
+                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-300 max-w-[150px] truncate" title={inv.service || '—'}>
                         {inv.service || '—'}
                       </td>
 
                       {/* N° FACTURA / COTIZACIÓN */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <input 
                           type="text"
                           value={inv.invoiceNumber || ''}
                           onChange={(e) => onUpdateField(inv.id, 'invoiceNumber', e.target.value)}
                           placeholder="FAC-..."
-                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-24 focus:border-red-500"
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-20 focus:border-red-500"
                         />
                       </td>
 
-                      {/* FECHA */}
-                      <td className="px-4 py-3 font-mono text-[11px] text-slate-600 dark:text-zinc-300">
-                        {inv.emissionDate || '—'}
+                      {/* 1. FECHA DE EMISIÓN: EDITABLE MANUALMENTE DIRECTO EN LA TABLA */}
+                      <td className="px-3.5 py-3">
+                        <input
+                          type="date"
+                          value={inv.emissionDate ? inv.emissionDate.split('T')[0] : ''}
+                          onChange={(e) => onUpdateField(inv.id, 'emissionDate', e.target.value)}
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none transition-all shadow-2xs cursor-pointer w-28"
+                          title="Fecha de Emisión del Documento"
+                        />
+                      </td>
+
+                      {/* 2. FECHA DE ENTREGA: AL LADO, AUTO CUANDO SE MARCA SÍ O EDITABLE */}
+                      <td className="px-3.5 py-3">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="date"
+                            value={inv.deliveryDate ? inv.deliveryDate.split('T')[0] : ''}
+                            onChange={(e) => onUpdateField(inv.id, 'deliveryDate', e.target.value)}
+                            placeholder="Sin entregar"
+                            className={`border rounded-lg px-2 py-1 text-[11px] font-mono font-bold outline-none transition-all shadow-2xs cursor-pointer w-28 ${
+                              isDelivered 
+                                ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-200 font-extrabold' 
+                                : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-400'
+                            }`}
+                            title={isDelivered ? "Fecha en que se entregó el documento" : "Fecha de Entrega (se autocompleta al marcar Entregado en SÍ)"}
+                          />
+                        </div>
                       </td>
 
                       {/* VALOR */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3.5 py-3 text-right">
                         <input 
                           type="number"
                           value={inv.value ?? 0}
                           onChange={(e) => onUpdateField(inv.id, 'value', parseFloat(e.target.value) || 0)}
-                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-800 dark:text-zinc-100 outline-none w-24 focus:border-red-500"
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-800 dark:text-zinc-100 outline-none w-20 focus:border-red-500"
                         />
                       </td>
 
                       {/* SWITCH FIRMADO */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-3 text-center">
                         <button
                           onClick={() => onUpdateField(inv.id, 'signed', isSigned ? 'NO' : 'SÍ')}
-                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                          className={`w-11 h-5 rounded-full px-1 inline-flex items-center transition-all cursor-pointer border ${
                             isSigned 
                               ? 'bg-emerald-500 border-emerald-600 justify-end' 
                               : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
                           }`}
                         >
-                          <span className={`text-[8.5px] font-black mr-1 ${isSigned ? 'text-white' : 'hidden'}`}>SÍ</span>
-                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
-                          <span className={`text-[8.5px] font-black ml-1 ${isSigned ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                          <span className={`text-[8px] font-black mr-0.5 ${isSigned ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8px] font-black ml-0.5 ${isSigned ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
                         </button>
                       </td>
 
                       {/* ORDEN DE COMPRA (OC) */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-3 text-center">
                         <input 
                           type="text"
                           value={inv.oc || ''}
                           onChange={(e) => onUpdateField(inv.id, 'oc', e.target.value)}
                           placeholder="OC-..."
-                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-20 focus:border-red-500 text-center"
+                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-1.5 py-1 text-[11px] font-mono font-bold text-slate-800 dark:text-zinc-100 outline-none w-16 focus:border-red-500 text-center"
                         />
                       </td>
 
                       {/* SWITCH EN FACTURE */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-3 text-center">
                         <button
                           onClick={() => onUpdateField(inv.id, 'enFacture', isEnFacture ? 'AÚN NO' : 'SÍ')}
-                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                          className={`w-11 h-5 rounded-full px-1 inline-flex items-center transition-all cursor-pointer border ${
                             isEnFacture 
                               ? 'bg-emerald-500 border-emerald-600 justify-end' 
                               : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
                           }`}
                         >
-                          <span className={`text-[8.5px] font-black mr-1 ${isEnFacture ? 'text-white' : 'hidden'}`}>SÍ</span>
-                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
-                          <span className={`text-[8.5px] font-black ml-1 ${isEnFacture ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                          <span className={`text-[8px] font-black mr-0.5 ${isEnFacture ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8px] font-black ml-0.5 ${isEnFacture ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
                         </button>
                       </td>
 
-                      {/* SWITCH ENTREGADO */}
-                      <td className="px-4 py-3 text-center">
+                      {/* SWITCH ENTREGADO (AL MARCAR SÍ, MONTA AUTOMÁTICA LA FECHA DE ENTREGA) */}
+                      <td className="px-3 py-3 text-center">
                         <button
-                          onClick={() => onUpdateField(inv.id, 'delivered', isDelivered ? 'NO' : 'SÍ')}
-                          className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
+                          onClick={() => handleToggleDelivered(inv)}
+                          className={`w-11 h-5 rounded-full px-1 inline-flex items-center transition-all cursor-pointer border ${
                             isDelivered 
-                              ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                              ? 'bg-blue-600 border-blue-700 justify-end shadow-xs' 
                               : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
                           }`}
+                          title={isDelivered ? "Entregado (clic para desmarcar)" : "Marcar como Entregado (montará la fecha de entrega automáticamente)"}
                         >
-                          <span className={`text-[8.5px] font-black mr-1 ${isDelivered ? 'text-white' : 'hidden'}`}>SÍ</span>
-                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
-                          <span className={`text-[8.5px] font-black ml-1 ${isDelivered ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
+                          <span className={`text-[8px] font-black mr-0.5 ${isDelivered ? 'text-white' : 'hidden'}`}>SÍ</span>
+                          <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs"></span>
+                          <span className={`text-[8px] font-black ml-0.5 ${isDelivered ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
                         </button>
                       </td>
 
                       {/* ACCIONES */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-3 text-center">
                         <button 
                           onClick={() => onDeleteInvoice(inv.id)}
                           className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors cursor-pointer"

@@ -397,17 +397,26 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               </button>
             </div>
 
-            {/* ENTREGADO */}
+            {/* ENTREGADO (AL MARCAR SÍ, MONTA AUTOMÁTICA LA FECHA DE ENTREGA) */}
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 flex flex-col items-center justify-between gap-1.5">
               <span className="text-[10px] font-extrabold uppercase text-slate-600 dark:text-zinc-300">Entregado</span>
               <button
                 type="button"
-                onClick={() => setDelivered(prev => prev === 'SÍ' ? 'NO' : 'SÍ')}
+                onClick={() => {
+                  setDelivered(prev => {
+                    const nextVal = prev === 'SÍ' ? 'NO' : 'SÍ';
+                    if (nextVal === 'SÍ' && !deliveryDate) {
+                      setDeliveryDate(getTodayFormatted());
+                    }
+                    return nextVal;
+                  });
+                }}
                 className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
                   delivered === 'SÍ' 
-                    ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                    ? 'bg-blue-600 border-blue-700 justify-end shadow-xs' 
                     : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
                 }`}
+                title="Al marcar SÍ, la fecha de entrega se monta automáticamente"
               >
                 <span className={`text-[8.5px] font-black mr-1 ${delivered === 'SÍ' ? 'text-white' : 'hidden'}`}>SÍ</span>
                 <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
