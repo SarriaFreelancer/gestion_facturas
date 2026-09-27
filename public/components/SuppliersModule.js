@@ -82,9 +82,9 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
         </button>
       </div>
 
-      {/* BARRA DE BÚSQUEDA ESPACIOSA Y CON SEPARACIÓN */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm mb-6 flex items-center gap-3">
-        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
+      {/* BARRA DE BÚSQUEDA ESPACIOSA Y CON SEPARACIÓN VISUAL */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm my-6 flex items-center gap-3">
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
           <Icon name="search" size={16} className="text-slate-400" />
           <input
             type="text"
@@ -106,7 +106,7 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
 
         <button 
           onClick={() => setSearchTerm('')}
-          className="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs"
+          className="px-5 py-3 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs cursor-pointer"
           title="Restablecer búsqueda"
         >
           <Icon name="history" size={14} className="text-slate-500" />
@@ -114,26 +114,26 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
         </button>
       </div>
 
-      {/* TABLA DE PROVEEDORES */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-6">
+      {/* TABLA DE PROVEEDORES CON SEPARACIÓN GENEROSA */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
-                <th className="px-3.5 py-3 w-12 text-center text-white">Ver</th>
-                <th className="px-3.5 py-3 text-white">NIT / RUT</th>
-                <th className="px-3.5 py-3 text-white">Razón Social</th>
-                <th className="px-3.5 py-3 text-white">Asesor Comercial</th>
-                <th className="px-3.5 py-3 text-white">Teléfono</th>
-                <th className="px-3.5 py-3 text-white">Conceptos / Mes</th>
-                <th className="px-3.5 py-3 text-white">Área Asignada</th>
-                <th className="px-3.5 py-3 text-center text-white">Acciones</th>
+                <th className="px-4 py-3.5 w-12 text-center text-white">Ver</th>
+                <th className="px-4 py-3.5 text-white">NIT / RUT</th>
+                <th className="px-4 py-3.5 text-white">Razón Social</th>
+                <th className="px-4 py-3.5 text-white">Asesor Comercial</th>
+                <th className="px-4 py-3.5 text-white">Teléfono</th>
+                <th className="px-4 py-3.5 text-white">Conceptos / Mes</th>
+                <th className="px-4 py-3.5 text-white">Área Asignada</th>
+                <th className="px-4 py-3.5 text-center text-white">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium">
               {filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-12 text-slate-400 dark:text-zinc-500">
+                  <td colSpan="8" className="text-center py-16 text-slate-400 dark:text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Icon name="users" size={32} className="text-slate-300 dark:text-zinc-600" />
                       <span>No se encontraron proveedores registrados.</span>
@@ -150,7 +150,7 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                     <React.Fragment key={sup.id}>
                       <tr className={`hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}>
                         {/* TOGGLE EXPAND */}
-                        <td className="px-3.5 py-3 text-center">
+                        <td className="px-4 py-3 text-center">
                           <button 
                             onClick={() => toggleExpand(sup.id)}
                             className={`w-7 h-7 rounded-lg inline-flex items-center justify-center transition-all cursor-pointer ${
@@ -164,11 +164,11 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                           </button>
                         </td>
 
-                        <td className="px-3.5 py-3 font-mono font-bold text-slate-700 dark:text-zinc-300">
+                        <td className="px-4 py-3 font-mono font-bold text-slate-700 dark:text-zinc-300">
                           {sup.nit}
                         </td>
 
-                        <td className="px-3.5 py-3">
+                        <td className="px-4 py-3">
                           <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5 cursor-pointer" onClick={() => toggleExpand(sup.id)}>
                             <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[10px] font-black flex items-center justify-center shadow-xs ring-1 ring-red-100 dark:ring-red-950 flex-shrink-0">
                               {(sup.name || 'PR').substring(0, 2).toUpperCase()}
@@ -177,36 +177,36 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                           </div>
                         </td>
 
-                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300">
+                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
                           {sup.contact || '—'}
                         </td>
 
-                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300 font-mono">
+                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300 font-mono">
                           {sup.phone || '—'}
                         </td>
 
-                        <td className="px-3.5 py-3">
+                        <td className="px-4 py-3">
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs">
                             <Icon name="inventory" size={12} className="text-blue-600 dark:text-blue-400" />
                             {activeCount} {activeCount === 1 ? 'concepto activo' : 'conceptos activos'}
                           </span>
                         </td>
 
-                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300">
+                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
                           <div className="flex items-center gap-1.5">
                             <Icon name="areas" size={13} className="text-slate-400" />
                             <span>{sup.area || 'General'}</span>
                           </div>
                         </td>
 
-                        <td className="px-3.5 py-3 text-center">
+                        <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <button 
                               onClick={() => onEditSupplier(sup)}
                               className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-blue-200"
                               title="Editar proveedor"
                             >
-                              <Icon name="eye" size={14} />
+                              <i className="fa-regular fa-pen-to-square text-xs"></i>
                             </button>
 
                             <button 
