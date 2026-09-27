@@ -1,16 +1,16 @@
-﻿function CrmModule({ suppliers = [], quotations = [], onSaveQuotation, onDeleteQuotation, onUploadPdf }) {
+function CrmModule({ suppliers = [], quotations = [], onSaveQuotation, onDeleteQuotation, onUploadPdf }) {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('TODOS');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingQuotation, setEditingQuotation] = React.useState(null);
 
   const STAGES = [
-    { key: 'EN_BUSQUEDA', label: 'En Búsqueda', color: '#64748b', bg: '#f1f5f9' },
-    { key: 'CONSULTADO', label: 'Consultado', color: '#0284c7', bg: '#e0f2fe' },
-    { key: 'COTIZANDO', label: 'En Espera Cotización', color: '#d97706', bg: '#fef3c7' },
-    { key: 'COTIZADO', label: 'Cotización Recibida', color: '#16a34a', bg: '#dcfce7' },
-    { key: 'SELECCIONADO', label: 'Ganador / Aprobado', color: '#e11d48', bg: '#ffe4e6' },
-    { key: 'DESCARTADO', label: 'Descartado', color: '#94a3b8', bg: '#f8fafc' }
+    { key: 'EN_BUSQUEDA', label: 'En Búsqueda', colorClass: 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border-slate-200 dark:border-zinc-700' },
+    { key: 'CONSULTADO', label: 'Consultado', colorClass: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-900/50' },
+    { key: 'COTIZANDO', label: 'En Espera', colorClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-900/50' },
+    { key: 'COTIZADO', label: 'Cotización Recibida', colorClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50' },
+    { key: 'SELECCIONADO', label: '🏆 Adjudicado', colorClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-900/50 font-black' },
+    { key: 'DESCARTADO', label: 'Descartado', colorClass: 'bg-slate-100 text-slate-400 dark:bg-zinc-800/40 dark:text-zinc-500 border-slate-200 dark:border-zinc-800' }
   ];
 
   const getMeta = (k) => STAGES.find(s => s.key === k) || STAGES[0];
@@ -103,142 +103,293 @@
   };
 
   return (
-    <div className="dashboard-container" style={{paddingBottom: '40px'}}>
+    <div className="space-y-5 animate-fade-in pb-10">
       {/* HEADER */}
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', padding:'20px 24px', borderRadius:'20px', border:'1px solid #e2e8f0', flexWrap:'wrap', gap:'16px'}}>
-        <div style={{display:'flex', alignItems:'center', gap:'14px'}}>
-          <div style={{width:'46px', height:'46px', borderRadius:'14px', background:'linear-gradient(135deg, #e11d48, #be123c)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px', boxShadow:'0 4px 12px rgba(225,29,72,0.3)'}}>
+      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center text-xl shadow-lg shadow-rose-500/20">
             <i className="fa-solid fa-handshake"></i>
           </div>
           <div>
-            <h1 style={{fontSize:'18px', fontWeight:900, color:'#0f172a', margin:0}}>CRM de Cotizaciones & Proveedores</h1>
-            <p style={{fontSize:'12px', color:'#64748b', margin:'2px 0 0', fontWeight:600}}>Pipeline de compras: En Búsqueda ➔ Consultado ➔ En Espera ➔ Cotizado ➔ Adjudicado</p>
+            <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">CRM de Cotizaciones & Solicitudes</h1>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Pipeline de compras: Búsqueda ➔ Consultado ➔ Espera ➔ Cotizado ➔ Adjudicado</p>
           </div>
         </div>
-        <button className="btn-red-action" onClick={() => { setEditingQuotation({ id: 'crm-' + Date.now(), code: 'REQ-' + new Date().getFullYear() + '-' + (quotations.length + 1).toString().padStart(3, '0'), title: '', category: 'Insumos / Alimentos', description: '', urgency: 'Media', deadline: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], status: 'EN_BUSQUEDA', suppliers: [] }); setIsModalOpen(true); }} style={{padding:'12px 20px', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px'}}>
-          <i className="fa-solid fa-plus-circle"></i>
+
+        <button 
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer"
+          onClick={() => { 
+            setEditingQuotation({ 
+              id: 'crm-' + Date.now(), 
+              code: 'REQ-' + new Date().getFullYear() + '-' + (quotations.length + 1).toString().padStart(3, '0'), 
+              title: '', 
+              category: 'Insumos / Alimentos', 
+              description: '', 
+              urgency: 'Media', 
+              deadline: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], 
+              status: 'EN_BUSQUEDA', 
+              suppliers: [] 
+            }); 
+            setIsModalOpen(true); 
+          }}
+        >
+          <i className="fa-solid fa-plus-circle text-xs"></i>
           <span>Nueva Solicitud de Cotización</span>
         </button>
       </div>
 
       {/* KPIS */}
-      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:'12px'}}>
-        <div style={{background:'#fff', padding:'16px', borderRadius:'16px', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'12px'}}>
-          <div style={{width:'40px', height:'40px', borderRadius:'12px', background:'#eff6ff', color:'#2563eb', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px'}}><i className="fa-solid fa-layer-group"></i></div>
-          <div><div style={{fontSize:'11px', fontWeight:800, color:'#64748b', textTransform:'uppercase'}}>Total Solicitudes</div><div style={{fontSize:'20px', fontWeight:900, color:'#0f172a'}}>{metrics.total}</div></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center text-base">
+            <i className="fa-solid fa-layer-group"></i>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Solicitudes</div>
+            <div className="text-lg font-black text-slate-900 dark:text-white font-mono mt-0.5">{metrics.total}</div>
+          </div>
         </div>
-        <div style={{background:'#fff', padding:'16px', borderRadius:'16px', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'12px'}}>
-          <div style={{width:'40px', height:'40px', borderRadius:'12px', background:'#fef3c7', color:'#d97706', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px'}}><i className="fa-solid fa-magnifying-glass"></i></div>
-          <div><div style={{fontSize:'11px', fontWeight:800, color:'#64748b', textTransform:'uppercase'}}>En Búsqueda</div><div style={{fontSize:'20px', fontWeight:900, color:'#d97706'}}>{metrics.inSearch}</div></div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center text-base">
+            <i className="fa-solid fa-magnifying-glass"></i>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">En Búsqueda</div>
+            <div className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">{metrics.inSearch}</div>
+          </div>
         </div>
-        <div style={{background:'#fff', padding:'16px', borderRadius:'16px', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'12px'}}>
-          <div style={{width:'40px', height:'40px', borderRadius:'12px', background:'#e0f2fe', color:'#0284c7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px'}}><i className="fa-solid fa-hourglass-half"></i></div>
-          <div><div style={{fontSize:'11px', fontWeight:800, color:'#64748b', textTransform:'uppercase'}}>En Negociación</div><div style={{fontSize:'20px', fontWeight:900, color:'#0284c7'}}>{metrics.inProcess}</div></div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 flex items-center justify-center text-base">
+            <i className="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">En Negociación</div>
+            <div className="text-lg font-black text-sky-600 dark:text-sky-400 font-mono mt-0.5">{metrics.inProcess}</div>
+          </div>
         </div>
-        <div style={{background:'#fff', padding:'16px', borderRadius:'16px', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'12px'}}>
-          <div style={{width:'40px', height:'40px', borderRadius:'12px', background:'#dcfce7', color:'#16a34a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px'}}><i className="fa-solid fa-circle-check"></i></div>
-          <div><div style={{fontSize:'11px', fontWeight:800, color:'#64748b', textTransform:'uppercase'}}>Adjudicadas</div><div style={{fontSize:'20px', fontWeight:900, color:'#16a34a'}}>{metrics.completed}</div></div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center text-base">
+            <i className="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Adjudicadas</div>
+            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{metrics.completed}</div>
+          </div>
         </div>
       </div>
 
       {/* BUSQUEDA & FILTROS */}
-      <div style={{display:'flex', gap:'12px', background:'#fff', padding:'12px 16px', borderRadius:'16px', border:'1px solid #e2e8f0', alignItems:'center', flexWrap:'wrap'}}>
-        <div style={{position:'relative', flex:1, minWidth:'240px'}}>
-          <i className="fa-solid fa-search" style={{position:'absolute', left:'12px', top:'11px', color:'#94a3b8', fontSize: '13px'}}></i>
-          <input type="text" placeholder="Buscar requerimiento, producto o proveedor..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{width:'100%', padding:'8px 12px 8px 34px', borderRadius:'10px', border:'1px solid #cbd5e1', fontSize:'13px', outline:'none', boxSizing:'border-box'}} />
+      <div className="bg-white dark:bg-zinc-900 p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            type="text" 
+            placeholder="Buscar requerimiento, producto o proveedor..." 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+          />
         </div>
-        <div style={{display:'flex', gap:'6px', overflowX:'auto'}}>
-          {[{key:'TODOS', label:'Todas'}, {key:'EN_BUSQUEDA', label:'🔍 En Búsqueda'}, {key:'EN_PROCESO', label:'⏳ En Negociación'}, {key:'FINALIZADO', label:'🏆 Adjudicadas'}].map(tab => (
-            <button key={tab.key} onClick={() => setStatusFilter(tab.key)} style={{padding:'8px 14px', borderRadius:'10px', border:statusFilter===tab.key?'1px solid #e11d48':'1px solid #e2e8f0', background:statusFilter===tab.key?'#fff1f2':'#f8fafc', color:statusFilter===tab.key?'#e11d48':'#64748b', fontWeight:800, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap'}}>{tab.label}</button>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+          {[
+            { key: 'TODOS', label: 'Todas' }, 
+            { key: 'EN_BUSQUEDA', label: '🔍 En Búsqueda' }, 
+            { key: 'EN_PROCESO', label: '⏳ En Negociación' }, 
+            { key: 'FINALIZADO', label: '🏆 Adjudicadas' }
+          ].map(tab => (
+            <button 
+              key={tab.key} 
+              onClick={() => setStatusFilter(tab.key)} 
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                statusFilter === tab.key 
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 shadow-sm' 
+                  : 'bg-slate-50 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-zinc-700 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
       </div>
 
       {/* LISTADO PIPELINES */}
-      <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
+      <div className="space-y-4">
         {filtered.length === 0 ? (
-          <div style={{background:'#ffffff', padding:'48px 24px', borderRadius:'20px', border:'1px dashed #cbd5e1', textAlign:'center'}}>
-            <div style={{fontSize:'40px', color:'#cbd5e1', marginBottom:'12px'}}><i className="fa-solid fa-file-circle-question"></i></div>
-            <h3 style={{fontSize:'16px', fontWeight:800, color:'#334155'}}>No hay requerimientos registrados</h3>
-            <p style={{fontSize:'12px', color:'#64748b', maxWidth:'400px', margin:'6px auto 16px'}}>Crea tu primera solicitud para gestionar la cotización con varios proveedores.</p>
-            <button className="btn-red-action" onClick={() => { setEditingQuotation({ id: 'crm-' + Date.now(), code: 'REQ-' + new Date().getFullYear() + '-' + (quotations.length + 1).toString().padStart(3, '0'), title: '', category: 'Insumos / Alimentos', description: '', urgency: 'Media', deadline: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], status: 'EN_BUSQUEDA', suppliers: [] }); setIsModalOpen(true); }}><i className="fa-solid fa-plus"></i> Crear Solicitud de Cotización</button>
+          <div className="bg-white dark:bg-zinc-900 p-12 text-center rounded-3xl border border-dashed border-slate-200 dark:border-zinc-800 text-slate-400">
+            <i className="fa-solid fa-file-circle-question text-4xl mb-3 text-slate-300 dark:text-zinc-700 block"></i>
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">No hay requerimientos registrados</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto mb-4">Crea tu primera solicitud para gestionar la cotización con varios proveedores.</p>
+            <button 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20"
+              onClick={() => { 
+                setEditingQuotation({ 
+                  id: 'crm-' + Date.now(), 
+                  code: 'REQ-' + new Date().getFullYear() + '-' + (quotations.length + 1).toString().padStart(3, '0'), 
+                  title: '', 
+                  category: 'Insumos / Alimentos', 
+                  description: '', 
+                  urgency: 'Media', 
+                  deadline: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], 
+                  status: 'EN_BUSQUEDA', 
+                  suppliers: [] 
+                }); 
+                setIsModalOpen(true); 
+              }}
+            >
+              <i className="fa-solid fa-plus text-xs"></i>
+              <span>Crear Solicitud</span>
+            </button>
           </div>
         ) : (
           filtered.map(q => {
             const qSuppliers = q.suppliers || [];
             return (
-              <div key={q.id} style={{background:'#ffffff', borderRadius:'20px', border:'1px solid #e2e8f0', boxShadow:'0 2px 8px rgba(0,0,0,0.03)', overflow:'hidden'}}>
-                <div style={{padding:'16px 20px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap'}}>
-                    <span style={{background:'#e11d48', color:'#fff', fontSize:'11px', fontWeight:900, padding:'3px 8px', borderRadius:'6px'}}>{q.code}</span>
-                    <h3 style={{fontSize:'15px', fontWeight:900, color:'#0f172a', margin:0}}>{q.title}</h3>
-                    <span style={{background:'#f1f5f9', color:'#475569', padding:'3px 8px', borderRadius:'6px', fontSize:'11px', fontWeight:700}}>📂 {q.category}</span>
-                    <span style={{background:q.urgency==='Alta'?'#fee2e2':'#fef3c7', color:q.urgency==='Alta'?'#b91c1c':'#92400e', padding:'3px 8px', borderRadius:'6px', fontSize:'11px', fontWeight:800}}>⚡ {q.urgency}</span>
+              <div key={q.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
+                <div className="p-4 bg-slate-50/70 dark:bg-zinc-800/40 border-b border-slate-200/80 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="bg-rose-600 text-white text-[10px] font-black px-2.5 py-1 rounded-lg font-mono">{q.code}</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">{q.title}</h3>
+                    <span className="bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-bold">📂 {q.category}</span>
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
+                      q.urgency === 'Alta' 
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200' 
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200'
+                    }`}>
+                      ⚡ {q.urgency}
+                    </span>
                   </div>
-                  <button onClick={() => { Swal.fire({title:'¿Eliminar?', text:'Se borrará ' + q.code, icon:'warning', showCancelButton:true, confirmButtonColor:'#e11d48'}).then(r=>{if(r.isConfirmed) onDeleteQuotation(q.id);}); }} style={{background:'#fff1f2', border:'1px solid #fecdd3', color:'#e11d48', padding:'6px 10px', borderRadius:'8px', fontSize:'12px', fontWeight:700, cursor:'pointer'}}><i className="fa-solid fa-trash"></i></button>
+
+                  <button 
+                    onClick={() => { 
+                      Swal.fire({
+                        title: '¿Eliminar?', 
+                        text: 'Se borrará ' + q.code, 
+                        icon: 'warning', 
+                        showCancelButton: true, 
+                        confirmButtonColor: '#e11d48'
+                      }).then(r => {
+                        if (r.isConfirmed) onDeleteQuotation(q.id);
+                      }); 
+                    }} 
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-xs"
+                    title="Eliminar requerimiento"
+                  >
+                    <i className="fa-regular fa-trash-can"></i>
+                  </button>
                 </div>
 
-                <div style={{padding:'16px 20px'}}>
-                  {q.description && <p style={{fontSize:'12px', color:'#475569', marginBottom:'14px', lineHeight:1.4}}><strong>Especificaciones:</strong> {q.description}</p>}
+                <div className="p-4 space-y-3.5">
+                  {q.description && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      <strong className="text-slate-800 dark:text-slate-200">Especificaciones:</strong> {q.description}
+                    </p>
+                  )}
 
                   {/* SELECTOR INVITAR PROVEEDOR */}
-                  <div style={{display:'flex', alignItems:'center', gap:'10px', background:'#f8fafc', padding:'10px 14px', borderRadius:'12px', border:'1px solid #e2e8f0', marginBottom:'16px', flexWrap:'wrap'}}>
-                    <span style={{fontSize:'12px', fontWeight:800, color:'#334155'}}>➕ Invitar Proveedor a Cotizar:</span>
-                    <select id={'select-sup-' + q.id} style={{padding:'6px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'12px', fontWeight:700, outline:'none', flex:1, minWidth:'200px'}}>
+                  <div className="flex flex-wrap items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">➕ Invitar Proveedor:</span>
+                    <select 
+                      id={'select-sup-' + q.id} 
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-800 dark:text-white flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                    >
                       <option value="">-- Seleccionar Proveedor del Catálogo --</option>
                       {suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.nit}) - {s.area}</option>)}
                     </select>
-                    <button onClick={() => { const sel = document.getElementById('select-sup-' + q.id); const supObj = suppliers.find(s => s.id === sel.value); if(supObj) { handleAddSup(q, supObj); sel.value=''; } else { Swal.fire('Selecciona un Proveedor', 'Elige un proveedor del listado.', 'warning'); } }} style={{background:'#0f172a', color:'#ffffff', border:'none', padding:'7px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:800, cursor:'pointer'}}><i className="fa-solid fa-paper-plane"></i> Invitar Proveedor</button>
+                    <button 
+                      onClick={() => { 
+                        const sel = document.getElementById('select-sup-' + q.id); 
+                        const supObj = suppliers.find(s => s.id === sel.value); 
+                        if (supObj) { 
+                          handleAddSup(q, supObj); 
+                          sel.value = ''; 
+                        } else { 
+                          Swal.fire('Selecciona un Proveedor', 'Elige un proveedor del listado.', 'warning'); 
+                        } 
+                      }} 
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:bg-slate-800 transition-colors"
+                    >
+                      <i className="fa-solid fa-paper-plane mr-1"></i> Invitar
+                    </button>
                   </div>
 
                   {/* TABLA DE PROVEEDORES */}
                   {qSuppliers.length === 0 ? (
-                    <div style={{textAlign:'center', padding:'14px', color:'#94a3b8', fontSize:'12px', fontStyle:'italic'}}>Aún no has agregado proveedores para esta cotización.</div>
+                    <div className="text-center py-4 text-slate-400 text-xs italic">
+                      Aún no has agregado proveedores para esta cotización.
+                    </div>
                   ) : (
-                    <div style={{overflowX:'auto'}}>
-                      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px'}}>
+                    <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-zinc-800">
+                      <table className="w-full text-left border-collapse text-xs">
                         <thead>
-                          <tr style={{borderBottom:'2px solid #e2e8f0', textAlign:'left', color:'#64748b', fontSize:'11px', textTransform:'uppercase'}}>
-                            <th style={{padding:'8px 10px'}}>Proveedor</th>
-                            <th style={{padding:'8px 10px'}}>Estado del Proveedor</th>
-                            <th style={{padding:'8px 10px'}}>Monto Cotizado ($ COP)</th>
-                            <th style={{padding:'8px 10px'}}>Archivo PDF</th>
-                            <th style={{padding:'8px 10px', textAlign:'right'}}>Adjudicar</th>
+                          <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            <th className="py-2.5 px-3">Proveedor</th>
+                            <th className="py-2.5 px-3">Estado del Proveedor</th>
+                            <th className="py-2.5 px-3">Monto Cotizado ($ COP)</th>
+                            <th className="py-2.5 px-3">Archivo PDF</th>
+                            <th className="py-2.5 px-3 text-right">Adjudicar</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                           {qSuppliers.map((sup, idx) => {
                             const meta = getMeta(sup.stage);
                             const isSelected = sup.stage === 'SELECCIONADO';
                             return (
-                              <tr key={sup.id || idx} style={{borderBottom:'1px solid #f1f5f9', background:isSelected?'#fff1f2':'transparent'}}>
-                                <td style={{padding:'10px'}}>
-                                  <div style={{fontWeight:800, color:'#0f172a'}}>{sup.supplierName}</div>
-                                  {sup.phone && <div style={{fontSize:'11px', color:'#64748b'}}>📞 {sup.phone}</div>}
+                              <tr key={sup.id || idx} className={isSelected ? 'bg-rose-50/60 dark:bg-rose-950/20' : 'hover:bg-slate-50/50 dark:hover:bg-zinc-800/30'}>
+                                <td className="py-2.5 px-3">
+                                  <div className="font-bold text-slate-900 dark:text-white">{sup.supplierName}</div>
+                                  {sup.phone && <div className="text-[10px] text-slate-400">📞 {sup.phone}</div>}
                                 </td>
-                                <td style={{padding:'10px'}}>
-                                  <select value={sup.stage || 'CONSULTADO'} onChange={e => handleStageChange(q, idx, e.target.value)} style={{padding:'5px 10px', borderRadius:'8px', border:'1px solid ' + meta.color, background:meta.bg, color:meta.color, fontWeight:800, fontSize:'11px', outline:'none', cursor:'pointer'}}>
+                                <td className="py-2.5 px-3">
+                                  <select 
+                                    value={sup.stage || 'CONSULTADO'} 
+                                    onChange={e => handleStageChange(q, idx, e.target.value)} 
+                                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold outline-none cursor-pointer ${meta.colorClass}`}
+                                  >
                                     {STAGES.map(st => <option key={st.key} value={st.key}>{st.label}</option>)}
                                   </select>
                                 </td>
-                                <td style={{padding:'10px'}}>
-                                  <input type="number" defaultValue={sup.quotedAmount || ''} placeholder="$ 0" onBlur={e => handleAmountChange(q, idx, e.target.value)} style={{width:'120px', padding:'5px 8px', borderRadius:'6px', border:'1px solid #cbd5e1', fontWeight:800, fontSize:'12px'}} />
+                                <td className="py-2.5 px-3">
+                                  <input 
+                                    type="number" 
+                                    defaultValue={sup.quotedAmount || ''} 
+                                    placeholder="$ 0" 
+                                    onBlur={e => handleAmountChange(q, idx, e.target.value)} 
+                                    className="w-28 px-2.5 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white focus:ring-1 focus:ring-rose-500" 
+                                  />
                                 </td>
-                                <td style={{padding:'10px'}}>
+                                <td className="py-2.5 px-3">
                                   {sup.pdfPath ? (
-                                    <a href={sup.pdfPath} target="_blank" rel="noreferrer" style={{display:'inline-flex', alignItems:'center', gap:'6px', color:'#e11d48', fontWeight:800, textDecoration:'none', background:'#ffe4e6', padding:'4px 8px', borderRadius:'6px'}}><i className="fa-solid fa-file-pdf"></i> Ver PDF</a>
+                                    <a 
+                                      href={sup.pdfPath} 
+                                      target="_blank" 
+                                      rel="noreferrer" 
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 font-bold text-[11px] hover:bg-rose-100"
+                                    >
+                                      <i className="fa-solid fa-file-pdf"></i> Ver PDF
+                                    </a>
                                   ) : (
-                                    <label style={{display:'inline-flex', alignItems:'center', gap:'6px', color:'#0284c7', fontWeight:700, cursor:'pointer', background:'#f0f9ff', padding:'4px 8px', borderRadius:'6px', border:'1px dashed #7dd3fc'}}>
+                                    <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-dashed border-sky-300 dark:border-sky-800 font-semibold text-[11px] cursor-pointer hover:bg-sky-100">
                                       <i className="fa-solid fa-upload"></i> Adjuntar PDF
-                                      <input type="file" accept=".pdf,image/*" style={{display:'none'}} onChange={e => handlePdfUpload(q, idx, e.target.files[0])} />
+                                      <input type="file" accept=".pdf,image/*" className="hidden" onChange={e => handlePdfUpload(q, idx, e.target.files[0])} />
                                     </label>
                                   )}
                                 </td>
-                                <td style={{padding:'10px', textAlign:'right'}}>
+                                <td className="py-2.5 px-3 text-right">
                                   {isSelected ? (
-                                    <span style={{background:'#e11d48', color:'#fff', padding:'4px 10px', borderRadius:'8px', fontSize:'11px', fontWeight:900}}>🏆 GANADOR</span>
+                                    <span className="bg-rose-600 text-white px-3 py-1 rounded-lg text-[10px] font-black tracking-wider uppercase">
+                                      🏆 ADJUDICADO
+                                    </span>
                                   ) : (
-                                    <button onClick={() => handleStageChange(q, idx, 'SELECCIONADO')} style={{background:'#dcfce7', color:'#166534', border:'1px solid #bbf7d0', padding:'4px 10px', borderRadius:'8px', fontSize:'11px', fontWeight:800, cursor:'pointer'}}><i className="fa-solid fa-check"></i> Escoger</button>
+                                    <button 
+                                      onClick={() => handleStageChange(q, idx, 'SELECCIONADO')} 
+                                      className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 text-[11px] font-bold hover:bg-emerald-100"
+                                    >
+                                      <i className="fa-solid fa-check mr-1"></i> Escoger
+                                    </button>
                                   )}
                                 </td>
                               </tr>
@@ -257,26 +408,80 @@
 
       {/* MODAL NUEVA SOLICITUD */}
       {isModalOpen && editingQuotation && (
-        <div style={{position:'fixed', inset:0, background:'rgba(15, 23, 42, 0.6)', backdropFilter:'blur(3px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, padding:'16px'}}>
-          <div style={{background:'#ffffff', borderRadius:'24px', width:'100%', maxWidth:'520px', padding:'24px', boxShadow:'0 20px 40px rgba(0,0,0,0.2)'}}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-              <h2 style={{fontSize:'16px', fontWeight:900, color:'#0f172a', margin:0}}>Nueva Solicitud de Cotización</h2>
-              <button onClick={() => setIsModalOpen(false)} style={{background:'none', border:'none', fontSize:'18px', color:'#94a3b8', cursor:'pointer'}}><i className="fa-solid fa-xmark"></i></button>
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 dark:border-zinc-800 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-zinc-800">
+              <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center text-xs">
+                  <i className="fa-solid fa-file-circle-plus"></i>
+                </span>
+                Nueva Solicitud de Cotización
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
             </div>
-            <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-                <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Código *</label><input type="text" value={editingQuotation.code} onChange={e => setEditingQuotation({...editingQuotation, code:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', fontWeight:700, marginTop:'4px', boxSizing:'border-box'}} /></div>
-                <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Categoría</label><select value={editingQuotation.category} onChange={e => setEditingQuotation({...editingQuotation, category:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', fontWeight:700, marginTop:'4px', boxSizing:'border-box'}}><option value="Insumos / Alimentos">Insumos / Alimentos</option><option value="Empaques y Plásticos">Empaques y Plásticos</option><option value="Mantenimiento Industrial">Mantenimiento Industrial</option><option value="Transporte y Logística">Transporte y Logística</option><option value="Tecnología (TI)">Tecnología (TI)</option><option value="Servicios Generales">Servicios Generales</option></select></div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Código *</label>
+                  <input type="text" value={editingQuotation.code} onChange={e => setEditingQuotation({...editingQuotation, code: e.target.value})} className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Categoría</label>
+                  <select value={editingQuotation.category} onChange={e => setEditingQuotation({...editingQuotation, category: e.target.value})} className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white">
+                    <option value="Insumos / Alimentos">Insumos / Alimentos</option>
+                    <option value="Empaques y Plásticos">Empaques y Plásticos</option>
+                    <option value="Mantenimiento Industrial">Mantenimiento Industrial</option>
+                    <option value="Transporte y Logística">Transporte y Logística</option>
+                    <option value="Tecnología (TI)">Tecnología (TI)</option>
+                    <option value="Servicios Generales">Servicios Generales</option>
+                  </select>
+                </div>
               </div>
-              <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Título / Requerimiento *</label><input type="text" placeholder="ej: Suministro de Harina de Trigo o Cajas" value={editingQuotation.title} onChange={e => setEditingQuotation({...editingQuotation, title:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', fontWeight:700, marginTop:'4px', boxSizing:'border-box'}} /></div>
-              <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Detalles / Cantidades</label><textarea rows="3" placeholder="Describe cantidades, condiciones de entrega..." value={editingQuotation.description} onChange={e => setEditingQuotation({...editingQuotation, description:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'12px', marginTop:'4px', boxSizing:'border-box'}} /></div>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-                <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Urgencia</label><select value={editingQuotation.urgency} onChange={e => setEditingQuotation({...editingQuotation, urgency:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', marginTop:'4px', boxSizing:'border-box'}}><option value="Baja">Baja</option><option value="Media">Media</option><option value="Alta">Alta</option></select></div>
-                <div><label style={{fontSize:'11px', fontWeight:800, color:'#64748b'}}>Fecha Límite</label><input type="date" value={editingQuotation.deadline} onChange={e => setEditingQuotation({...editingQuotation, deadline:e.target.value})} style={{width:'100%', padding:'8px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', marginTop:'4px', boxSizing:'border-box'}} /></div>
+
+              <div>
+                <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Título / Requerimiento *</label>
+                <input type="text" placeholder="ej: Suministro de Harina de Trigo o Cajas" value={editingQuotation.title} onChange={e => setEditingQuotation({...editingQuotation, title: e.target.value})} className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white" />
               </div>
-              <div style={{display:'flex', justifyContent:'flex-end', gap:'10px', marginTop:'16px'}}>
-                <button type="button" onClick={() => setIsModalOpen(false)} style={{padding:'10px 16px', borderRadius:'10px', border:'1px solid #cbd5e1', background:'#f8fafc', fontWeight:700, cursor:'pointer'}}>Cancelar</button>
-                <button type="button" onClick={() => { if(!editingQuotation.title || !editingQuotation.code) { return Swal.fire('Campos requeridos', 'Ingresa código y título.', 'warning'); } onSaveQuotation(editingQuotation); setIsModalOpen(false); Swal.fire('Guardado', 'Solicitud registrada en MySQL.', 'success'); }} className="btn-red-action" style={{padding:'10px 20px', borderRadius:'10px'}}><i className="fa-solid fa-save"></i> Guardar Requerimiento</button>
+
+              <div>
+                <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Detalles / Cantidades</label>
+                <textarea rows="3" placeholder="Describe cantidades, condiciones de entrega..." value={editingQuotation.description} onChange={e => setEditingQuotation({...editingQuotation, description: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Urgencia</label>
+                  <select value={editingQuotation.urgency} onChange={e => setEditingQuotation({...editingQuotation, urgency: e.target.value})} className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white">
+                    <option value="Baja">Baja</option>
+                    <option value="Media">Media</option>
+                    <option value="Alta">Alta</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Fecha Límite</label>
+                  <input type="date" value={editingQuotation.deadline} onChange={e => setEditingQuotation({...editingQuotation, deadline: e.target.value})} className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white" />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50">Cancelar</button>
+                <button 
+                  type="button" 
+                  onClick={() => { 
+                    if (!editingQuotation.title || !editingQuotation.code) { 
+                      return Swal.fire('Campos requeridos', 'Ingresa código y título.', 'warning'); 
+                    } 
+                    onSaveQuotation(editingQuotation); 
+                    setIsModalOpen(false); 
+                    Swal.fire('Guardado', 'Solicitud registrada en MySQL.', 'success'); 
+                  }} 
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md shadow-rose-600/20"
+                >
+                  <i className="fa-solid fa-save mr-1"></i> Guardar Requerimiento
+                </button>
               </div>
             </div>
           </div>

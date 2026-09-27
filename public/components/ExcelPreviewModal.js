@@ -35,161 +35,171 @@ function ExcelPreviewModal({ isOpen, onClose, selectedInvoices, onToggleDelivere
   };
 
   return (
-    <div className="fixed-modal-overlay">
-      <div className="excel-modal-container">
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 md:p-6 animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200/80 dark:border-zinc-800 overflow-hidden">
         
         {/* Cabecera Tipo Excel / Hoja de Cálculo */}
-        <div className="excel-modal-header">
-          <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <div style={{background: '#107c41', color: '#fff', padding: '6px 10px', borderRadius: '8px', fontWeight: 900, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px'}}>
-              <i className="fa-regular fa-file-excel"></i> Excel View
+        <div className="p-4 md:px-6 bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20">
+              <i className="fa-regular fa-file-excel"></i>
+              <span>Excel View</span>
             </div>
             <div>
-              <h3 style={{fontSize: '15px', fontWeight: 800, margin: 0}}>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">
                 Vista Previa de Facturas Entregadas y Seleccionadas
               </h3>
-              <p style={{fontSize: '11px', color: '#64748b', margin: 0}}>
-                {selectedInvoices.length} facturas seleccionadas | {deliveredCount} con estado ENTREGADA | Total: <strong>${totalSelectedAmount.toLocaleString('es-CO')}</strong>
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                {selectedInvoices.length} facturas seleccionadas | {deliveredCount} con estado ENTREGADA | Total: <strong className="text-slate-800 dark:text-slate-200 font-mono">${totalSelectedAmount.toLocaleString('es-CO')}</strong>
               </p>
             </div>
           </div>
 
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <button className="btn-excel-tool" onClick={handleExportCsv} title="Descargar archivo Excel / CSV">
-              <i className="fa-solid fa-file-arrow-down" style={{color: '#15803d'}}></i>
+          <div className="flex items-center gap-2">
+            <button 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shadow-xs" 
+              onClick={handleExportCsv} 
+              title="Descargar archivo Excel / CSV"
+            >
+              <i className="fa-solid fa-file-arrow-down text-emerald-600"></i>
               <span>Exportar CSV</span>
             </button>
-            <button className="btn-excel-tool" onClick={handlePrint} title="Imprimir informe">
-              <i className="fa-solid fa-print" style={{color: '#2563eb'}}></i>
+            <button 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shadow-xs" 
+              onClick={handlePrint} 
+              title="Imprimir informe"
+            >
+              <i className="fa-solid fa-print text-blue-600"></i>
               <span>Imprimir</span>
             </button>
-            <button className="btn-excel-close" onClick={onClose} title="Cerrar modal">
-              <i className="fa-solid fa-xmark"></i>
+            <button 
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" 
+              onClick={onClose} 
+              title="Cerrar modal"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
             </button>
           </div>
         </div>
 
         {/* Barra de herramientas / Fórmula tipo Excel */}
-        <div className="excel-formula-bar">
-          <div className="excel-cell-name">A1:{String.fromCharCode(65 + 10)}{selectedInvoices.length + 1}</div>
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px', flex: 1}}>
-            <span style={{fontWeight: 800, color: '#94a3b8', fontStyle: 'italic'}}>fx</span>
-            <span style={{fontSize: '12px', fontWeight: 600, color: '#475569'}}>
+        <div className="px-6 py-2 bg-slate-100/70 dark:bg-zinc-800/40 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-3 text-xs">
+          <div className="font-mono font-bold text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-[11px]">
+            A1:{String.fromCharCode(65 + 10)}{selectedInvoices.length + 1}
+          </div>
+          <div className="flex items-center gap-2 flex-1">
+            <span className="font-black italic text-slate-400 font-serif">fx</span>
+            <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
               =SUMA(VALOR) = ${totalSelectedAmount.toLocaleString('es-CO')} COP | Entregadas: {deliveredCount}/{selectedInvoices.length}
             </span>
           </div>
         </div>
 
-        {/* Tabla Estilo Hoja de Cálculo Excel con cuadrícula y columnas A, B, C... */}
-        <div className="excel-sheet-viewport">
-          <table className="excel-sheet-table">
-            <thead>
-              {/* Fila de letras de columnas Excel */}
-              <tr className="excel-col-letters-row">
-                <th style={{width: '40px'}}></th>
-                <th>A</th>
-                <th>B</th>
-                <th>C</th>
-                <th>D</th>
-                <th>E</th>
-                <th>F</th>
-                <th>G</th>
-                <th>H</th>
-                <th>I</th>
-                <th>J</th>
-                <th>K</th>
-                <th>L</th>
-              </tr>
-              {/* Fila de Títulos Reales */}
-              <tr className="excel-header-row">
-                <th style={{textAlign: 'center', background: '#e2e8f0', color: '#475569'}}>#</th>
-                <th>PROVEEDOR</th>
-                <th>SERVICIO</th>
-                <th>N DE FACTURA</th>
-                <th>FECHA EMISIÓN</th>
-                <th>FECHA ENTREGA</th>
-                <th style={{textAlign: 'right'}}>VALOR ($)</th>
-                <th style={{textAlign: 'center'}}>FIRMADA</th>
-                <th style={{textAlign: 'center'}}>ORDEN STD</th>
-                <th>OC</th>
-                <th style={{textAlign: 'center'}}>EN FACTURE</th>
-                <th style={{textAlign: 'center'}}>ENTREGADA</th>
-                <th style={{textAlign: 'center'}}>DOCUMENTO PDF</th>
+        {/* Tabla Estilo Hoja de Cálculo Excel */}
+        <div className="flex-1 overflow-auto bg-slate-50 dark:bg-zinc-950">
+          <table className="w-full text-left border-collapse text-xs font-sans">
+            <thead className="sticky top-0 bg-slate-200/90 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 shadow-xs z-10">
+              <tr className="border-b border-slate-300 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-wider">
+                <th className="py-2 px-3 text-center w-10 bg-slate-300/80 dark:bg-zinc-700 text-slate-600 dark:text-slate-300">#</th>
+                <th className="py-2 px-3">PROVEEDOR</th>
+                <th className="py-2 px-3">SERVICIO</th>
+                <th className="py-2 px-3 font-mono">N° FACTURA</th>
+                <th className="py-2 px-3">FECHA EMISIÓN</th>
+                <th className="py-2 px-3">FECHA ENTREGA</th>
+                <th className="py-2 px-3 text-right">VALOR ($)</th>
+                <th className="py-2 px-3 text-center">FIRMADA</th>
+                <th className="py-2 px-3 text-center">ORDEN STD</th>
+                <th className="py-2 px-3">OC</th>
+                <th className="py-2 px-3 text-center">EN FACTURE</th>
+                <th className="py-2 px-3 text-center">ENTREGADA</th>
+                <th className="py-2 px-3 text-center">DOCUMENTO</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-200 dark:divide-zinc-800 bg-white dark:bg-zinc-900">
               {selectedInvoices.map((inv, idx) => (
-                <tr key={inv.id || idx} className={inv.delivered === 'SÍ' ? 'row-delivered-highlight' : ''}>
-                  {/* Número de fila Excel 1, 2, 3... */}
-                  <td className="excel-row-num">{idx + 1}</td>
-                  
-                  <td style={{fontWeight: 700, color: '#0f172a'}}>{inv.supplier}</td>
-                  <td style={{color: '#475569'}}>{inv.service}</td>
-                  <td style={{fontFamily: 'monospace', fontWeight: 800, color: '#e11d48'}}>{inv.invoiceNumber}</td>
-                  <td>{inv.emissionDate}</td>
-                  <td style={{color: '#047857', fontWeight: 700}}>{inv.deliveryDate}</td>
-                  <td style={{textAlign: 'right', fontWeight: 800, fontFamily: 'monospace'}}>
+                <tr key={inv.id || idx} className={`hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 ${inv.delivered === 'SÍ' ? 'bg-emerald-50/30 dark:bg-emerald-950/10' : ''}`}>
+                  <td className="py-2.5 px-3 text-center font-mono font-bold text-[10px] text-slate-400 bg-slate-50 dark:bg-zinc-800/40 border-r border-slate-200 dark:border-zinc-800">{idx + 1}</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{inv.supplier}</td>
+                  <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{inv.service}</td>
+                  <td className="py-2.5 px-3 font-mono font-bold text-rose-600 dark:text-rose-400">{inv.invoiceNumber}</td>
+                  <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{inv.emissionDate}</td>
+                  <td className="py-2.5 px-3 font-semibold text-emerald-700 dark:text-emerald-400">{inv.deliveryDate}</td>
+                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
                     ${Number(inv.value || 0).toLocaleString('es-CO')}
                   </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.signed === 'SÍ' ? 'state-yes' : 'state-no'}`}>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                      inv.signed === 'SÍ' 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}>
                       {inv.signed || 'NO'}
                     </span>
                   </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.orderStd === 'SÍ' ? 'state-yes' : 'state-no'}`}>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                      inv.orderStd === 'SÍ' 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}>
                       {inv.orderStd || 'NO'}
                     </span>
                   </td>
-                  <td style={{fontFamily: 'monospace', color: '#7c3aed', fontWeight: 700}}>{inv.oc}</td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.enFacture === 'SÍ' ? 'state-yes' : 'state-pending'}`}>
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{inv.oc}</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                      inv.enFacture === 'SÍ' 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
                       {inv.enFacture || 'AÚN NO'}
                     </span>
                   </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span 
-                      className={`state-pill ${inv.delivered === 'SÍ' ? 'state-yes' : 'state-no'}`}
+                  <td className="py-2.5 px-3 text-center">
+                    <button 
+                      className={`px-2.5 py-0.5 rounded-md text-[10px] font-black border transition-all cursor-pointer ${
+                        inv.delivered === 'SÍ' 
+                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs' 
+                          : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-300 border-slate-200 dark:border-zinc-700'
+                      }`}
                       onClick={() => onToggleDelivered && onToggleDelivered(inv.id)}
-                      style={{cursor: 'pointer'}}
                       title="Clic para cambiar estado de entrega"
                     >
                       {inv.delivered === 'SÍ' ? 'SÍ ✓' : 'NO ✕'}
-                    </span>
+                    </button>
                   </td>
-                  <td style={{textAlign: 'center'}}>
+                  <td className="py-2.5 px-3 text-center">
                     {inv.pdfPath ? (
                       <a 
                         href={inv.pdfPath} 
                         target="_blank" 
                         rel="noreferrer" 
-                        className="btn-pdf-badge"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline"
                         title={`Ver PDF: ${inv.pdfOriginalName || 'Archivo adjunto'}`}
                       >
-                        <i className="fa-solid fa-file-pdf"></i> Ver PDF
+                        <i className="fa-solid fa-file-pdf"></i> Ver
                       </a>
                     ) : (
                       <button 
-                        className="btn-upload-pdf-badge"
+                        className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                         onClick={() => onUploadPdf && onUploadPdf(inv.id)}
-                        title="Adjuntar PDF físico a esta factura"
                       >
-                        <i className="fa-solid fa-paperclip"></i> Adjuntar PDF
+                        <i className="fa-solid fa-paperclip"></i> Adjuntar
                       </button>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr className="excel-total-row">
-                <td colSpan="6" style={{textAlign: 'right', fontWeight: 900, textTransform: 'uppercase', color: '#0f172a'}}>
+            <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-zinc-800 font-bold border-t-2 border-slate-300 dark:border-zinc-700 z-10">
+              <tr>
+                <td colSpan="6" className="py-3 px-4 text-right font-black uppercase text-slate-800 dark:text-slate-100 text-xs">
                   TOTAL GENERAL SELECCIONADO:
                 </td>
-                <td style={{textAlign: 'right', fontWeight: 900, fontSize: '13px', color: '#15803d', fontFamily: 'monospace'}}>
+                <td className="py-3 px-3 text-right font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm">
                   ${totalSelectedAmount.toLocaleString('es-CO')}
                 </td>
-                <td colSpan="6" style={{textAlign: 'center', fontSize: '11px', color: '#64748b'}}>
+                <td colSpan="6" className="py-3 px-3 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
                   {deliveredCount} facturas entregadas de {selectedInvoices.length} seleccionadas
                 </td>
               </tr>
@@ -198,12 +208,15 @@ function ExcelPreviewModal({ isOpen, onClose, selectedInvoices, onToggleDelivere
         </div>
 
         {/* Footer del Modal */}
-        <div className="excel-modal-footer">
-          <div style={{fontSize: '11px', color: '#64748b'}}>
-            💡 Los archivos PDF se guardan de forma segura en la carpeta local <code>/uploads</code> y la información en <strong>MySQL</strong>.
+        <div className="p-4 md:px-6 bg-slate-50 dark:bg-zinc-800/60 border-t border-slate-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            💡 Documentos guardados de forma segura en local <code>/uploads</code> y registros persistidos en <strong>MySQL</strong>.
           </div>
-          <button className="btn-red-action" onClick={onClose}>
-            Entendido / Cerrar Vista
+          <button 
+            className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:bg-slate-800 transition-colors"
+            onClick={onClose}
+          >
+            Cerrar Vista
           </button>
         </div>
 

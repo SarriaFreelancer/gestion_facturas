@@ -17,6 +17,7 @@ function buildFrontendBundle() {
     const bundlePath = path.join(__dirname, '..', 'public', 'bundle.js');
 
     const componentFiles = [
+      'Icons.js',
       'LoginModal.js',
       'Sidebar.js',
       'TopNavbar.js',
@@ -27,6 +28,9 @@ function buildFrontendBundle() {
       'InvoicesModule.js',
       'SuppliersModule.js',
       'CrmModule.js',
+      'TechInventoryModule.js',
+      'TechBudgetModule.js',
+      'AreasModule.js',
       'UsersModule.js',
       'AlertsModule.js',
       'ExcelPreviewModal.js'
@@ -199,8 +203,99 @@ async function runStartupScript() {
       );
     `);
 
+    // 5. Tabla de Áreas Organizacionales (con 1er y 2do Responsable)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS company_areas (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(150) NOT NULL UNIQUE,
+        director VARCHAR(255) NOT NULL,
+        headOrCoord VARCHAR(255) NULL,
+        email VARCHAR(255) NULL,
+        budgetLimit DECIMAL(15,2) DEFAULT 0,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 6. Tabla de Inventario de Equipos y Periféricos TI
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tech_inventory (
+        id VARCHAR(100) PRIMARY KEY,
+        category VARCHAR(100) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        brandModel VARCHAR(255) NULL,
+        serialCode VARCHAR(100) NULL,
+        quantity INT DEFAULT 0,
+        unit VARCHAR(50) DEFAULT 'Unidades',
+        areaAssigned VARCHAR(150) NULL,
+        status VARCHAR(50) DEFAULT 'Disponible',
+        notes TEXT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 7. Tabla de Presupuestos Tecnológicos Anuales
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tech_budgets (
+        id VARCHAR(100) PRIMARY KEY,
+        year VARCHAR(10) NOT NULL,
+        area VARCHAR(150) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        itemType VARCHAR(255) NOT NULL,
+        quantity INT DEFAULT 1,
+        unitCost DECIMAL(15,2) DEFAULT 0,
+        totalCost DECIMAL(15,2) DEFAULT 0,
+        priority VARCHAR(50) DEFAULT 'Media',
+        status VARCHAR(50) DEFAULT 'Planificado',
+        notes TEXT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed de Áreas si la tabla está vacía
+    const [existingAreas] = await pool.query('SELECT COUNT(*) as count FROM company_areas');
+    if (existingAreas[0].count === 0) {
+      await pool.query(`
+        INSERT INTO company_areas (id, name, director, headOrCoord, email, budgetLimit) VALUES
+        ('area-1', 'Tecnología (TI)', 'Ing. Carlos Mendoza (Director TI)', 'David Sarria (Líder Sistemas)', 'ti@alimentosenriko.com', 45000000),
+        ('area-2', 'Adquisiciones & Compras', 'Dra. Patricia Gómez (Directora Compras)', 'Andrea Valbuena (Coordinadora)', 'compras@alimentosenriko.com', 25000000),
+        ('area-3', 'Contabilidad & Finanzas', 'Dr. Roberto Meza (Director Financiero)', 'Juliana Rivas (Jefe Contable)', 'contabilidad@alimentosenriko.com', 18000000),
+        ('area-4', 'Operaciones & Planta', 'Ing. Fernando Castro (Director Operaciones)', 'Mauricio Pardo (Jefe Planta)', 'planta@alimentosenriko.com', 35000000),
+        ('area-5', 'Dirección General', 'Gerencia General Enriko', 'Asistente de Dirección', 'gerencia@alimentosenriko.com', 60000000);
+      `);
+    }
+
+    // Seed de Inventario TI si la tabla está vacía
+    const [existingInv] = await pool.query('SELECT COUNT(*) as count FROM tech_inventory');
+    if (existingInv[0].count === 0) {
+      await pool.query(`
+        INSERT INTO tech_inventory (id, category, name, brandModel, serialCode, quantity, unit, areaAssigned, status, notes) VALUES
+        ('ti-1', 'Periféricos', 'Mouse Ergonómico Inalámbrico', 'Logitech MX Master 3S', 'SN-LOG-9921', 9, 'Unidades', 'Tecnología (TI)', 'Disponible', 'Equipos listos para entrega inmediata a puestos de trabajo.'),
+        ('ti-2', 'Periféricos', 'Teclado Mecánico Silencioso', 'Keychron K3 Pro', 'SN-KCH-4412', 6, 'Unidades', 'Tecnología (TI)', 'Disponible', 'Distribución en español para áreas administrativas.'),
+        ('ti-3', 'Monitores', 'Monitor 27" 4K IPS UltraWide', 'Dell UltraSharp U2723QE', 'SN-DEL-7701', 4, 'Unidades', 'Tecnología (TI)', 'Disponible', 'Monitores para desarrollo y analítica de datos.'),
+        ('ti-4', 'Equipos de Cómputo', 'Laptop ThinkPad T14s Core i7 32GB', 'Lenovo ThinkPad T14s Gen 4', 'SN-LEN-8819', 3, 'Unidades', 'Tecnología (TI)', 'Disponible', 'Portátiles de alto rendimiento corporativo.'),
+        ('ti-5', 'Redes & Conectividad', 'Switch Administrable 24 Puertos PoE+', 'Ubiquiti UniFi Pro 24 PoE', 'SN-UBI-1029', 2, 'Unidades', 'Operaciones & Planta', 'Disponible', 'Backbone de red cableada planta principal.'),
+        ('ti-6', 'Licencias de AI', 'Tokens Copilot Studio & API Keys', 'Microsoft / OpenAI Dedicated', 'LIC-AI-9021', 9, 'Tokens/Slots', 'Tecnología (TI)', 'Disponible', 'Licencias empresariales para automatización y desarrollo.');
+      `);
+    }
+
+    // Seed de Presupuestos TI 2026 si está vacío
+    const [existingBud] = await pool.query('SELECT COUNT(*) as count FROM tech_budgets');
+    if (existingBud[0].count === 0) {
+      await pool.query(`
+        INSERT INTO tech_budgets (id, year, area, category, itemType, quantity, unitCost, totalCost, priority, status, notes) VALUES
+        ('bud-1', '2026', 'Tecnología (TI)', 'Licencias de AI', 'OpenAI API / ChatGPT Enterprise (Slots anuales)', 10, 1200000, 12000000, 'Alta', 'Aprobado', 'Plataformas de IA generativa para el equipo de desarrollo y análisis.'),
+        ('bud-2', '2026', 'Tecnología (TI)', 'Licencias de AI', 'GitHub Copilot Business', 8, 950000, 7600000, 'Alta', 'Aprobado', 'Asistente de desarrollo acelerado para ingenieros.'),
+        ('bud-3', '2026', 'Adquisiciones & Compras', 'Periféricos', 'Kits Teclado + Mouse Inalámbricos', 12, 180000, 2160000, 'Media', 'Planificado', 'Renovación de periféricos para puestos de compras.'),
+        ('bud-4', '2026', 'Contabilidad & Finanzas', 'Monitores', 'Monitores 24" Dell Full HD con Hub', 6, 850000, 5100000, 'Media', 'Planificado', 'Puestos de doble pantalla para cierres contables.'),
+        ('bud-5', '2026', 'Operaciones & Planta', 'Equipos de Cómputo', 'Terminales Industriales Ruggedized', 4, 3800000, 15200000, 'Alta', 'En Revisión', 'Equipos para control de despacho en muelles de carga.');
+      `);
+    }
+
     isMySqlConnected = true;
-    console.log('✅ [MySQL GESTION_FACTURAS] Conectado e inicializado exitosamente.');
+    console.log('✅ [MySQL GESTION_FACTURAS] Conectado e inicializado exitosamente con tablas de Facturación, Inventario TI, Presupuestos y Áreas.');
   } catch (err) {
     console.log('⚠️ [MySQL] Error al inicializar tablas:', err.message);
   }
@@ -486,6 +581,248 @@ app.delete('/api/users/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. ÁREAS ORGANIZACIONALES (CON 1ER Y 2DO RESPONSABLE)
+app.get('/api/areas', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM company_areas ORDER BY name ASC');
+    // Enriquecer con conteo de equipos asignados y presupuestos
+    const [inventoryCounts] = await pool.query(`
+      SELECT areaAssigned, SUM(quantity) as totalItems 
+      FROM tech_inventory 
+      WHERE areaAssigned IS NOT NULL AND areaAssigned != ''
+      GROUP BY areaAssigned
+    `);
+    const [budgetCounts] = await pool.query(`
+      SELECT area, COUNT(*) as budgetCount, SUM(totalCost) as totalBudget 
+      FROM tech_budgets 
+      GROUP BY area
+    `);
+
+    const invMap = {};
+    inventoryCounts.forEach(r => { if (r.areaAssigned) invMap[r.areaAssigned.trim().toLowerCase()] = Number(r.totalItems) || 0; });
+    
+    const budMap = {};
+    budgetCounts.forEach(r => { if (r.area) budMap[r.area.trim().toLowerCase()] = { count: Number(r.budgetCount) || 0, total: Number(r.totalBudget) || 0 }; });
+
+    const enriched = rows.map(a => {
+      const key = (a.name || '').trim().toLowerCase();
+      return {
+        ...a,
+        assignedTechItems: invMap[key] || 0,
+        budgetItemsCount: budMap[key] ? budMap[key].count : 0,
+        calculatedBudgetSum: budMap[key] ? budMap[key].total : 0
+      };
+    });
+
+    return res.json(enriched);
+  } catch (err) {
+    console.error('Error al obtener áreas:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/areas', async (req, res) => {
+  const { id, name, director, headOrCoord, email, budgetLimit } = req.body;
+  const areaId = id || ('area-' + Date.now());
+  try {
+    await pool.query(`
+      INSERT INTO company_areas (id, name, director, headOrCoord, email, budgetLimit)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        name = VALUES(name),
+        director = VALUES(director),
+        headOrCoord = VALUES(headOrCoord),
+        email = VALUES(email),
+        budgetLimit = VALUES(budgetLimit);
+    `, [areaId, name, director, headOrCoord || '', email || '', Number(budgetLimit) || 0]);
+
+    broadcastLiveChange('AREAS_UPDATED', { id: areaId });
+    res.status(201).json({ success: true, id: areaId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/areas/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM company_areas WHERE id = ?', [req.params.id]);
+    broadcastLiveChange('AREAS_UPDATED', { id: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7. INVENTARIO DE EQUIPOS Y PERIFÉRICOS TI
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM tech_inventory ORDER BY category ASC, name ASC');
+    return res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener inventario:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/inventory', async (req, res) => {
+  const { id, category, name, brandModel, serialCode, quantity, unit, areaAssigned, status, notes } = req.body;
+  const invId = id || ('ti-' + Date.now());
+  const qty = Number(quantity);
+  const finalQty = isNaN(qty) ? 0 : qty;
+
+  try {
+    await pool.query(`
+      INSERT INTO tech_inventory (id, category, name, brandModel, serialCode, quantity, unit, areaAssigned, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        category = VALUES(category),
+        name = VALUES(name),
+        brandModel = VALUES(brandModel),
+        serialCode = VALUES(serialCode),
+        quantity = VALUES(quantity),
+        unit = VALUES(unit),
+        areaAssigned = VALUES(areaAssigned),
+        status = VALUES(status),
+        notes = VALUES(notes);
+    `, [invId, category || 'Periféricos', name, brandModel || '', serialCode || '', finalQty, unit || 'Unidades', areaAssigned || 'Tecnología (TI)', status || (finalQty > 0 ? 'Disponible' : 'Agotado'), notes || '']);
+
+    broadcastLiveChange('INVENTORY_UPDATED', { id: invId });
+    res.status(201).json({ success: true, id: invId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ACCIÓN ENTREGAR EQUIPO (DESCUENTA DE INVENTARIO DISPONIBLE)
+app.post('/api/inventory/deliver', async (req, res) => {
+  const { id, quantityToDeliver, deliveredToArea, recipientName, notes } = req.body;
+  const toDeliver = Number(quantityToDeliver) || 1;
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM tech_inventory WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Artículo de inventario no encontrado' });
+    }
+
+    const currentItem = rows[0];
+    const currentQty = Number(currentItem.quantity) || 0;
+
+    if (currentQty < toDeliver) {
+      return res.status(400).json({ 
+        error: `Cantidad insuficiente. Disponible: ${currentQty} ${currentItem.unit || 'uds'}, solicitada: ${toDeliver}` 
+      });
+    }
+
+    const newQty = currentQty - toDeliver;
+    const newStatus = newQty === 0 ? 'Agotado' : 'Disponible';
+    const deliveryLog = `\n[ENTREGA ${new Date().toISOString().split('T')[0]}]: ${toDeliver} ${currentItem.unit || 'uds'} entregadas a ${recipientName || 'Personal'} (${deliveredToArea || 'Área'}). ${notes || ''}`;
+    const updatedNotes = (currentItem.notes || '') + deliveryLog;
+
+    await pool.query(`
+      UPDATE tech_inventory 
+      SET quantity = ?, status = ?, notes = ? 
+      WHERE id = ?
+    `, [newQty, newStatus, updatedNotes, id]);
+
+    broadcastLiveChange('INVENTORY_UPDATED', { id });
+    res.json({ 
+      success: true, 
+      id, 
+      previousQuantity: currentQty, 
+      deliveredQuantity: toDeliver, 
+      remainingQuantity: newQty 
+    });
+  } catch (err) {
+    console.error('Error al entregar artículo de inventario:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/inventory/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM tech_inventory WHERE id = ?', [req.params.id]);
+    broadcastLiveChange('INVENTORY_UPDATED', { id: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. PRESUPUESTOS TECNOLÓGICOS ANUALES
+app.get('/api/budgets', async (req, res) => {
+  const { year, area } = req.query;
+  try {
+    let sql = 'SELECT * FROM tech_budgets WHERE 1=1';
+    const params = [];
+    if (year && year !== 'Todos') {
+      sql += ' AND year = ?';
+      params.push(year);
+    }
+    if (area && area !== 'Todos') {
+      sql += ' AND area = ?';
+      params.push(area);
+    }
+    sql += ' ORDER BY year DESC, area ASC, category ASC';
+    const [rows] = await pool.query(sql, params);
+    return res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener presupuestos:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/budgets', async (req, res) => {
+  const { id, year, area, category, itemType, quantity, unitCost, priority, status, notes } = req.body;
+  const budId = id || ('bud-' + Date.now());
+  const qty = Number(quantity) || 1;
+  const unit = Number(unitCost) || 0;
+  const total = qty * unit;
+
+  try {
+    await pool.query(`
+      INSERT INTO tech_budgets (id, year, area, category, itemType, quantity, unitCost, totalCost, priority, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        year = VALUES(year),
+        area = VALUES(area),
+        category = VALUES(category),
+        itemType = VALUES(itemType),
+        quantity = VALUES(quantity),
+        unitCost = VALUES(unitCost),
+        totalCost = VALUES(totalCost),
+        priority = VALUES(priority),
+        status = VALUES(status),
+        notes = VALUES(notes);
+    `, [budId, year || '2026', area || 'Tecnología (TI)', category || 'Licencias de AI', itemType, qty, unit, total, priority || 'Media', status || 'Planificado', notes || '']);
+
+    broadcastLiveChange('BUDGETS_UPDATED', { id: budId });
+    res.status(201).json({ success: true, id: budId, totalCost: total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/budgets/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM tech_budgets WHERE id = ?', [req.params.id]);
+    broadcastLiveChange('BUDGETS_UPDATED', { id: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. LIMPIEZA DE BASE DE DATOS E INICIALIZACIÓN LIMPIA (MES ACTUAL)
+app.post('/api/clean-database', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM invoices');
+    broadcastLiveChange('INVOICES_UPDATED');
+    res.json({ success: true, message: 'Base de datos de facturas limpiada exitosamente.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

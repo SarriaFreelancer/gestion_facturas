@@ -7,6 +7,9 @@ const ROUTE_MAP = {
   '/facturas': 'invoices',
   '/proveedores': 'suppliers',
   '/crm': 'crm',
+  '/inventario': 'inventory',
+  '/presupuestos': 'budgets',
+  '/areas': 'areas',
   '/reportes': 'reports',
   '/alertas': 'alerts',
   '/usuarios': 'users',
@@ -20,6 +23,9 @@ const VIEW_TO_PATH = {
   'invoices': '/facturas',
   'suppliers': '/proveedores',
   'crm': '/crm',
+  'inventory': '/inventario',
+  'budgets': '/presupuestos',
+  'areas': '/areas',
   'reports': '/reportes',
   'alerts': '/alertas',
   'users': '/usuarios',
@@ -72,6 +78,7 @@ function App() {
   const setCurrentView = (view) => navigateTo(view);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('ae_sidebar_collapsed') === 'true');
   const [selectedMonth, setSelectedMonth] = useState('Todos');
   const [selectedYear, setSelectedYear] = useState('Todos');
   const [currentTab, setCurrentTab] = useState('Todos');
@@ -81,6 +88,14 @@ function App() {
   
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [isExcelPreviewOpen, setIsExcelPreviewOpen] = useState(false);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('ae_sidebar_collapsed', next.toString());
+      return next;
+    });
+  };
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ae_dark') === 'true');
   const [currentUser, setCurrentUser] = useState(() => {
@@ -127,19 +142,28 @@ function App() {
   const [manualInvoices, setManualInvoices] = useState([]);
   const [quotations, setQuotations] = useState([]);
   const [users, setUsers] = useState([]);
+  const [techInventory, setTechInventory] = useState([]);
+  const [techBudgets, setTechBudgets] = useState([]);
+  const [areas, setAreas] = useState([]);
 
   const loadInitialData = async () => {
     try {
-      const [supData, invData, crmData, usrData] = await Promise.all([
+      const [supData, invData, crmData, usrData, invTiData, budData, areaData] = await Promise.all([
         window.API.suppliers.getAll(),
         window.API.invoices.getAll(),
         window.API.crm.getAll(),
-        window.API.users.getAll()
+        window.API.users.getAll(),
+        window.API.inventory.getAll(),
+        window.API.budgets.getAll(),
+        window.API.areas.getAll()
       ]);
       if (Array.isArray(supData)) setSuppliers(supData);
       if (Array.isArray(invData)) setManualInvoices(invData);
       if (Array.isArray(crmData)) setQuotations(crmData);
       if (Array.isArray(usrData) && usrData.length > 0) setUsers(usrData);
+      if (Array.isArray(invTiData)) setTechInventory(invTiData);
+      if (Array.isArray(budData)) setTechBudgets(budData);
+      if (Array.isArray(areaData)) setAreas(areaData);
     } catch (e) {
       console.error('Error cargando datos iniciales:', e);
     }
@@ -165,6 +189,89 @@ function App() {
     }
   };
 
+  // HANDLERS DE INVENTARIO TI
+  const handleAddOrUpdateInventoryItem = async (item) => {
+    try {
+      await window.API.inventory.save(item);
+      const data = await window.API.inventory.getAll();
+      if (Array.isArray(data)) setTechInventory(data);
+      Swal.fire('Guardado', 'Equipo registrado en inventario MySQL.', 'success');
+    } catch (e) {
+      console.error('Error guardando inventario:', e);
+      Swal.fire('Error', 'No se pudo guardar en inventario.', 'error');
+    }
+  };
+
+  const handleDeliverInventoryItem = async (deliverData) => {
+    try {
+      const res = await window.API.inventory.deliver(deliverData);
+      if (res.success) {
+        const data = await window.API.inventory.getAll();
+        if (Array.isArray(data)) setTechInventory(data);
+        Swal.fire('¡Entrega Registrada!', `${res.deliveredQuantity} unidades entregadas exitosamente. Stock restante: ${res.remainingQuantity}`, 'success');
+      } else {
+        Swal.fire('Error', res.error || 'No se pudo registrar la entrega.', 'error');
+      }
+    } catch (e) {
+      console.error('Error entregando equipo:', e);
+      Swal.fire('Error', 'No se pudo completar la entrega.', 'error');
+    }
+  };
+
+  const handleDeleteInventoryItem = async (id) => {
+    try {
+      await window.API.inventory.delete(id);
+      setTechInventory(prev => prev.filter(i => i.id !== id));
+      Swal.fire('Eliminado', 'Equipo removido del inventario.', 'success');
+    } catch (e) {
+      console.error('Error eliminando inventario:', e);
+    }
+  };
+
+  // HANDLERS DE PRESUPUESTOS TI
+  const handleSaveBudget = async (budgetObj) => {
+    try {
+      await window.API.budgets.save(budgetObj);
+      const data = await window.API.budgets.getAll();
+      if (Array.isArray(data)) setTechBudgets(data);
+      Swal.fire('Guardado', 'Ítem presupuestal registrado en MySQL.', 'success');
+    } catch (e) {
+      console.error('Error guardando presupuesto:', e);
+    }
+  };
+
+  const handleDeleteBudget = async (id) => {
+    try {
+      await window.API.budgets.delete(id);
+      setTechBudgets(prev => prev.filter(b => b.id !== id));
+      Swal.fire('Eliminado', 'Rubro presupuestal eliminado.', 'success');
+    } catch (e) {
+      console.error('Error eliminando presupuesto:', e);
+    }
+  };
+
+  // HANDLERS DE ÁREAS
+  const handleSaveArea = async (areaObj) => {
+    try {
+      await window.API.areas.save(areaObj);
+      const data = await window.API.areas.getAll();
+      if (Array.isArray(data)) setAreas(data);
+      Swal.fire('Guardado', 'Área organizacional registrada en MySQL.', 'success');
+    } catch (e) {
+      console.error('Error guardando área:', e);
+    }
+  };
+
+  const handleDeleteArea = async (id) => {
+    try {
+      await window.API.areas.delete(id);
+      setAreas(prev => prev.filter(a => a.id !== id));
+      Swal.fire('Eliminado', 'Área removida de la estructura.', 'success');
+    } catch (e) {
+      console.error('Error eliminando área:', e);
+    }
+  };
+
   useEffect(() => {
     loadInitialData();
 
@@ -187,6 +294,15 @@ function App() {
             } else if (parsed.type === 'CRM_UPDATED') {
               window.API.crm.getAll()
                 .then(data => { if (Array.isArray(data)) setQuotations(data); });
+            } else if (parsed.type === 'INVENTORY_UPDATED') {
+              window.API.inventory.getAll()
+                .then(data => { if (Array.isArray(data)) setTechInventory(data); });
+            } else if (parsed.type === 'BUDGETS_UPDATED') {
+              window.API.budgets.getAll()
+                .then(data => { if (Array.isArray(data)) setTechBudgets(data); });
+            } else if (parsed.type === 'AREAS_UPDATED') {
+              window.API.areas.getAll()
+                .then(data => { if (Array.isArray(data)) setAreas(data); });
             }
           } catch (e) {}
         };
@@ -195,7 +311,6 @@ function App() {
             eventSource.close();
             eventSource = null;
           }
-          // Reintentar suavemente cada 10 segundos si el servidor se reinicia
           if (!reconnectTimeout) {
             reconnectTimeout = setTimeout(() => {
               reconnectTimeout = null;
@@ -214,6 +329,11 @@ function App() {
     };
   }, []);
 
+  const [selectedSignedFilter, setSelectedSignedFilter] = useState('Todos');
+  const [selectedOrderStdFilter, setSelectedOrderStdFilter] = useState('Todos');
+  const [selectedOcFilter, setSelectedOcFilter] = useState('Todos');
+  const [selectedDeliveredFilter, setSelectedDeliveredFilter] = useState('Todos');
+
   const monthMap = {
     'Enero': '01', 'Febrero': '02', 'Marzo': '03', 'Abril': '04',
     'Mayo': '05', 'Junio': '06', 'Julio': '07', 'Agosto': '08',
@@ -231,6 +351,7 @@ function App() {
         if (srv.enabled !== false) {
           const supName = sup.name || '';
           const srvName = srv.serviceName || `Servicio #${idx + 1}`;
+          const isQuotation = srv.type === 'cotizacion';
           
           const exists = list.some(i => {
             const sameSup = (i.supplier || '') === supName;
@@ -251,14 +372,15 @@ function App() {
               logoText: (supName.substring(0, 2) || 'PR').toUpperCase(),
               supplier: supName,
               service: srvName,
-              invoiceNumber: '',
+              docType: isQuotation ? 'cotizacion' : 'factura',
+              invoiceNumber: isQuotation ? 'COT-' : '',
               emissionDate: '',
               deliveryDate: '',
               value: 0,
               signed: 'NO',
               orderStd: 'NO',
               oc: '',
-              enFacture: 'AÚN NO',
+              enFacture: 'NO',
               delivered: 'NO',
               pdfPath: null,
               pdfOriginalName: null
@@ -287,16 +409,16 @@ function App() {
         const diffDays = Math.max(1, Math.floor((now - delivDate) / (1000 * 60 * 60 * 24)));
         list.push({
           type: 'red',
-          title: `Factura Atrasada (${inv.invoiceNumber})`,
+          title: `Factura Atrasada (${inv.invoiceNumber || 'Sin N°'})`,
           message: `${inv.supplier} - Vencida hace ${diffDays} día(s)`,
           tag: '▲ Urgente'
         });
       }
 
-      if (inv.enFacture === 'AÚN NO') {
+      if (inv.enFacture === 'NO' || inv.enFacture === 'AÚN NO') {
         list.push({
           type: 'amber',
-          title: `Pendiente en Facture (${inv.invoiceNumber})`,
+          title: `Pendiente en Facture (${inv.invoiceNumber || 'Sin N°'})`,
           message: `${inv.supplier} aún no ha sido radicada`,
           tag: 'Aún no llega'
         });
@@ -305,7 +427,7 @@ function App() {
       if (inv.signed === 'NO') {
         list.push({
           type: 'blue',
-          title: `Firma Pendiente (${inv.invoiceNumber})`,
+          title: `Firma Pendiente (${inv.invoiceNumber || 'Sin N°'})`,
           message: `${inv.supplier} requiere autorización`,
           tag: 'Por firmar'
         });
@@ -315,37 +437,73 @@ function App() {
     return list;
   }, [activeInvoices]);
 
-  // FILTRADO DINÁMICO DE FACTURAS POR TEXTO, PROVEEDOR, FACTURE, PESTAÑAS, MES Y AÑO
+  // FILTRADO DINÁMICO DE FACTURAS POR TEXTO, PROVEEDOR, FIRMADA, ORDEN STD, OC, FACTURE, ENTREGADA, PESTAÑAS, MES Y AÑO
   const filteredRows = useMemo(() => {
     return activeInvoices.filter(inv => {
       // 1. Filtro por texto
       const matchText = (inv.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                         (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (inv.service || '').toLowerCase().includes(searchTerm.toLowerCase());
+                        (inv.service || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (inv.oc || '').toLowerCase().includes(searchTerm.toLowerCase());
       if (!matchText) return false;
 
       // 2. Filtro por proveedor
       if (selectedSupplier !== 'Todos' && inv.supplier !== selectedSupplier) return false;
 
       // 3. Filtro por estado en Facture
-      if (selectedFactureFilter !== 'Todos' && inv.enFacture !== selectedFactureFilter) return false;
+      if (selectedFactureFilter !== 'Todos') {
+        const isFactureYes = inv.enFacture === 'SÍ';
+        if (selectedFactureFilter === 'SÍ' && !isFactureYes) return false;
+        if (selectedFactureFilter === 'NO' && isFactureYes) return false;
+      }
 
-      // 4. Filtro por Año
+      // 4. Filtro por Firmada
+      if (selectedSignedFilter !== 'Todos') {
+        const isSignedYes = inv.signed === 'SÍ';
+        if (selectedSignedFilter === 'SÍ' && !isSignedYes) return false;
+        if (selectedSignedFilter === 'NO' && isSignedYes) return false;
+      }
+
+      // 5. Filtro por Orden STD
+      if (selectedOrderStdFilter !== 'Todos') {
+        const isOrderStdYes = inv.orderStd === 'SÍ';
+        if (selectedOrderStdFilter === 'SÍ' && !isOrderStdYes) return false;
+        if (selectedOrderStdFilter === 'NO' && isOrderStdYes) return false;
+      }
+
+      // 6. Filtro por OC
+      if (selectedOcFilter !== 'Todos') {
+        const hasOc = !!(inv.oc && inv.oc.trim().length > 0);
+        if (selectedOcFilter === 'CON_OC' && !hasOc) return false;
+        if (selectedOcFilter === 'SIN_OC' && hasOc) return false;
+      }
+
+      // 7. Filtro por Entregada
+      if (selectedDeliveredFilter !== 'Todos') {
+        const isDeliveredYes = inv.delivered === 'SÍ';
+        if (selectedDeliveredFilter === 'SÍ' && !isDeliveredYes) return false;
+        if (selectedDeliveredFilter === 'NO' && isDeliveredYes) return false;
+      }
+
+      // 8. Filtro por Año
       if (selectedYear !== 'Todos') {
         const invYear = (inv.emissionDate || '').substring(0, 4) || (inv.deliveryDate || '').substring(0, 4);
         if (invYear && invYear !== selectedYear) return false;
       }
 
-      // 5. Filtro por Mes
+      // 9. Filtro por Mes
       if (selectedMonth !== 'Todos') {
         const monthNum = monthMap[selectedMonth];
         const invMonth = (inv.emissionDate || '').substring(5, 7) || (inv.deliveryDate || '').substring(5, 7);
         if (monthNum && invMonth && invMonth !== monthNum) return false;
       }
 
-      // 6. Filtro por Pestañas
-      if (currentTab === 'Facturas' && !inv.invoiceNumber.startsWith('FAC')) return false;
-      if (currentTab === 'Cotizaciones' && !inv.invoiceNumber.startsWith('COT')) return false;
+      // 10. Filtro por Pestañas
+      const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || inv.docType === 'cotizacion';
+      const isFac = (inv.invoiceNumber || '').toUpperCase().startsWith('FAC') || (!isCot && inv.docType !== 'cotizacion');
+
+      if (currentTab === 'Facturas' && !isFac) return false;
+      if (currentTab === 'Cotizaciones' && !isCot) return false;
       if (currentTab === 'Pendientes' && inv.delivered === 'SÍ') return false;
       if (currentTab === 'Atrasadas') {
         const isDelayed = new Date(inv.deliveryDate) < new Date('2026-09-01') && inv.delivered !== 'SÍ';
@@ -355,14 +513,18 @@ function App() {
 
       return true;
     });
-  }, [activeInvoices, searchTerm, selectedSupplier, selectedFactureFilter, selectedMonth, selectedYear, currentTab]);
+  }, [
+    activeInvoices, searchTerm, selectedSupplier, selectedFactureFilter, 
+    selectedSignedFilter, selectedOrderStdFilter, selectedOcFilter, selectedDeliveredFilter,
+    selectedMonth, selectedYear, currentTab
+  ]);
 
   // CONTEO PARA TABS
   const tabCounts = useMemo(() => {
     return {
       total: activeInvoices.length,
-      fac: activeInvoices.filter(i => i.invoiceNumber.startsWith('FAC')).length,
-      cot: activeInvoices.filter(i => i.invoiceNumber.startsWith('COT')).length,
+      fac: activeInvoices.filter(i => (i.invoiceNumber || '').toUpperCase().startsWith('FAC') || i.docType === 'factura').length,
+      cot: activeInvoices.filter(i => (i.invoiceNumber || '').toUpperCase().startsWith('COT') || i.docType === 'cotizacion').length,
       pending: activeInvoices.filter(i => i.delivered !== 'SÍ').length,
       delayed: activeInvoices.filter(i => new Date(i.deliveryDate) < new Date('2026-09-01') && i.delivered !== 'SÍ').length,
       facture: activeInvoices.filter(i => i.enFacture === 'SÍ').length
@@ -405,86 +567,152 @@ function App() {
       const file = e.target.files[0];
       if (!file) return;
 
-      const formData = new FormData();
-      formData.append('file', file);
-
       try {
         Swal.fire({ title: 'Guardando archivo PDF en el dispositivo...', didOpen: () => Swal.showLoading() });
         const data = await window.API.invoices.uploadPdf(file);
 
         if (data.success) {
-          const updated = manualInvoices.map(inv => {
-            if (inv.id === invoiceId) {
-              const updatedInv = { ...inv, pdfPath: data.relativePath, pdfOriginalName: data.originalName };
-              window.API.invoices.save(updatedInv).catch(() => {});
-              return updatedInv;
-            }
-            return inv;
+          const invObj = activeInvoices.find(i => i.id === invoiceId) || { id: invoiceId };
+          const updatedInv = { ...invObj, pdfPath: data.relativePath, pdfOriginalName: data.originalName };
+          
+          setManualInvoices(prev => {
+            const exists = prev.some(i => i.id === invoiceId);
+            return exists ? prev.map(i => i.id === invoiceId ? updatedInv : i) : [updatedInv, ...prev];
           });
-
-          setManualInvoices(updated);
-          Swal.fire('¡PDF Guardado!', `Archivo ${data.originalName} almacenado en la carpeta local /uploads y registrado en la base de datos.`, 'success');
+          window.API.invoices.save(updatedInv).catch(() => {});
+          Swal.fire('¡PDF Guardado!', `Archivo ${data.originalName} almacenado y registrado.`, 'success');
         } else {
           Swal.fire('Error', data.error || 'No se pudo subir el archivo.', 'error');
         }
       } catch (err) {
-        Swal.fire('Guardado Localmente', `Archivo ${file.name} vinculado a la factura.`, 'info');
+        Swal.fire('Guardado', `Archivo vinculado.`, 'info');
       }
     };
     fileInput.click();
   };
 
-  // PERSISTENCIA EN MYSQL
+  // PERSISTENCIA EN MYSQL & ACTUALIZACIÓN DIRECTA EN TABLA CON TIEMPO REAL
+  const saveInvoiceDebounceRef = React.useRef({});
+
   const saveInvoiceToDb = (invoice) => {
-    window.API.invoices.save(invoice).catch(() => {});
+    window.API.invoices.save(invoice).catch(err => {
+      console.error('Error guardando factura en MySQL:', err);
+    });
+  };
+
+  const handleUpdateInvoiceField = (id, field, value) => {
+    const invObj = activeInvoices.find(i => i.id === id) || { id };
+    const updated = { ...invObj, [field]: value };
+    
+    // 1. Actualización inmediata y reactiva del estado en memoria
+    setManualInvoices(prev => {
+      const exists = prev.some(i => i.id === id);
+      return exists ? prev.map(i => i.id === id ? updated : i) : [updated, ...prev];
+    });
+
+    // 2. Guardado en base de datos MySQL con debounce para campos de texto/número y directo para conmutadores
+    if (field === 'invoiceNumber' || field === 'oc' || field === 'value') {
+      if (saveInvoiceDebounceRef.current[id]) {
+        clearTimeout(saveInvoiceDebounceRef.current[id]);
+      }
+      saveInvoiceDebounceRef.current[id] = setTimeout(() => {
+        saveInvoiceToDb(updated);
+      }, 400);
+    } else {
+      saveInvoiceToDb(updated);
+    }
   };
 
   const handleToggleSigned = (id) => {
-    const updated = manualInvoices.map(i => {
-      if (i.id === id) {
-        const item = { ...i, signed: i.signed === 'SÍ' ? 'NO' : 'SÍ' };
-        saveInvoiceToDb(item);
-        return item;
-      }
-      return i;
-    });
-    setManualInvoices(updated);
+    const inv = activeInvoices.find(i => i.id === id) || { id };
+    const newSigned = inv.signed === 'SÍ' ? 'NO' : 'SÍ';
+    handleUpdateInvoiceField(id, 'signed', newSigned);
   };
 
   const handleToggleOrderStd = (id) => {
-    const updated = manualInvoices.map(i => {
-      if (i.id === id) {
-        const item = { ...i, orderStd: i.orderStd === 'SÍ' ? 'NO' : 'SÍ' };
-        saveInvoiceToDb(item);
-        return item;
-      }
-      return i;
-    });
-    setManualInvoices(updated);
+    const inv = activeInvoices.find(i => i.id === id) || { id };
+    const newOrder = inv.orderStd === 'SÍ' ? 'NO' : 'SÍ';
+    handleUpdateInvoiceField(id, 'orderStd', newOrder);
   };
 
   const handleToggleFacture = (id) => {
-    const updated = manualInvoices.map(i => {
-      if (i.id === id) {
-        const item = { ...i, enFacture: i.enFacture === 'SÍ' ? 'AÚN NO' : 'SÍ' };
-        saveInvoiceToDb(item);
-        return item;
+    const inv = activeInvoices.find(i => i.id === id) || { id };
+    const willBeFactureYes = inv.enFacture !== 'SÍ';
+    const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || inv.docType === 'cotizacion';
+
+    let updated = { ...inv };
+
+    if (willBeFactureYes) {
+      // Al marcar En Facture: SÍ
+      if (isCot) {
+        // Se convierte en Factura (cambia prefijo COT a FAC o docType a factura)
+        let newCode = inv.invoiceNumber || '';
+        if (newCode.toUpperCase().startsWith('COT')) {
+          newCode = 'FAC' + newCode.substring(3);
+        } else if (!newCode || newCode === 'COT-') {
+          newCode = 'FAC-';
+        }
+        
+        updated = {
+          ...updated,
+          enFacture: 'SÍ',
+          docType: 'factura',
+          invoiceNumber: newCode,
+          signed: 'NO', // El usuario la firmará cuando su jefe autorice
+          delivered: 'NO' // Entrega es acción manual
+        };
+      } else {
+        // Si ya es Factura normal
+        updated = {
+          ...updated,
+          enFacture: 'SÍ'
+        };
       }
-      return i;
+    } else {
+      // Al desmarcar En Facture (volver a NO)
+      updated = {
+        ...updated,
+        enFacture: 'NO'
+      };
+    }
+
+    setManualInvoices(prev => {
+      const exists = prev.some(i => i.id === id);
+      return exists ? prev.map(i => i.id === id ? updated : i) : [updated, ...prev];
     });
-    setManualInvoices(updated);
+    saveInvoiceToDb(updated);
   };
 
   const handleToggleDelivered = (id) => {
-    const updated = manualInvoices.map(i => {
-      if (i.id === id) {
-        const item = { ...i, delivered: i.delivered === 'SÍ' ? 'NO' : 'SÍ' };
-        saveInvoiceToDb(item);
-        return item;
-      }
-      return i;
+    const inv = activeInvoices.find(i => i.id === id) || { id };
+    const isNowDelivered = inv.delivered !== 'SÍ';
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const updated = {
+      ...inv,
+      delivered: isNowDelivered ? 'SÍ' : 'NO',
+      // Si se marca como entregada y no tenía fecha de entrega, colocar la fecha actual
+      deliveryDate: (isNowDelivered && !inv.deliveryDate) ? todayStr : inv.deliveryDate
+    };
+
+    setManualInvoices(prev => {
+      const exists = prev.some(i => i.id === id);
+      return exists ? prev.map(i => i.id === id ? updated : i) : [updated, ...prev];
     });
-    setManualInvoices(updated);
+    saveInvoiceToDb(updated);
+  };
+
+  const handleCleanAllFilters = () => {
+    setSearchTerm('');
+    setSelectedSupplier('Todos');
+    setSelectedFactureFilter('Todos');
+    setSelectedSignedFilter('Todos');
+    setSelectedOrderStdFilter('Todos');
+    setSelectedOcFilter('Todos');
+    setSelectedDeliveredFilter('Todos');
+    setSelectedMonth('Todos');
+    setSelectedYear('Todos');
+    setSelectedInvoiceIds([]);
   };
 
   const handleDeleteInvoice = (id) => {
@@ -854,7 +1082,7 @@ function App() {
   }
 
   return (
-    <div className="app-wrapper">
+    <div className={`app-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* TELÓN DE FONDO PARA DISPOSITIVOS MÓVILES */}
       <div 
         className={`sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`} 
@@ -869,6 +1097,8 @@ function App() {
         onLogout={handleLogout}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
 
       <main className="main-content">
@@ -882,12 +1112,18 @@ function App() {
           onOpenUsers={() => setCurrentView('users')}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onToggleSidebar={() => {
+            if (window.innerWidth < 1024) {
+              setIsSidebarOpen(!isSidebarOpen);
+            } else {
+              toggleSidebarCollapse();
+            }
+          }}
           currentUser={currentUser}
           onLogout={handleLogout}
         />
 
-        {/* VISTA 1: DASHBOARD */}
+        {/* VISTA 1: DASHBOARD LIMPIO (SIN TABLAS PESADAS) */}
         {currentView === 'dashboard' && (
           <div className="dashboard-container">
             <KpiCards 
@@ -912,47 +1148,47 @@ function App() {
               onGoSuppliers={() => setCurrentView('suppliers')}
             />
 
-            <FiltersBar 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedSupplier={selectedSupplier}
-              setSelectedSupplier={setSelectedSupplier}
-              selectedFactureFilter={selectedFactureFilter}
-              setSelectedFactureFilter={setSelectedFactureFilter}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              suppliersList={suppliersList}
-              selectedCount={selectedInvoiceIds.length}
-              onOpenExcelPreview={() => setIsExcelPreviewOpen(true)}
-              onClean={() => { 
-                setSearchTerm(''); 
-                setSelectedSupplier('Todos'); 
-                setSelectedFactureFilter('Todos'); 
-                setSelectedMonth('Todos');
-                setSelectedYear('Todos');
-                setSelectedInvoiceIds([]); 
-              }}
-              onExportExcel={() => Swal.fire('Excel Exportado', 'Reporte descargado correctamente.', 'success')}
-            />
+            {/* TARJETAS DE ACCESO RÁPIDO EJECUTIVO */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 mb-8">
+              <div 
+                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border-2 border-slate-200/90 dark:border-zinc-800 cursor-pointer flex items-center gap-4 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+                onClick={() => setCurrentView('inventory')}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/30 text-rose-600 flex items-center justify-center text-xl flex-shrink-0 border border-rose-200 dark:border-rose-900/50 group-hover:scale-105 transition-transform shadow-sm">
+                  <Icon name="inventory" size={26} className="text-rose-600" />
+                </div>
+                <div>
+                  <div className="font-black text-base text-slate-900 dark:text-white">Inventario TI</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">{techInventory.length} referencias físicas y licencias</div>
+                </div>
+              </div>
 
-            <InvoicesTable 
-              rows={filteredRows}
-              currentTab={currentTab}
-              setCurrentTab={setCurrentTab}
-              tabCounts={tabCounts}
-              selectedIds={selectedInvoiceIds}
-              onToggleSelectRow={handleToggleSelectRow}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleSigned={handleToggleSigned}
-              onToggleFacture={handleToggleFacture}
-              onToggleDelivered={handleToggleDelivered}
-              onToggleOrderStd={handleToggleOrderStd}
-              onViewDetail={handleViewDetail}
-              onDeleteInvoice={handleDeleteInvoice}
-              onUploadPdf={handleUploadPdf}
-            />
+              <div 
+                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border-2 border-slate-200/90 dark:border-zinc-800 cursor-pointer flex items-center gap-4 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+                onClick={() => setCurrentView('budgets')}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/30 text-emerald-600 flex items-center justify-center text-xl flex-shrink-0 border border-emerald-200 dark:border-emerald-900/50 group-hover:scale-105 transition-transform shadow-sm">
+                  <Icon name="budgets" size={26} className="text-emerald-600" />
+                </div>
+                <div>
+                  <div className="font-black text-base text-slate-900 dark:text-white">Presupuestos TI 2026</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">{techBudgets.length} rubros planificados y AI</div>
+                </div>
+              </div>
+
+              <div 
+                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border-2 border-slate-200/90 dark:border-zinc-800 cursor-pointer flex items-center gap-4 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+                onClick={() => setCurrentView('areas')}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30 text-purple-600 flex items-center justify-center text-xl flex-shrink-0 border border-purple-200 dark:border-purple-900/50 group-hover:scale-105 transition-transform shadow-sm">
+                  <Icon name="areas" size={26} className="text-purple-600" />
+                </div>
+                <div>
+                  <div className="font-black text-base text-slate-900 dark:text-white">Áreas & Directores</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">{areas.length} áreas organizacionales</div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -965,6 +1201,7 @@ function App() {
             onToggleOrderStd={handleToggleOrderStd}
             onToggleFacture={handleToggleFacture}
             onToggleDelivered={handleToggleDelivered}
+            onUpdateInvoiceField={handleUpdateInvoiceField}
             onDeleteInvoice={handleDeleteInvoice}
             onUploadPdf={handleUploadPdf}
             onViewDetail={handleViewDetail}
@@ -978,9 +1215,18 @@ function App() {
             setSelectedSupplier={setSelectedSupplier}
             selectedFactureFilter={selectedFactureFilter}
             setSelectedFactureFilter={setSelectedFactureFilter}
+            selectedSignedFilter={selectedSignedFilter}
+            setSelectedSignedFilter={setSelectedSignedFilter}
+            selectedOrderStdFilter={selectedOrderStdFilter}
+            setSelectedOrderStdFilter={setSelectedOrderStdFilter}
+            selectedOcFilter={selectedOcFilter}
+            setSelectedOcFilter={setSelectedOcFilter}
+            selectedDeliveredFilter={selectedDeliveredFilter}
+            setSelectedDeliveredFilter={setSelectedDeliveredFilter}
             suppliersList={suppliersList}
             onOpenExcelPreview={() => setIsExcelPreviewOpen(true)}
             selectedCount={selectedInvoiceIds.length}
+            onCleanFilters={handleCleanAllFilters}
           />
         )}
 
@@ -1003,6 +1249,36 @@ function App() {
             quotations={quotations}
             onSaveQuotation={handleSaveQuotation}
             onDeleteQuotation={handleDeleteQuotation}
+          />
+        )}
+
+        {/* VISTA INVENTARIO TI */}
+        {currentView === 'inventory' && (
+          <TechInventoryModule 
+            inventory={techInventory}
+            areas={areas}
+            onAddOrUpdateItem={handleAddOrUpdateInventoryItem}
+            onDeliverItem={handleDeliverInventoryItem}
+            onDeleteItem={handleDeleteInventoryItem}
+          />
+        )}
+
+        {/* VISTA PRESUPUESTOS TI */}
+        {currentView === 'budgets' && (
+          <TechBudgetModule 
+            budgets={techBudgets}
+            areas={areas}
+            onSaveBudget={handleSaveBudget}
+            onDeleteBudget={handleDeleteBudget}
+          />
+        )}
+
+        {/* VISTA ÁREAS ORGANIZACIONALES */}
+        {currentView === 'areas' && (
+          <AreasModule 
+            areas={areas}
+            onSaveArea={handleSaveArea}
+            onDeleteArea={handleDeleteArea}
           />
         )}
 

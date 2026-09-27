@@ -1,3 +1,6 @@
+// public/components/InvoicesModule.js
+// Módulo Completo de Facturas y Cotizaciones con Diseño Elevado
+
 function InvoicesModule({ 
   invoices, 
   onQuickRegister, 
@@ -5,6 +8,7 @@ function InvoicesModule({
   onToggleOrderStd, 
   onToggleFacture, 
   onToggleDelivered, 
+  onUpdateInvoiceField,
   onDeleteInvoice, 
   onUploadPdf,
   onViewDetail,
@@ -18,29 +22,77 @@ function InvoicesModule({
   setSelectedSupplier,
   selectedFactureFilter,
   setSelectedFactureFilter,
+  selectedSignedFilter,
+  setSelectedSignedFilter,
+  selectedOrderStdFilter,
+  setSelectedOrderStdFilter,
+  selectedOcFilter,
+  setSelectedOcFilter,
+  selectedDeliveredFilter,
+  setSelectedDeliveredFilter,
   suppliersList,
   onOpenExcelPreview,
-  selectedCount
+  selectedCount,
+  onCleanFilters
 }) {
+  const [currentTab, setCurrentTab] = React.useState('Todos');
+  const [selectedIds, setSelectedIds] = React.useState([]);
+
+  const tabCounts = React.useMemo(() => {
+    return {
+      total: invoices.length,
+      fac: invoices.filter(i => (i.invoiceNumber || '').toUpperCase().startsWith('FAC') || i.docType === 'factura').length,
+      cot: invoices.filter(i => (i.invoiceNumber || '').toUpperCase().startsWith('COT') || i.docType === 'cotizacion').length,
+      pending: invoices.filter(i => i.delivered !== 'SÍ').length,
+      delayed: invoices.filter(i => new Date(i.deliveryDate) < new Date('2026-09-01') && i.delivered !== 'SÍ').length,
+      facture: invoices.filter(i => i.enFacture === 'SÍ').length
+    };
+  }, [invoices]);
+
+  const handleToggleSelectRow = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleToggleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedIds(invoices.map(i => i.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
   return (
     <div className="dashboard-container">
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
-        <div>
-          <h2 style={{fontSize: '16px', fontWeight: 800}}>📑 Módulo de Facturas & Cotizaciones</h2>
-          <p style={{fontSize: '12px', color: '#64748b'}}>Control de Orden STD (SÍ/NO), OC, Fechas y Radicaciones con Filtros Avanzados</p>
+      {/* CABECERA */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-5">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
+            <Icon name="file-text" size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+              Facturas & Cotizaciones
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              Edición en tiempo real: Números de comprobante, fechas con calendario, montos y conmutadores directos.
+            </p>
+          </div>
         </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-          <button className="btn-preview-excel" onClick={onOpenExcelPreview}>
-            <i className="fa-solid fa-table-cells"></i>
-            <span>Vista Previa Excel</span>
-          </button>
-          <button className="btn-red-action" onClick={onQuickRegister}>
-            <i className="fa-solid fa-plus"></i> Registrar Factura
-          </button>
-        </div>
+
+        <button 
+          onClick={onQuickRegister}
+          className="btn-red-action"
+        >
+          <Icon name="plus" size={16} className="text-white" />
+          <span>Registrar Comprobante</span>
+        </button>
       </div>
 
-      {/* FILTROS INTEGRADOS EN EL MÓDULO DE FACTURAS */}
+      {/* FILTROS */}
       <FiltersBar 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -48,108 +100,43 @@ function InvoicesModule({
         setSelectedSupplier={setSelectedSupplier}
         selectedFactureFilter={selectedFactureFilter}
         setSelectedFactureFilter={setSelectedFactureFilter}
+        selectedSignedFilter={selectedSignedFilter}
+        setSelectedSignedFilter={setSelectedSignedFilter}
+        selectedOrderStdFilter={selectedOrderStdFilter}
+        setSelectedOrderStdFilter={setSelectedOrderStdFilter}
+        selectedOcFilter={selectedOcFilter}
+        setSelectedOcFilter={setSelectedOcFilter}
+        selectedDeliveredFilter={selectedDeliveredFilter}
+        setSelectedDeliveredFilter={setSelectedDeliveredFilter}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
         suppliersList={suppliersList || []}
-        selectedCount={selectedCount || 0}
+        selectedCount={selectedIds.length}
         onOpenExcelPreview={onOpenExcelPreview}
-        onClean={() => { 
-          if (setSearchTerm) setSearchTerm(''); 
-          if (setSelectedSupplier) setSelectedSupplier('Todos'); 
-          if (setSelectedFactureFilter) setSelectedFactureFilter('Todos'); 
-          if (setSelectedMonth) setSelectedMonth('Todos');
-          if (setSelectedYear) setSelectedYear('Todos');
-        }}
+        onClean={onCleanFilters}
         onExportExcel={() => Swal.fire('Excel Exportado', 'Reporte descargado correctamente.', 'success')}
       />
 
-      <div className="table-card">
-        <table className="main-table">
-          <thead>
-            <tr>
-              <th>Proveedor</th>
-              <th>SERVICIO</th>
-              <th>N DE FACTURA</th>
-              <th>FECHA DE EMISION</th>
-              <th>FECHA DE ENTREGA</th>
-              <th>VALOR</th>
-              <th style={{textAlign: 'center'}}>FIRMADA</th>
-              <th style={{textAlign: 'center'}}>ORDEN STD</th>
-              <th>OC</th>
-              <th style={{textAlign: 'center'}}>EN FACTURE</th>
-              <th style={{textAlign: 'center'}}>ENTREGADA</th>
-              <th style={{textAlign: 'center'}}>PDF</th>
-              <th style={{textAlign: 'right'}}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length === 0 ? (
-              <tr>
-                <td colSpan="13" style={{textAlign: 'center', padding: '24px', color: '#64748b'}}>
-                  No hay comprobantes para el mes y año seleccionados.
-                </td>
-              </tr>
-            ) : (
-              invoices.map(inv => (
-                <tr key={inv.id}>
-                  <td style={{fontWeight: 700}}>{inv.supplier}</td>
-                  <td>{inv.service}</td>
-                  <td style={{fontFamily: 'monospace', fontWeight: 800, color: '#e11d48'}}>{inv.invoiceNumber}</td>
-                  <td>{inv.emissionDate}</td>
-                  <td style={{color: '#047857', fontWeight: 600}}>{inv.deliveryDate}</td>
-                  <td style={{fontWeight: 800}}>${Number(inv.value || 0).toLocaleString('es-CO')}</td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.signed === 'SÍ' ? 'state-yes' : 'state-no'}`} onClick={() => onToggleSigned(inv.id)}>
-                      {inv.signed}
-                    </span>
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.orderStd === 'SÍ' ? 'state-yes' : 'state-no'}`} onClick={() => onToggleOrderStd(inv.id)}>
-                      {inv.orderStd}
-                    </span>
-                  </td>
-                  <td style={{fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed'}}>{inv.oc}</td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.enFacture === 'SÍ' ? 'state-yes' : 'state-pending'}`} onClick={() => onToggleFacture(inv.id)}>
-                      {inv.enFacture}
-                    </span>
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`state-pill ${inv.delivered === 'SÍ' ? 'state-yes' : 'state-no'}`} onClick={() => onToggleDelivered(inv.id)}>
-                      {inv.delivered}
-                    </span>
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    {inv.pdfPath ? (
-                      <a href={inv.pdfPath} target="_blank" rel="noreferrer" style={{color: '#e11d48', fontSize: '13px'}} title={`Ver PDF: ${inv.pdfOriginalName || 'Archivo'}`}>
-                        <i className="fa-solid fa-file-pdf"></i>
-                      </a>
-                    ) : (
-                      <i className="fa-solid fa-arrow-up-from-bracket" style={{color: '#94a3b8', cursor: 'pointer', fontSize: '12px'}} onClick={() => onUploadPdf && onUploadPdf(inv.id)} title="Subir PDF"></i>
-                    )}
-                  </td>
-                  <td style={{textAlign: 'right'}}>
-                    <button 
-                      style={{background: '#eff6ff', color: '#2563eb', border: 'none', padding: '4px 8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', marginRight: '6px'}} 
-                      onClick={() => onViewDetail && onViewDetail(inv)}
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button 
-                      style={{background: '#fee2e2', color: '#e11d48', border: 'none', padding: '4px 8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer'}} 
-                      onClick={() => onDeleteInvoice(inv.id)}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* TABLA SAAS */}
+      <InvoicesTable 
+        rows={invoices}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        tabCounts={tabCounts}
+        selectedIds={selectedIds}
+        onToggleSelectRow={handleToggleSelectRow}
+        onToggleSelectAll={handleToggleSelectAll}
+        onToggleSigned={onToggleSigned}
+        onToggleFacture={onToggleFacture}
+        onToggleDelivered={onToggleDelivered}
+        onToggleOrderStd={onToggleOrderStd}
+        onUpdateInvoiceField={onUpdateInvoiceField}
+        onViewDetail={onViewDetail}
+        onDeleteInvoice={onDeleteInvoice}
+        onUploadPdf={onUploadPdf}
+      />
     </div>
   );
 }
