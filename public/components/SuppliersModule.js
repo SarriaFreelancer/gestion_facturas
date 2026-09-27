@@ -160,7 +160,7 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                             }`}
                             title={isExpanded ? "Ocultar conceptos" : "Desplegar conceptos recurrentes"}
                           >
-                            <Icon name={isExpanded ? "arrow-up" : "arrow-down"} size={13} />
+                            <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-[11px]`}></i>
                           </button>
                         </td>
 
