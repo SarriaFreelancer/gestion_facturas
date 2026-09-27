@@ -112,9 +112,9 @@ def delete_supplier(supplier_id: str):
 
 # --- DASHBOARD METRICS ---
 @router.get("/dashboard/metrics")
-def get_metrics():
+def get_metrics(month: Optional[str] = None, year: Optional[str] = None):
     try:
-        return analytics_service.get_dashboard_metrics()
+        return analytics_service.get_dashboard_metrics(month=month, year=year)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

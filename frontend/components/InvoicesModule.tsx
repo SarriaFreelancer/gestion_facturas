@@ -5,11 +5,12 @@ import {
   FileText, 
   Search, 
   Trash2, 
-  Calendar, 
+  Plus, 
   DollarSign, 
   Building2,
-  FileCheck,
+  Calendar,
   CheckCircle,
+  Clock,
   Eye,
   Hash
 } from 'lucide-react';
@@ -19,23 +20,29 @@ interface InvoicesModuleProps {
   invoices: Invoice[];
   onUpdateField: (id: string, field: string, value: any) => void;
   onDeleteInvoice: (id: string) => void;
+  onAddInvoice: () => void;
+  selectedMonth: string;
+  selectedYear: string;
 }
 
 export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   invoices,
   onUpdateField,
-  onDeleteInvoice
+  onDeleteInvoice,
+  onAddInvoice,
+  selectedMonth,
+  selectedYear
 }) => {
   const [currentTab, setCurrentTab] = useState<'Todos' | 'Facturas' | 'Cotizaciones'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredInvoices = invoices.filter(inv => {
-    // Tab filter
+    // Filtro de Tab
     const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || (inv.service || '').toUpperCase().startsWith('COT');
     if (currentTab === 'Facturas' && isCot) return false;
     if (currentTab === 'Cotizaciones' && !isCot) return false;
 
-    // Search filter
+    // Filtro de Búsqueda
     const term = searchTerm.toLowerCase();
     return (
       (inv.supplier || '').toLowerCase().includes(term) ||
@@ -47,6 +54,37 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
 
   return (
     <div className="w-full">
+      {/* HEADER DE MÓDULO CON BOTÓN DE AGREGAR FACTURA / COTIZACIÓN */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2">
+              <span>Control de Facturas & Cotizaciones</span>
+              {selectedMonth !== 'Todos' && (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                  {selectedMonth} {selectedYear}
+                </span>
+              )}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              Registro y control mensual de documentos. Puedes emitir facturas no recurrentes para proveedores autorizados.
+            </p>
+          </div>
+        </div>
+
+        {/* BOTÓN SOLICITADO: AGREGAR FACTURA O COTIZACIÓN */}
+        <button 
+          onClick={onAddInvoice}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4 text-white" />
+          <span>Agregar Factura o Cotización</span>
+        </button>
+      </div>
+
       {/* TABS Y BUSCADOR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-6">
         <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/80">
@@ -101,7 +139,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                   <td colSpan={10} className="text-center py-16 text-slate-400 dark:text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FileText className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
-                      <span>No hay documentos registrados para este filtro.</span>
+                      <span>No hay documentos registrados para este filtro ({selectedMonth} {selectedYear}).</span>
                     </div>
                   </td>
                 </tr>

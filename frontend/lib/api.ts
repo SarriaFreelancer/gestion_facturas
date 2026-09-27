@@ -70,8 +70,12 @@ export const api = {
   },
 
   // Dashboard Metrics
-  async getMetrics(): Promise<DashboardMetrics> {
-    const res = await fetch(`${API_BASE_URL}/dashboard/metrics`, { cache: 'no-store' });
+  async getMetrics(month?: string, year?: string): Promise<DashboardMetrics> {
+    const params = new URLSearchParams();
+    if (month && month !== 'Todos') params.append('month', month);
+    if (year && year !== 'Todos') params.append('year', year);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/dashboard/metrics${queryString}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al cargar métricas');
     return res.json();
   },

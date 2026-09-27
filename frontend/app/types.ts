@@ -37,6 +37,36 @@ export interface Invoice {
   updatedAt?: string;
 }
 
+export interface MonthlyStat {
+  month: string;
+  short: string;
+  count: number;
+  totalAmount: number;
+  facCount: number;
+  cotCount: number;
+}
+
+export interface WeeklyReceivedDelivered {
+  day: string;
+  received: number;
+  delivered: number;
+}
+
+export interface RecurrenceStudyItem {
+  supplierId: string;
+  supplierName: string;
+  nit: string;
+  area: string;
+  monthlyCount: number;
+  totalConcepts: number;
+  activeConcepts: number;
+  facConcepts: number;
+  cotConcepts: number;
+  registeredInvoices: number;
+  totalSpent: number;
+  compliance: number;
+}
+
 export interface DashboardMetrics {
   total: number;
   facCount: number;
@@ -48,4 +78,7 @@ export interface DashboardMetrics {
   pendingDeliveryCount: number;
   totalAmount: number;
   delayedCount: number;
+  monthlyStats?: MonthlyStat[];
+  weeklyReceivedDelivered?: WeeklyReceivedDelivered[];
+  recurrenceStudy?: RecurrenceStudyItem[];
 }

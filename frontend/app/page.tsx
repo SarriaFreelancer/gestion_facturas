@@ -1,37 +1,50 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { TopNavbar } from '../components/TopNavbar';
 import { DashboardKpis } from '../components/DashboardKpis';
+import { DashboardCharts } from '../components/DashboardCharts';
 import { SuppliersModule } from '../components/SuppliersModule';
 import { InvoicesModule } from '../components/InvoicesModule';
+import { SupplierModal } from '../components/SupplierModal';
+import { InvoiceModal } from '../components/InvoiceModal';
 import { api } from '../lib/api';
 import { Invoice, Supplier, DashboardMetrics } from './types';
-import { Trash2, AlertCircle, Sparkles } from 'lucide-react';
+import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Requisito: "Pon el modo claro en el thema" -> valor por defecto false (modo claro activo)
   const [darkMode, setDarkMode] = useState(false);
 
+  // Filtros Globales de Mes y Año
   const [selectedMonth, setSelectedMonth] = useState('Todos');
   const [selectedYear, setSelectedYear] = useState('2026');
 
+  // Estado de Datos
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos desde FastAPI backend
+  // Estados de Modales
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [selectedSupplierForEdit, setSelectedSupplierForEdit] = useState<Supplier | null>(null);
+
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<Invoice | null>(null);
+
+  // Cargar datos desde FastAPI backend con soporte a filtros de mes y año
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [invs, sups, mets] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
-        api.getMetrics().catch(() => null)
+        api.getMetrics(selectedMonth, selectedYear).catch(() => null)
       ]);
       setInvoices(invs);
       setSuppliers(sups);
@@ -41,24 +54,67 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Filtrado reactivo en el frontend para facturas según el mes y año seleccionados
+  const filteredInvoicesByDate = useMemo(() => {
+    const monthMap: Record<string, number> = {
+      'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+      'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+      'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+    };
+
+    return invoices.filter(inv => {
+      const dateStr = inv.emissionDate || inv.createdAt || '';
+      if (!dateStr) return true;
+      const cleanDate = dateStr.split('T')[0].split(' ')[0];
+      const parts = cleanDate.split(/[-/]/);
+      if (parts.length >= 3) {
+        const year = parts[0].length === 4 ? parts[0] : parts[2];
+        const month = parseInt(parts[0].length === 4 ? parts[1] : parts[1], 10);
+
+        if (selectedYear !== 'Todos' && year !== selectedYear) {
+          return false;
+        }
+
+        if (selectedMonth !== 'Todos') {
+          const targetMonthNum = monthMap[selectedMonth.toLowerCase()];
+          if (targetMonthNum && month !== targetMonthNum) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+  }, [invoices, selectedMonth, selectedYear]);
+
   // Actualización de campo en factura (PATCH inmediato)
   const handleUpdateInvoiceField = async (id: string, field: string, value: any) => {
-    // Actualización optimista local
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, [field]: value } : inv));
     try {
       await api.updateInvoiceField(id, field, value);
-      const updatedMetrics = await api.getMetrics();
+      const updatedMetrics = await api.getMetrics(selectedMonth, selectedYear);
       setMetrics(updatedMetrics);
     } catch (err) {
       console.error('Error al actualizar campo:', err);
-      loadData(); // Revertir si hay error
+      loadData();
     }
+  };
+
+  // Guardar Proveedor (Crear o Editar)
+  const handleSaveSupplier = async (supplierData: Partial<Supplier>) => {
+    await api.createOrUpdateSupplier(supplierData);
+    await loadData();
+  };
+
+  // Guardar Factura / Cotización (No recurrente o regular)
+  const handleSaveInvoice = async (invoiceData: Partial<Invoice>) => {
+    await api.createOrUpdateInvoice(invoiceData);
+    await loadData();
   };
 
   // Eliminación de factura
@@ -135,18 +191,31 @@ export default function Home() {
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
                 <div>
-                  <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
-                    Panel de Control y Analítica
+                  <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2">
+                    <span>Panel de Control y Analítica</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                      Filtro Activo: {selectedMonth} {selectedYear}
+                    </span>
                   </h1>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                    Visualiza métricas en tiempo real con almacenamiento en MySQL y arquitectura moderna.
+                    Visualiza métricas, evolución mes a mes, flujos semanales y estudio de conceptos recurrentes.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button 
+                    onClick={() => {
+                      setSelectedInvoiceForEdit(null);
+                      setIsInvoiceModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-red-600/25 transition-all cursor-pointer"
+                  >
+                    <span>+ Factura / Cotización</span>
+                  </button>
+
+                  <button 
                     onClick={handleCleanDatabase}
-                    className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 hover:bg-red-50 hover:text-red-600 text-slate-600 dark:text-zinc-300 text-xs font-bold border border-slate-200 dark:border-zinc-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-red-50 hover:text-red-600 text-slate-600 dark:text-zinc-300 text-xs font-bold border border-slate-200 dark:border-zinc-700 transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Vaciar facturas de prueba"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -155,40 +224,32 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* KPIS */}
+              {/* KPIS PRINCIPALES (SENSIBLES AL FILTRO DE MES Y AÑO) */}
               <DashboardKpis metrics={metrics} loading={loading} />
 
-              {/* RESUMEN RÁPIDO */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-red-600" />
-                    <span>Estado del Backend FastAPI</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
-                    Conectado activamente al API en <code>http://localhost:8000</code>. El backend implementa el patrón Service-Repository con validación estricta de esquemas Pydantic v2 y pool directo a la base de datos MySQL <code>GESTION_FACTURAS</code>.
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    <span>Compatibilidad y Portabilidad</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
-                    Toda la interfaz mantiene la paleta corporativa <strong>Alimentos Enriko</strong> (Rojo #dc2626, switches de estado, campos semirredondeados y selectores de conceptos desplegables) sin alterar el servidor de producción actual.
-                  </p>
-                </div>
-              </div>
+              {/* GRÁFICOS SOLICITADOS: MES A MES, FLUJO SEMANAL Y ESTUDIO DE RECURRENCIA */}
+              <DashboardCharts 
+                monthlyStats={metrics?.monthlyStats || []}
+                weeklyData={metrics?.weeklyReceivedDelivered || []}
+                recurrenceStudy={metrics?.recurrenceStudy || []}
+                selectedYear={selectedYear}
+                selectedMonth={selectedMonth}
+              />
             </div>
           )}
 
           {/* VISTA FACTURAS */}
           {currentView === 'invoices' && (
             <InvoicesModule 
-              invoices={invoices}
+              invoices={filteredInvoicesByDate}
               onUpdateField={handleUpdateInvoiceField}
               onDeleteInvoice={handleDeleteInvoice}
+              onAddInvoice={() => {
+                setSelectedInvoiceForEdit(null);
+                setIsInvoiceModalOpen(true);
+              }}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
           )}
 
@@ -196,8 +257,14 @@ export default function Home() {
           {currentView === 'suppliers' && (
             <SuppliersModule 
               suppliers={suppliers}
-              onAddSupplier={() => alert('Para registrar un proveedor rápido, puedes usar el formulario o la API.')}
-              onEditSupplier={(sup) => alert(`Editando proveedor: ${sup.name}`)}
+              onAddSupplier={() => {
+                setSelectedSupplierForEdit(null);
+                setIsSupplierModalOpen(true);
+              }}
+              onEditSupplier={(sup) => {
+                setSelectedSupplierForEdit(sup);
+                setIsSupplierModalOpen(true);
+              }}
               onDeleteSupplier={handleDeleteSupplier}
               onUpdateSupplierServices={handleUpdateSupplierServices}
             />
@@ -208,12 +275,37 @@ export default function Home() {
             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-12 text-center shadow-sm">
               <h2 className="text-base font-black text-slate-800 dark:text-white mb-2">Módulo en Desarrollo</h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Los datos de este módulo se procesan con los endpoints de analítica FastAPI.
+                Los datos se sincronizan con los endpoints analíticos de FastAPI y MySQL.
               </p>
             </div>
           )}
         </main>
       </div>
+
+      {/* MODAL PARA CREACIÓN / EDICIÓN DE PROVEEDORES */}
+      <SupplierModal 
+        isOpen={isSupplierModalOpen}
+        onClose={() => {
+          setIsSupplierModalOpen(false);
+          setSelectedSupplierForEdit(null);
+        }}
+        onSave={handleSaveSupplier}
+        initialSupplier={selectedSupplierForEdit}
+      />
+
+      {/* MODAL PARA CREACIÓN / EDICIÓN DE FACTURAS O COTIZACIONES NO RECURRENTES */}
+      <InvoiceModal 
+        isOpen={isInvoiceModalOpen}
+        onClose={() => {
+          setIsInvoiceModalOpen(false);
+          setSelectedInvoiceForEdit(null);
+        }}
+        onSave={handleSaveInvoice}
+        suppliers={suppliers}
+        defaultMonth={selectedMonth}
+        defaultYear={selectedYear}
+        initialInvoice={selectedInvoiceForEdit}
+      />
     </div>
   );
 }
