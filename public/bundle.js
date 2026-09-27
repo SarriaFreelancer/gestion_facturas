@@ -702,36 +702,37 @@ function TopNavbar({ selectedMonth, setSelectedMonth, selectedYear, setSelectedY
     "button",
     {
       onClick: onToggleDarkMode,
-      className: "w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/60 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:text-red-600 transition-colors",
+      className: "w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs cursor-pointer group",
       title: darkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"
     },
-    darkMode ? /* @__PURE__ */ React.createElement(Icon, { name: "sun", size: 18, className: "text-amber-400" }) : /* @__PURE__ */ React.createElement(Icon, { name: "moon", size: 18, className: "text-slate-600" })
+    darkMode ? /* @__PURE__ */ React.createElement(Icon, { name: "sun", size: 20, className: "text-amber-400 group-hover:scale-110 transition-transform" }) : /* @__PURE__ */ React.createElement(Icon, { name: "moon", size: 20, className: "text-slate-600 dark:text-zinc-300 group-hover:text-red-600 group-hover:scale-110 transition-all" })
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: onOpenAlerts,
-      className: "w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/60 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:text-red-600 transition-colors relative",
+      className: "w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs relative cursor-pointer group",
       title: "Alertas de vencimiento"
     },
-    /* @__PURE__ */ React.createElement(Icon, { name: "bell", size: 18 }),
-    alertCount > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse" }, alertCount)
+    /* @__PURE__ */ React.createElement(Icon, { name: "bell", size: 20, className: "group-hover:scale-110 transition-transform" }),
+    alertCount > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-zinc-900 shadow-sm animate-pulse" }, alertCount)
   ), /* @__PURE__ */ React.createElement(
     "div",
     {
       onClick: onOpenUsers,
-      className: "flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all",
+      className: "flex items-center gap-2 px-2 py-1 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 cursor-pointer hover:border-red-400 hover:shadow-sm transition-all",
       title: "Gesti\xF3n de usuario"
     },
-    /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white font-black text-xs flex items-center justify-center shadow-sm" }, currentUser?.initials || userInitials || "SA"),
-    /* @__PURE__ */ React.createElement(Icon, { name: "arrow-down", size: 12, className: "text-slate-500 hover:text-slate-700" })
+    /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white font-black text-xs flex items-center justify-center shadow-xs ring-1 ring-red-200 dark:ring-red-900" }, currentUser?.initials || userInitials || "SA"),
+    /* @__PURE__ */ React.createElement("div", { className: "hidden lg:flex flex-col text-left mr-1" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-black text-slate-800 dark:text-zinc-200 leading-tight" }, currentUser ? currentUser.name : "Super Admin"), /* @__PURE__ */ React.createElement("span", { className: "text-[9px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider" }, isSuper ? "SUPERADMIN" : "ADMINISTRADOR")),
+    /* @__PURE__ */ React.createElement(Icon, { name: "arrow-down", size: 13, className: "text-slate-400 hover:text-red-600 transition-colors" })
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: onLogout,
-      className: "w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all",
+      className: "w-10 h-10 rounded-xl bg-gradient-to-r from-red-50 to-red-100/70 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-600 flex items-center justify-center hover:bg-gradient-to-r hover:from-red-600 hover:to-red-700 hover:text-white hover:border-red-600 transition-all shadow-2xs cursor-pointer group",
       title: "Cerrar Sesi\xF3n"
     },
-    /* @__PURE__ */ React.createElement(Icon, { name: "logout", size: 16, className: "text-red-600" })
+    /* @__PURE__ */ React.createElement(Icon, { name: "logout", size: 18, className: "text-red-600 group-hover:text-white transition-colors group-hover:scale-110" })
   )));
 }
 window.TopNavbar = TopNavbar;
@@ -1674,115 +1675,127 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
       return (s.name || "").toLowerCase().includes(term) || (s.nit || "").toLowerCase().includes(term) || (s.contact || "").toLowerCase().includes(term) || (s.area || "").toLowerCase().includes(term);
     });
   }, [suppliers, searchTerm]);
-  return /* @__PURE__ */ React.createElement("div", { className: "dashboard-container" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-user-group text-rose-600" }), "Directorio de Proveedores Autorizados"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-slate-500 dark:text-zinc-400 mt-1" }, "Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones.")), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "dashboard-container" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3.5" }, /* @__PURE__ */ React.createElement("div", { className: "w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0" }, /* @__PURE__ */ React.createElement(Icon, { name: "users", size: 24, className: "text-white" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-xl font-black text-slate-900 dark:text-white leading-tight" }, "Directorio de Proveedores Autorizados"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-slate-500 dark:text-zinc-400 mt-1" }, "Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones."))), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: onAddSupplier,
       className: "btn-red-action"
     },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus text-xs" }),
+    /* @__PURE__ */ React.createElement(Icon, { name: "plus", size: 16, className: "text-white" }),
     /* @__PURE__ */ React.createElement("span", null, "Registrar Proveedor")
-  )), /* @__PURE__ */ React.createElement("div", { className: "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-3.5 shadow-sm mb-5 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/60 rounded-xl px-3 py-1.5 flex-1 focus-within:border-rose-500 focus-within:bg-white dark:focus-within:bg-zinc-800 transition-all" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-magnifying-glass text-slate-400 text-xs" }), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { className: "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm mb-6 flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner" }, /* @__PURE__ */ React.createElement(Icon, { name: "search", size: 16, className: "text-slate-400" }), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",
       placeholder: "Buscar proveedor por raz\xF3n social, NIT, contacto o \xE1rea...",
       value: searchTerm,
       onChange: (e) => setSearchTerm(e.target.value),
-      className: "bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full"
+      className: "bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full placeholder:text-slate-400"
     }
+  ), searchTerm && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setSearchTerm(""),
+      className: "text-slate-400 hover:text-red-600 text-xs font-bold",
+      title: "Limpiar b\xFAsqueda"
+    },
+    /* @__PURE__ */ React.createElement(Icon, { name: "close", size: 14 })
   )), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setSearchTerm(""),
-      className: "btn-clean"
+      className: "px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs",
+      title: "Restablecer b\xFAsqueda"
     },
-    /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-rotate-right text-[11px]" }),
+    /* @__PURE__ */ React.createElement(Icon, { name: "history", size: 14, className: "text-slate-500" }),
     /* @__PURE__ */ React.createElement("span", null, "Limpiar")
-  )), /* @__PURE__ */ React.createElement("div", { className: "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full text-left border-collapse text-xs" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "bg-slate-50 dark:bg-zinc-850 border-b border-slate-200 dark:border-zinc-800 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400" }, /* @__PURE__ */ React.createElement("th", { className: "p-3 w-10 text-center" }, "Ver"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "NIT / RUT"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "Raz\xF3n Social"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "Asesor Comercial"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "Tel\xE9fono"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "Conceptos / Mes"), /* @__PURE__ */ React.createElement("th", { className: "p-3" }, "\xC1rea Asignada"), /* @__PURE__ */ React.createElement("th", { className: "p-3 text-center" }, "Acciones"))), /* @__PURE__ */ React.createElement("tbody", { className: "divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium" }, filteredSuppliers.length === 0 ? /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: "8", className: "text-center py-12 text-slate-400 dark:text-zinc-500" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-users text-3xl mb-2 block text-slate-300 dark:text-zinc-600" }), "No se encontraron proveedores registrados.")) : filteredSuppliers.map((sup) => {
+  )), /* @__PURE__ */ React.createElement("div", { className: "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full text-left border-collapse text-xs" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm" }, /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 w-12 text-center text-white" }, "Ver"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "NIT / RUT"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "Raz\xF3n Social"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "Asesor Comercial"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "Tel\xE9fono"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "Conceptos / Mes"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-white" }, "\xC1rea Asignada"), /* @__PURE__ */ React.createElement("th", { className: "px-3.5 py-3 text-center text-white" }, "Acciones"))), /* @__PURE__ */ React.createElement("tbody", { className: "divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium" }, filteredSuppliers.length === 0 ? /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: "8", className: "text-center py-12 text-slate-400 dark:text-zinc-500" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-center justify-center gap-2" }, /* @__PURE__ */ React.createElement(Icon, { name: "users", size: 32, className: "text-slate-300 dark:text-zinc-600" }), /* @__PURE__ */ React.createElement("span", null, "No se encontraron proveedores registrados.")))) : filteredSuppliers.map((sup) => {
     const isExpanded = expandedSupplierId === sup.id;
     const services = sup.services || [];
     const activeCount = services.filter((s) => s.enabled !== false).length;
-    return /* @__PURE__ */ React.createElement(React.Fragment, { key: sup.id }, /* @__PURE__ */ React.createElement("tr", { className: `hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? "bg-rose-50/20 dark:bg-rose-950/20" : ""}` }, /* @__PURE__ */ React.createElement("td", { className: "p-3 text-center" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement(React.Fragment, { key: sup.id }, /* @__PURE__ */ React.createElement("tr", { className: `hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? "bg-red-50/30 dark:bg-red-950/20" : ""}` }, /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 text-center" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => toggleExpand(sup.id),
-        className: `w-7 h-7 rounded-lg inline-flex items-center justify-center transition-all cursor-pointer ${isExpanded ? "bg-rose-600 text-white shadow-glow-sm" : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200"}`,
+        className: `w-7 h-7 rounded-lg inline-flex items-center justify-center transition-all cursor-pointer ${isExpanded ? "bg-red-600 text-white shadow-sm shadow-red-600/30" : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200"}`,
         title: isExpanded ? "Ocultar conceptos" : "Desplegar conceptos recurrentes"
       },
-      /* @__PURE__ */ React.createElement("i", { className: `fa-solid ${isExpanded ? "fa-chevron-up" : "fa-chevron-down"} text-[10px]` })
-    )), /* @__PURE__ */ React.createElement("td", { className: "p-3 font-mono font-bold text-slate-700 dark:text-zinc-300" }, sup.nit), /* @__PURE__ */ React.createElement("td", { className: "p-3" }, /* @__PURE__ */ React.createElement("div", { className: "font-extrabold text-slate-900 dark:text-white flex items-center gap-2 cursor-pointer", onClick: () => toggleExpand(sup.id) }, /* @__PURE__ */ React.createElement("span", { className: "w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-[10px] font-black flex items-center justify-center" }, (sup.name || "PR").substring(0, 2).toUpperCase()), /* @__PURE__ */ React.createElement("span", null, sup.name))), /* @__PURE__ */ React.createElement("td", { className: "p-3 text-slate-600 dark:text-zinc-300" }, sup.contact || "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "p-3 text-slate-600 dark:text-zinc-300 font-mono" }, sup.phone || "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "p-3" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-list-check text-[9px]" }), activeCount, " ", activeCount === 1 ? "concepto activo" : "conceptos activos")), /* @__PURE__ */ React.createElement("td", { className: "p-3 text-slate-600 dark:text-zinc-300" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-building-user text-slate-400 mr-1.5 text-[11px]" }), sup.area || "General"), /* @__PURE__ */ React.createElement("td", { className: "p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-center gap-1" }, /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement(Icon, { name: isExpanded ? "arrow-up" : "arrow-down", size: 13 })
+    )), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 font-mono font-bold text-slate-700 dark:text-zinc-300" }, sup.nit), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3" }, /* @__PURE__ */ React.createElement("div", { className: "font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5 cursor-pointer", onClick: () => toggleExpand(sup.id) }, /* @__PURE__ */ React.createElement("span", { className: "w-7 h-7 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[10px] font-black flex items-center justify-center shadow-xs ring-1 ring-red-100 dark:ring-red-950 flex-shrink-0" }, (sup.name || "PR").substring(0, 2).toUpperCase()), /* @__PURE__ */ React.createElement("span", { className: "hover:text-red-600 transition-colors" }, sup.name))), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 text-slate-600 dark:text-zinc-300" }, sup.contact || "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 text-slate-600 dark:text-zinc-300 font-mono" }, sup.phone || "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3" }, /* @__PURE__ */ React.createElement("span", { className: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs" }, /* @__PURE__ */ React.createElement(Icon, { name: "inventory", size: 12, className: "text-blue-600 dark:text-blue-400" }), activeCount, " ", activeCount === 1 ? "concepto activo" : "conceptos activos")), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 text-slate-600 dark:text-zinc-300" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement(Icon, { name: "areas", size: 13, className: "text-slate-400" }), /* @__PURE__ */ React.createElement("span", null, sup.area || "General"))), /* @__PURE__ */ React.createElement("td", { className: "px-3.5 py-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-center gap-1.5" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => onEditSupplier(sup),
-        className: "w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors",
+        className: "w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-blue-200",
         title: "Editar proveedor"
       },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-regular fa-pen-to-square text-xs" })
+      /* @__PURE__ */ React.createElement(Icon, { name: "eye", size: 14 })
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => onDeleteSupplier(sup.id),
-        className: "w-7 h-7 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors",
+        className: "w-7 h-7 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-red-200",
         title: "Eliminar proveedor"
       },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-regular fa-trash-can text-xs" })
-    )))), isExpanded && /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: "8", className: "p-0 bg-slate-50/50 dark:bg-zinc-950/40" }, /* @__PURE__ */ React.createElement("div", { className: "p-5 border-y border-slate-200 dark:border-zinc-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-black text-slate-800 dark:text-zinc-200 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-layer-group text-rose-600" }), "Conceptos Recurrentes Mensuales de ", sup.name), /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement(Icon, { name: "trash", size: 14 })
+    )))), isExpanded && /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: "8", className: "p-0 bg-slate-50/70 dark:bg-zinc-950/60" }, /* @__PURE__ */ React.createElement("div", { className: "p-6 border-y border-slate-200 dark:border-zinc-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-black text-slate-800 dark:text-zinc-200 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center" }, /* @__PURE__ */ React.createElement(Icon, { name: "file-text", size: 14, className: "text-red-600" })), /* @__PURE__ */ React.createElement("span", null, "Conceptos Recurrentes Mensuales de ", /* @__PURE__ */ React.createElement("strong", null, sup.name))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => handleAddConcept(sup),
-        className: "px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+        className: "px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-red-600/20 cursor-pointer"
       },
-      /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-plus text-[10px]" }),
+      /* @__PURE__ */ React.createElement(Icon, { name: "plus", size: 12, className: "text-white" }),
       /* @__PURE__ */ React.createElement("span", null, "Agregar Concepto")
-    )), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" }, services.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "col-span-full p-4 text-center text-slate-400 text-xs bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800" }, 'No hay conceptos configurados. Haz clic en "Agregar Concepto" para registrar servicios mensuales.') : services.map((srv, sIdx) => {
+    )), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" }, services.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "col-span-full p-6 text-center text-slate-400 text-xs bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800" }, 'No hay conceptos configurados. Haz clic en "Agregar Concepto" para registrar servicios mensuales.') : services.map((srv, sIdx) => {
       const isEnabled = srv.enabled !== false;
       const isCot = srv.type === "cotizacion";
       return /* @__PURE__ */ React.createElement(
         "div",
         {
           key: sIdx,
-          className: `p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isEnabled ? "bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 shadow-sm" : "bg-slate-100/50 dark:bg-zinc-900/40 border-slate-200/50 dark:border-zinc-800/40 opacity-60"}`
+          className: `p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3.5 ${isEnabled ? "bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md" : "bg-slate-100/60 dark:bg-zinc-900/40 border-slate-200/60 dark:border-zinc-800/40 opacity-60"}`
         },
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-1" }, /* @__PURE__ */ React.createElement("span", { className: "w-5 h-5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 text-[10px] font-black flex items-center justify-center" }, "#", sIdx + 1), /* @__PURE__ */ React.createElement(
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2.5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5 flex-1" }, /* @__PURE__ */ React.createElement("span", { className: "w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-black flex items-center justify-center flex-shrink-0" }, "#", sIdx + 1), /* @__PURE__ */ React.createElement(
           "input",
           {
             type: "text",
             value: srv.serviceName || "",
             onChange: (e) => handleServiceNameChange(sup, sIdx, e.target.value),
             placeholder: "Nombre del concepto o servicio",
-            className: "bg-transparent text-xs font-bold text-slate-800 dark:text-zinc-100 border-b border-transparent hover:border-slate-300 focus:border-rose-500 outline-none flex-1 pb-0.5"
+            className: "bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-1 focus:ring-red-500/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none flex-1 transition-all shadow-2xs"
           }
         )), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => handleRemoveConcept(sup, sIdx),
-            className: "text-slate-400 hover:text-rose-600 transition-colors p-1",
+            className: "w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors flex-shrink-0",
             title: "Eliminar este concepto"
           },
-          /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-xmark text-xs" })
+          /* @__PURE__ */ React.createElement(Icon, { name: "close", size: 13 })
         )),
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px] font-bold" }, /* @__PURE__ */ React.createElement(
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-full text-[10px] font-bold border border-slate-200/80 dark:border-zinc-700/80" }, /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => handleServiceTypeChange(sup, sIdx, "factura"),
-            className: `px-2 py-0.5 rounded-md transition-all ${!isCot ? "bg-rose-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-zinc-400"}`
+            className: `px-3 py-1 rounded-full transition-all cursor-pointer ${!isCot ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-2xs font-black" : "text-slate-500 hover:text-slate-800 dark:text-zinc-400"}`
           },
           "Factura"
         ), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => handleServiceTypeChange(sup, sIdx, "cotizacion"),
-            className: `px-2 py-0.5 rounded-md transition-all ${isCot ? "bg-purple-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-zinc-400"}`
+            className: `px-3 py-1 rounded-full transition-all cursor-pointer ${isCot ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-2xs font-black" : "text-slate-500 hover:text-slate-800 dark:text-zinc-400"}`
           },
           "Cotizaci\xF3n"
         )), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => handleToggleServiceEnable(sup, sIdx),
-            className: `px-2.5 py-0.5 rounded-full text-[10px] font-extrabold cursor-pointer transition-all ${isEnabled ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300" : "bg-slate-200 dark:bg-zinc-800 text-slate-500"}`
+            className: `w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${isEnabled ? "bg-emerald-500 border-emerald-600 justify-end" : "bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start"}`,
+            title: isEnabled ? "Desactivar concepto" : "Activar concepto"
           },
-          isEnabled ? "\u25CF Activo" : "\u25CB Inactivo"
+          /* @__PURE__ */ React.createElement("span", { className: `text-[8.5px] font-black mr-1 ${isEnabled ? "text-white" : "hidden"}` }, "S\xCD"),
+          /* @__PURE__ */ React.createElement("span", { className: "w-4 h-4 rounded-full bg-white shadow-xs" }),
+          /* @__PURE__ */ React.createElement("span", { className: `text-[8.5px] font-black ml-1 ${isEnabled ? "hidden" : "text-slate-500 dark:text-zinc-300"}` }, "NO")
         ))
       );
     }))))));

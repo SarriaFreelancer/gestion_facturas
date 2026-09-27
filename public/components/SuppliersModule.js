@@ -58,44 +58,58 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
   return (
     <div className="dashboard-container">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-5">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-            <i className="fa-solid fa-user-group text-rose-600"></i>
-            Directorio de Proveedores Autorizados
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-            Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones.
-          </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
+            <Icon name="users" size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+              Directorio de Proveedores Autorizados
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones.
+            </p>
+          </div>
         </div>
 
         <button 
           onClick={onAddSupplier}
           className="btn-red-action"
         >
-          <i className="fa-solid fa-plus text-xs"></i>
+          <Icon name="plus" size={16} className="text-white" />
           <span>Registrar Proveedor</span>
         </button>
       </div>
 
-      {/* BARRA DE BÚSQUEDA */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-3.5 shadow-sm mb-5 flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/60 rounded-xl px-3 py-1.5 flex-1 focus-within:border-rose-500 focus-within:bg-white dark:focus-within:bg-zinc-800 transition-all">
-          <i className="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
+      {/* BARRA DE BÚSQUEDA ESPACIOSA Y CON SEPARACIÓN */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm mb-6 flex items-center gap-3">
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
+          <Icon name="search" size={16} className="text-slate-400" />
           <input
             type="text"
             placeholder="Buscar proveedor por razón social, NIT, contacto o área..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full"
+            className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full placeholder:text-slate-400"
           />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')} 
+              className="text-slate-400 hover:text-red-600 text-xs font-bold"
+              title="Limpiar búsqueda"
+            >
+              <Icon name="close" size={14} />
+            </button>
+          )}
         </div>
 
         <button 
           onClick={() => setSearchTerm('')}
-          className="btn-clean"
+          className="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs"
+          title="Restablecer búsqueda"
         >
-          <i className="fa-solid fa-rotate-right text-[11px]"></i>
+          <Icon name="history" size={14} className="text-slate-500" />
           <span>Limpiar</span>
         </button>
       </div>
@@ -105,23 +119,25 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 dark:bg-zinc-850 border-b border-slate-200 dark:border-zinc-800 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                <th className="p-3 w-10 text-center">Ver</th>
-                <th className="p-3">NIT / RUT</th>
-                <th className="p-3">Razón Social</th>
-                <th className="p-3">Asesor Comercial</th>
-                <th className="p-3">Teléfono</th>
-                <th className="p-3">Conceptos / Mes</th>
-                <th className="p-3">Área Asignada</th>
-                <th className="p-3 text-center">Acciones</th>
+              <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
+                <th className="px-3.5 py-3 w-12 text-center text-white">Ver</th>
+                <th className="px-3.5 py-3 text-white">NIT / RUT</th>
+                <th className="px-3.5 py-3 text-white">Razón Social</th>
+                <th className="px-3.5 py-3 text-white">Asesor Comercial</th>
+                <th className="px-3.5 py-3 text-white">Teléfono</th>
+                <th className="px-3.5 py-3 text-white">Conceptos / Mes</th>
+                <th className="px-3.5 py-3 text-white">Área Asignada</th>
+                <th className="px-3.5 py-3 text-center text-white">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium">
               {filteredSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="text-center py-12 text-slate-400 dark:text-zinc-500">
-                    <i className="fa-solid fa-users text-3xl mb-2 block text-slate-300 dark:text-zinc-600"></i>
-                    No se encontraron proveedores registrados.
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Icon name="users" size={32} className="text-slate-300 dark:text-zinc-600" />
+                      <span>No se encontraron proveedores registrados.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -132,99 +148,103 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
 
                   return (
                     <React.Fragment key={sup.id}>
-                      <tr className={`hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? 'bg-rose-50/20 dark:bg-rose-950/20' : ''}`}>
+                      <tr className={`hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}>
                         {/* TOGGLE EXPAND */}
-                        <td className="p-3 text-center">
+                        <td className="px-3.5 py-3 text-center">
                           <button 
                             onClick={() => toggleExpand(sup.id)}
                             className={`w-7 h-7 rounded-lg inline-flex items-center justify-center transition-all cursor-pointer ${
                               isExpanded 
-                                ? 'bg-rose-600 text-white shadow-glow-sm' 
+                                ? 'bg-red-600 text-white shadow-sm shadow-red-600/30' 
                                 : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
                             }`}
                             title={isExpanded ? "Ocultar conceptos" : "Desplegar conceptos recurrentes"}
                           >
-                            <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-[10px]`}></i>
+                            <Icon name={isExpanded ? "arrow-up" : "arrow-down"} size={13} />
                           </button>
                         </td>
 
-                        <td className="p-3 font-mono font-bold text-slate-700 dark:text-zinc-300">
+                        <td className="px-3.5 py-3 font-mono font-bold text-slate-700 dark:text-zinc-300">
                           {sup.nit}
                         </td>
 
-                        <td className="p-3">
-                          <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-2 cursor-pointer" onClick={() => toggleExpand(sup.id)}>
-                            <span className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-[10px] font-black flex items-center justify-center">
+                        <td className="px-3.5 py-3">
+                          <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5 cursor-pointer" onClick={() => toggleExpand(sup.id)}>
+                            <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[10px] font-black flex items-center justify-center shadow-xs ring-1 ring-red-100 dark:ring-red-950 flex-shrink-0">
                               {(sup.name || 'PR').substring(0, 2).toUpperCase()}
                             </span>
-                            <span>{sup.name}</span>
+                            <span className="hover:text-red-600 transition-colors">{sup.name}</span>
                           </div>
                         </td>
 
-                        <td className="p-3 text-slate-600 dark:text-zinc-300">
+                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300">
                           {sup.contact || '—'}
                         </td>
 
-                        <td className="p-3 text-slate-600 dark:text-zinc-300 font-mono">
+                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300 font-mono">
                           {sup.phone || '—'}
                         </td>
 
-                        <td className="p-3">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                            <i className="fa-solid fa-list-check text-[9px]"></i>
+                        <td className="px-3.5 py-3">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs">
+                            <Icon name="inventory" size={12} className="text-blue-600 dark:text-blue-400" />
                             {activeCount} {activeCount === 1 ? 'concepto activo' : 'conceptos activos'}
                           </span>
                         </td>
 
-                        <td className="p-3 text-slate-600 dark:text-zinc-300">
-                          <i className="fa-solid fa-building-user text-slate-400 mr-1.5 text-[11px]"></i>
-                          {sup.area || 'General'}
+                        <td className="px-3.5 py-3 text-slate-600 dark:text-zinc-300">
+                          <div className="flex items-center gap-1.5">
+                            <Icon name="areas" size={13} className="text-slate-400" />
+                            <span>{sup.area || 'General'}</span>
+                          </div>
                         </td>
 
-                        <td className="p-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="px-3.5 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button 
                               onClick={() => onEditSupplier(sup)}
-                              className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors"
+                              className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-blue-200"
                               title="Editar proveedor"
                             >
-                              <i className="fa-regular fa-pen-to-square text-xs"></i>
+                              <Icon name="eye" size={14} />
                             </button>
 
                             <button 
                               onClick={() => onDeleteSupplier(sup.id)}
-                              className="w-7 h-7 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors"
+                              className="w-7 h-7 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-red-200"
                               title="Eliminar proveedor"
                             >
-                              <i className="fa-regular fa-trash-can text-xs"></i>
+                              <Icon name="trash" size={14} />
                             </button>
                           </div>
                         </td>
                       </tr>
 
-                      {/* SUBFILA DESPLEGABLE CON CONCEPTOS RECURRENTES */}
+                      {/* SUBFILA DESPLEGABLE CON CONCEPTOS RECURRENTES MEJORADOS */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan="8" className="p-0 bg-slate-50/50 dark:bg-zinc-950/40">
-                            <div className="p-5 border-y border-slate-200 dark:border-zinc-800">
-                              <div className="flex items-center justify-between mb-3">
+                          <td colSpan="8" className="p-0 bg-slate-50/70 dark:bg-zinc-950/60">
+                            <div className="p-6 border-y border-slate-200 dark:border-zinc-800">
+                              <div className="flex items-center justify-between mb-4">
                                 <div className="text-xs font-black text-slate-800 dark:text-zinc-200 flex items-center gap-2">
-                                  <i className="fa-solid fa-layer-group text-rose-600"></i>
-                                  Conceptos Recurrentes Mensuales de {sup.name}
+                                  <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center">
+                                    <Icon name="file-text" size={14} className="text-red-600" />
+                                  </div>
+                                  <span>Conceptos Recurrentes Mensuales de <strong>{sup.name}</strong></span>
                                 </div>
 
                                 <button 
                                   onClick={() => handleAddConcept(sup)}
-                                  className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-red-600/20 cursor-pointer"
                                 >
-                                  <i className="fa-solid fa-plus text-[10px]"></i>
+                                  <Icon name="plus" size={12} className="text-white" />
                                   <span>Agregar Concepto</span>
                                 </button>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {services.length === 0 ? (
-                                  <div className="col-span-full p-4 text-center text-slate-400 text-xs bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800">
+                                  <div className="col-span-full p-6 text-center text-slate-400 text-xs bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">
                                     No hay conceptos configurados. Haz clic en "Agregar Concepto" para registrar servicios mensuales.
                                   </div>
                                 ) : (
@@ -235,43 +255,44 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                                     return (
                                       <div 
                                         key={sIdx}
-                                        className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                                        className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3.5 ${
                                           isEnabled 
-                                            ? 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 shadow-sm' 
-                                            : 'bg-slate-100/50 dark:bg-zinc-900/40 border-slate-200/50 dark:border-zinc-800/40 opacity-60'
+                                            ? 'bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md' 
+                                            : 'bg-slate-100/60 dark:bg-zinc-900/40 border-slate-200/60 dark:border-zinc-800/40 opacity-60'
                                         }`}
                                       >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2 flex-1">
-                                            <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 text-[10px] font-black flex items-center justify-center">
+                                        <div className="flex items-center justify-between gap-2.5">
+                                          <div className="flex items-center gap-2.5 flex-1">
+                                            <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-black flex items-center justify-center flex-shrink-0">
                                               #{sIdx + 1}
                                             </span>
+                                            {/* INPUT SEMIREDONDO HERMOSO */}
                                             <input 
                                               type="text"
                                               value={srv.serviceName || ''}
                                               onChange={(e) => handleServiceNameChange(sup, sIdx, e.target.value)}
                                               placeholder="Nombre del concepto o servicio"
-                                              className="bg-transparent text-xs font-bold text-slate-800 dark:text-zinc-100 border-b border-transparent hover:border-slate-300 focus:border-rose-500 outline-none flex-1 pb-0.5"
+                                              className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-1 focus:ring-red-500/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none flex-1 transition-all shadow-2xs"
                                             />
                                           </div>
 
                                           <button 
                                             onClick={() => handleRemoveConcept(sup, sIdx)}
-                                            className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors flex-shrink-0"
                                             title="Eliminar este concepto"
                                           >
-                                            <i className="fa-solid fa-xmark text-xs"></i>
+                                            <Icon name="close" size={13} />
                                           </button>
                                         </div>
 
-                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                          {/* TIPO: FACTURA O COTIZACION */}
-                                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-lg text-[10px] font-bold">
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800">
+                                          {/* TIPO: FACTURA O COTIZACION (PÍLDORA REDONDA) */}
+                                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-full text-[10px] font-bold border border-slate-200/80 dark:border-zinc-700/80">
                                             <button 
                                               onClick={() => handleServiceTypeChange(sup, sIdx, 'factura')}
-                                              className={`px-2 py-0.5 rounded-md transition-all ${
+                                              className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                                                 !isCot 
-                                                  ? 'bg-rose-600 text-white shadow-sm' 
+                                                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-2xs font-black' 
                                                   : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                                               }`}
                                             >
@@ -279,9 +300,9 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                                             </button>
                                             <button 
                                               onClick={() => handleServiceTypeChange(sup, sIdx, 'cotizacion')}
-                                              className={`px-2 py-0.5 rounded-md transition-all ${
+                                              className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                                                 isCot 
-                                                  ? 'bg-purple-600 text-white shadow-sm' 
+                                                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-2xs font-black' 
                                                   : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                                               }`}
                                             >
@@ -289,16 +310,19 @@ function SuppliersModule({ suppliers, invoices = [], onAddSupplier, onEditSuppli
                                             </button>
                                           </div>
 
-                                          {/* HABILITADO / DESHABILITADO */}
+                                          {/* HABILITADO / DESHABILITADO (CONMUTADOR ELEGANTE) */}
                                           <button 
                                             onClick={() => handleToggleServiceEnable(sup, sIdx)}
-                                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold cursor-pointer transition-all ${
+                                            className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${
                                               isEnabled 
-                                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' 
-                                                : 'bg-slate-200 dark:bg-zinc-800 text-slate-500'
+                                                ? 'bg-emerald-500 border-emerald-600 justify-end' 
+                                                : 'bg-slate-200 dark:bg-zinc-700 border-slate-300 dark:border-zinc-600 justify-start'
                                             }`}
+                                            title={isEnabled ? "Desactivar concepto" : "Activar concepto"}
                                           >
-                                            {isEnabled ? '● Activo' : '○ Inactivo'}
+                                            <span className={`text-[8.5px] font-black mr-1 ${isEnabled ? 'text-white' : 'hidden'}`}>SÍ</span>
+                                            <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
+                                            <span className={`text-[8.5px] font-black ml-1 ${isEnabled ? 'hidden' : 'text-slate-500 dark:text-zinc-300'}`}>NO</span>
                                           </button>
                                         </div>
                                       </div>
