@@ -17,8 +17,26 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  // Requisito: "Pon el modo claro en el thema" -> valor por defecto false (modo claro activo)
-  const [darkMode, setDarkMode] = useState(false);
+  // Modo claro como predeterminado (false) con persistencia en localStorage
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ae_dark_mode');
+      return saved === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('ae_dark_mode', 'true');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('ae_dark_mode', 'false');
+      }
+    }
+  }, [darkMode]);
 
   // Filtros Globales de Mes y Año
   const [selectedMonth, setSelectedMonth] = useState('Todos');
