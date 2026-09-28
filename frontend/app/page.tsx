@@ -20,26 +20,35 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
-  // Modo claro como predeterminado (false) con persistencia en localStorage
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('ae_dark_mode');
-      return saved === 'true';
-    }
-    return false;
-  });
+  // Modo claro como predeterminado (false) tanto en servidor como cliente
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      if (darkMode) {
+    setMounted(true);
+    const saved = localStorage.getItem('ae_dark_mode');
+    if (saved === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const handleToggleDarkMode = useCallback(() => {
+    setDarkMode(prev => {
+      const next = !prev;
+      if (next) {
         document.documentElement.classList.add('dark');
         localStorage.setItem('ae_dark_mode', 'true');
       } else {
         document.documentElement.classList.remove('dark');
         localStorage.setItem('ae_dark_mode', 'false');
       }
-    }
-  }, [darkMode]);
+      return next;
+    });
+  }, []);
 
   // Filtros Globales de Mes y Año
   const [selectedMonth, setSelectedMonth] = useState('Todos');
@@ -281,7 +290,7 @@ export default function Home() {
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
           darkMode={darkMode}
-          onToggleDarkMode={() => setDarkMode(prev => !prev)}
+          onToggleDarkMode={handleToggleDarkMode}
           onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         />
 
