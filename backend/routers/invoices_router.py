@@ -393,3 +393,41 @@ def delete_user(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- AUTHENTICATION ---
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+
+class RegisterPayload(BaseModel):
+    username: str
+    name: Optional[str] = ""
+    email: Optional[str] = ""
+    password: str
+    role: Optional[str] = "admin"
+    area: Optional[str] = "Tecnología (TI)"
+
+@router.post("/auth/login")
+def login(payload: LoginPayload):
+    try:
+        user = repo.authenticate_user(payload.username, payload.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos.")
+        return {"success": True, "user": user}
+    except ValueError as ve:
+        raise HTTPException(status_code=403, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/auth/register")
+def register(payload: RegisterPayload):
+    try:
+        user = repo.register_user(payload.model_dump())
+        return {"success": True, "user": user}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+

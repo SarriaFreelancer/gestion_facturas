@@ -577,3 +577,62 @@ class MySQLRepository:
             with conn.cursor() as cursor:
                 cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
                 return cursor.rowcount > 0
+
+    def authenticate_user(self, username_or_email: str, password: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, username, name, email, password, role, area, status, createdAt 
+                    FROM users 
+                    WHERE (LOWER(username) = LOWER(%s) OR (email IS NOT NULL AND LOWER(email) = LOWER(%s)))
+                """, (username_or_email.strip(), username_or_email.strip()))
+                user = cursor.fetchone()
+                if not user:
+                    return None
+                if user.get("password") != password:
+                    return None
+                if user.get("status") != "Activo":
+                    raise ValueError("El usuario se encuentra inactivo. Contacte al administrador.")
+                user.pop("password", None)
+                return user
+
+    def register_user(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        username = data.get("username", "").strip()
+        email = data.get("email", "").strip() or None
+        if not username:
+            raise ValueError("El nombre de usuario es requerido.")
+        
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Verificar si ya existe el usuario
+                cursor.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", (username,))
+                if cursor.fetchone():
+                    raise ValueError(f"El usuario '{username}' ya se encuentra registrado.")
+                
+                if email:
+                    cursor.execute("SELECT id FROM users WHERE email IS NOT NULL AND LOWER(email) = LOWER(%s)", (email,))
+                    if cursor.fetchone():
+                        raise ValueError(f"El correo electrónico '{email}' ya está asociado a otra cuenta.")
+                
+                user_id = f"usr-{int(time.time() * 1000)}"
+                password = data.get("password") or "123456"
+                name = data.get("name", "").strip() or username
+                role = data.get("role") or "admin"
+                area = data.get("area") or "Tecnología (TI)"
+                status = "Activo"
+                
+                cursor.execute("""
+                    INSERT INTO users (id, username, name, email, password, role, area, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (user_id, username, name, email, password, role, area, status))
+                
+                return {
+                    "id": user_id,
+                    "username": username,
+                    "name": name,
+                    "email": email,
+                    "role": role,
+                    "area": area,
+                    "status": status
+                }
+

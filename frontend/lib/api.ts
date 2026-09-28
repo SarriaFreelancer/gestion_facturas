@@ -243,5 +243,33 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Error al eliminar usuario');
     return res.json();
+  },
+
+  // Autenticación
+  async login(username: string, password: string): Promise<{ success: boolean; user: any }> {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al iniciar sesión');
+    }
+    return res.json();
+  },
+
+  async register(data: { username: string; name?: string; email?: string; password: string; role?: string; area?: string }): Promise<{ success: boolean; user: any }> {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al registrar usuario');
+    }
+    return res.json();
   }
 };
+
