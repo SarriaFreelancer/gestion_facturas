@@ -430,4 +430,44 @@ def register(payload: RegisterPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- EMAIL SETTINGS & DELIVERED INVOICES REPORTING (OUTLOOK INTEGRATION) ---
+class EmailSettingsPayload(BaseModel):
+    recipientEmail: Optional[str] = "contabilidad@alimentosenriko.com"
+    senderName: Optional[str] = "Alimentos Enriko S.A.S. — Control de Facturas"
+    emailSubject: Optional[str] = "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."
+    emailTemplate: Optional[str] = ""
+    frequency: Optional[str] = "manual"
+    outlookIntegrationEnabled: Optional[int] = 1
+    smtpHost: Optional[str] = "smtp.office365.com"
+    smtpPort: Optional[int] = 587
+    smtpUser: Optional[str] = ""
+    smtpPassword: Optional[str] = ""
+
+@router.get("/settings/email")
+def get_email_settings():
+    try:
+        return repo.fetch_email_settings()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/settings/email")
+def save_email_settings(payload: EmailSettingsPayload):
+    try:
+        success = repo.save_email_settings(payload.model_dump())
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class MarkEmailSentPayload(BaseModel):
+    invoiceIds: List[str]
+
+@router.post("/invoices/mark-email-sent")
+def mark_invoices_email_sent(payload: MarkEmailSentPayload):
+    try:
+        success = repo.mark_invoices_email_sent(payload.invoiceIds)
+        return {"success": success, "count": len(payload.invoiceIds)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 

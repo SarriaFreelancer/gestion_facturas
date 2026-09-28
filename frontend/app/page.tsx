@@ -15,6 +15,9 @@ import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
 import { MonthRolloverModal } from '../components/MonthRolloverModal';
 import { LoginScreen } from '../components/LoginScreen';
+import { DeliveredInvoicesModal } from '../components/DeliveredInvoicesModal';
+import { EmailSettingsModal } from '../components/EmailSettingsModal';
+import { SettingsModule } from '../components/SettingsModule';
 import { api } from '../lib/api';
 import { 
   notifySuccess, 
@@ -32,12 +35,13 @@ import {
   InventoryMovement, 
   InventoryCategory, 
   CompanyArea, 
-  User 
+  User,
+  EmailSettings
 } from './types';
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
@@ -128,11 +132,16 @@ export default function Home() {
   const [rolloverPreviousMonth, setRolloverPreviousMonth] = useState('Septiembre');
   const [serverDateInfo, setServerDateInfo] = useState<any>(null);
 
+  // Estados de Facturas Entregadas & Configuración Correo
+  const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
+  const [isEmailSettingsModalOpen, setIsEmailSettingsModalOpen] = useState(false);
+  const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
+
   // Cargar datos desde FastAPI backend con soporte a filtros de mes y año
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invs, sups, mets, invt, movs, cats, ars, usrs, srvDate] = await Promise.all([
+      const [invs, sups, mets, invt, movs, cats, ars, usrs, srvDate, mailSet] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
         api.getMetrics(selectedMonth, selectedYear).catch(() => null),
@@ -141,7 +150,8 @@ export default function Home() {
         api.getInventoryCategories().catch(() => []),
         api.getCompanyAreas().catch(() => []),
         api.getUsers().catch(() => []),
-        api.getSystemDateStatus(selectedMonth !== 'Todos' ? selectedMonth : undefined, selectedYear).catch(() => null)
+        api.getSystemDateStatus(selectedMonth !== 'Todos' ? selectedMonth : undefined, selectedYear).catch(() => null),
+        api.getEmailSettings().catch(() => null)
       ]);
       setInvoices(invs);
       setSuppliers(sups);
@@ -151,6 +161,7 @@ export default function Home() {
       setCategories(cats);
       setAreas(ars);
       setUsers(usrs);
+      if (mailSet) setEmailSettings(mailSet);
 
       if (srvDate) {
         setServerDateInfo(srvDate);
@@ -707,6 +718,7 @@ export default function Home() {
                 setSelectedInvoiceForEdit(null);
                 setIsInvoiceModalOpen(true);
               }}
+              onOpenDeliveredModal={() => setIsDeliveredModalOpen(true)}
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
             />
@@ -772,6 +784,11 @@ export default function Home() {
               onDeleteUser={handleDeleteUser}
             />
           )}
+
+          {/* VISTA CONFIGURACIONES DEL SISTEMA & CORREO OUTLOOK */}
+          {currentView === 'settings' && (
+            <SettingsModule onSettingsUpdated={loadData} />
+          )}
         </main>
       </div>
 
@@ -811,6 +828,23 @@ export default function Home() {
         undeliveredCount={undeliveredCount}
         quotationsToRollCount={quotationsToRollCount}
         serverDateInfo={serverDateInfo}
+      />
+
+      {/* MODAL FACTURAS ENTREGADAS (REPORTE EXCEL & OUTLOOK) */}
+      <DeliveredInvoicesModal 
+        isOpen={isDeliveredModalOpen}
+        onClose={() => setIsDeliveredModalOpen(false)}
+        invoices={filteredInvoicesByDate}
+        onRefreshData={loadData}
+        onOpenSettings={() => setIsEmailSettingsModalOpen(true)}
+        emailSettings={emailSettings}
+      />
+
+      {/* MODAL CONFIGURACIÓN RÁPIDA DE CORREO / OUTLOOK */}
+      <EmailSettingsModal 
+        isOpen={isEmailSettingsModalOpen}
+        onClose={() => setIsEmailSettingsModalOpen(false)}
+        onSaved={loadData}
       />
     </div>
   );

@@ -74,7 +74,7 @@ class MySQLRepository:
         allowed_fields = [
             "supplier", "service", "invoiceNumber", "emissionDate", "deliveryDate",
             "value", "signed", "orderStd", "oc", "enFacture", "delivered",
-            "pdfPath", "pdfOriginalName"
+            "pdfPath", "pdfOriginalName", "emailSent", "emailSentAt"
         ]
         if field not in allowed_fields:
             raise ValueError(f"Campo {field} no permitido para actualización")
@@ -84,6 +84,65 @@ class MySQLRepository:
                 sql = f"UPDATE invoices SET `{field}` = %s, updatedAt = NOW() WHERE id = %s"
                 cursor.execute(sql, (value, invoice_id))
                 return cursor.rowcount > 0
+
+    def mark_invoices_email_sent(self, invoice_ids: List[str]) -> bool:
+        if not invoice_ids:
+            return True
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                format_strings = ','.join(['%s'] * len(invoice_ids))
+                cursor.execute(f"UPDATE invoices SET emailSent = 'SÍ', emailSentAt = NOW() WHERE id IN ({format_strings})", tuple(invoice_ids))
+                return True
+
+    def fetch_email_settings(self) -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM email_settings WHERE id = 'default'")
+                row = cursor.fetchone()
+                if not row:
+                    return {
+                        "id": "default",
+                        "recipientEmail": "contabilidad@alimentosenriko.com",
+                        "senderName": "Alimentos Enriko S.A.S. — Control de Facturas",
+                        "emailSubject": "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S.",
+                        "emailTemplate": "Estimado equipo de Contabilidad y Pagos,\n\nAdjunto remitimos el reporte detallado de las facturas que han sido radicadas y entregadas formalmente para su respectiva causación y trámite de pago.\n\nPor favor verificar el detalle en la tabla anexa.",
+                        "frequency": "manual",
+                        "outlookIntegrationEnabled": 1
+                    }
+                return row
+
+    def save_email_settings(self, data: Dict[str, Any]) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO email_settings (
+                        id, recipientEmail, senderName, emailSubject, emailTemplate,
+                        frequency, outlookIntegrationEnabled, smtpHost, smtpPort, smtpUser, smtpPassword
+                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        recipientEmail = VALUES(recipientEmail),
+                        senderName = VALUES(senderName),
+                        emailSubject = VALUES(emailSubject),
+                        emailTemplate = VALUES(emailTemplate),
+                        frequency = VALUES(frequency),
+                        outlookIntegrationEnabled = VALUES(outlookIntegrationEnabled),
+                        smtpHost = VALUES(smtpHost),
+                        smtpPort = VALUES(smtpPort),
+                        smtpUser = VALUES(smtpUser),
+                        smtpPassword = VALUES(smtpPassword)
+                """, (
+                    data.get("recipientEmail", "contabilidad@alimentosenriko.com"),
+                    data.get("senderName", "Alimentos Enriko S.A.S. — Control de Facturas"),
+                    data.get("emailSubject", "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."),
+                    data.get("emailTemplate", ""),
+                    data.get("frequency", "manual"),
+                    int(data.get("outlookIntegrationEnabled", 1) or 1),
+                    data.get("smtpHost", "smtp.office365.com"),
+                    int(data.get("smtpPort", 587) or 587),
+                    data.get("smtpUser", ""),
+                    data.get("smtpPassword", "")
+                ))
+                return True
 
     def delete_invoice(self, invoice_id: str) -> bool:
         with self.get_connection() as conn:

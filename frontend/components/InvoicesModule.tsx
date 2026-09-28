@@ -13,7 +13,9 @@ import {
   Clock,
   Eye,
   Hash,
-  Pencil
+  Pencil,
+  FileSpreadsheet,
+  Mail
 } from 'lucide-react';
 import { Invoice } from '../app/types';
 
@@ -23,6 +25,7 @@ interface InvoicesModuleProps {
   onDeleteInvoice: (id: string) => void;
   onEditInvoice?: (invoice: Invoice) => void;
   onAddInvoice: () => void;
+  onOpenDeliveredModal?: () => void;
   selectedMonth: string;
   selectedYear: string;
 }
@@ -33,11 +36,15 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   onDeleteInvoice,
   onEditInvoice,
   onAddInvoice,
+  onOpenDeliveredModal,
   selectedMonth,
   selectedYear
 }) => {
   const [currentTab, setCurrentTab] = useState<'Todos' | 'Facturas' | 'Cotizaciones'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const deliveredCount = invoices.filter(i => (i.delivered || '').toUpperCase() === 'SÍ').length;
+  const pendingEmailCount = invoices.filter(i => (i.delivered || '').toUpperCase() === 'SÍ' && (i.emailSent || '').toUpperCase() !== 'SÍ').length;
 
   // Función utilitaria para fecha de hoy en formato YYYY-MM-DD
   const getTodayFormatted = () => {
@@ -83,7 +90,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
 
   return (
     <div className="w-full">
-      {/* HEADER DE MÓDULO CON BOTÓN DE AGREGAR FACTURA / COTIZACIÓN */}
+      {/* HEADER DE MÓDULO CON BOTONES DE ACCIÓN */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
         <div className="flex items-center gap-3 sm:gap-3.5">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
@@ -104,14 +111,36 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
           </div>
         </div>
 
-        {/* BOTÓN: AGREGAR FACTURA O COTIZACIÓN */}
-        <button 
-          onClick={onAddInvoice}
-          className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer flex-shrink-0"
-        >
-          <Plus className="w-4 h-4 text-white" />
-          <span>Agregar Factura o Cotización</span>
-        </button>
+        {/* BOTONES: FACTURAS ENTREGADAS (OUTLOOK) & AGREGAR FACTURA */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          {onOpenDeliveredModal && (
+            <button
+              onClick={onOpenDeliveredModal}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/80 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs group"
+              title="Ver reporte Excel de facturas entregadas y enviar a Outlook"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+              <span>Facturas Entregadas (Outlook)</span>
+              {deliveredCount > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  pendingEmailCount > 0 
+                    ? 'bg-red-600 text-white animate-pulse' 
+                    : 'bg-emerald-600 text-white'
+                }`}>
+                  {pendingEmailCount > 0 ? `${pendingEmailCount} pendientes` : `${deliveredCount} enviadas`}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button 
+            onClick={onAddInvoice}
+            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer flex-shrink-0"
+          >
+            <Plus className="w-4 h-4 text-white" />
+            <span>Agregar Factura / Cotización</span>
+          </button>
+        </div>
       </div>
 
       {/* TABS Y BUSCADOR */}
@@ -237,14 +266,20 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                         </div>
                       </td>
 
-                      {/* VALOR */}
+                      {/* VALOR (CON 2 DECIMALES Y ANCHO COMPLETO) */}
                       <td className="px-3.5 py-3 text-right">
-                        <input 
-                          type="number"
-                          value={inv.value ?? 0}
-                          onChange={(e) => onUpdateField(inv.id, 'value', parseFloat(e.target.value) || 0)}
-                          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-800 dark:text-zinc-100 outline-none w-20 focus:border-red-500"
-                        />
+                        <div className="inline-flex items-center justify-end">
+                          <span className="text-slate-400 text-[10px] font-mono mr-1">$</span>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={inv.value !== undefined && inv.value !== null ? inv.value : 0}
+                            onChange={(e) => onUpdateField(inv.id, 'value', parseFloat(e.target.value) || 0)}
+                            className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-900 rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold text-right text-slate-900 dark:text-zinc-100 outline-none w-28 sm:w-32 focus:ring-1 focus:ring-red-500 transition-all shadow-2xs"
+                            title="Valor monetario con 2 decimales"
+                          />
+                        </div>
                       </td>
 
                       {/* SWITCH FIRMADO */}

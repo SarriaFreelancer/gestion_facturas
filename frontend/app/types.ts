@@ -33,7 +33,24 @@ export interface Invoice {
   delivered?: 'SÍ' | 'NO' | string;
   pdfPath?: string | null;
   pdfOriginalName?: string | null;
+  emailSent?: 'SÍ' | 'NO' | string;
+  emailSentAt?: string | null;
   createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface EmailSettings {
+  id: string;
+  recipientEmail: string;
+  senderName?: string;
+  emailSubject?: string;
+  emailTemplate?: string;
+  frequency?: 'manual' | 'daily' | 'each_delivery' | string;
+  outlookIntegrationEnabled?: boolean | number;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
   updatedAt?: string;
 }
 

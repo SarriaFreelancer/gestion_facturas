@@ -270,6 +270,34 @@ export const api = {
       throw new Error(err.detail || 'Error al registrar usuario');
     }
     return res.json();
+  },
+
+  // Configuración de Correo & Reportes Outlook
+  async getEmailSettings(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/settings/email`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar configuración de correo');
+    return res.json();
+  },
+
+  async saveEmailSettings(settings: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/settings/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    if (!res.ok) throw new Error('Error al guardar configuración de correo');
+    return res.json();
+  },
+
+  async markInvoicesEmailSent(invoiceIds: string[]): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/mark-email-sent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceIds })
+    });
+    if (!res.ok) throw new Error('Error al marcar facturas enviadas');
+    return res.json();
   }
 };
+
 

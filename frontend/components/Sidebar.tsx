@@ -14,7 +14,8 @@ import {
   Laptop,
   Building2,
   Tag,
-  Shield
+  Shield,
+  Settings
 } from 'lucide-react';
 import { User } from '../app/types';
 
@@ -51,7 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ...(isSuperAdmin ? [
       { id: 'categories', label: 'Categorías TI', icon: Tag, superadminOnly: true },
       { id: 'users', label: 'Usuarios & Roles', icon: Shield, superadminOnly: true }
-    ] : [])
+    ] : []),
+    { id: 'settings', label: 'Configuración', icon: Settings }
   ];
 
   return (
