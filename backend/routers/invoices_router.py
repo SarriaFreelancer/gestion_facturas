@@ -268,3 +268,128 @@ def delete_inventory(item_id: str):
         return {"success": success}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- INVENTORY MOVEMENTS (HISTORIAL PRÉSTAMOS & ENTREGAS) ---
+class ReturnMovementPayload(BaseModel):
+    returnQuantity: Optional[int] = 0
+    notes: Optional[str] = ""
+
+@router.get("/inventory/movements")
+def get_inventory_movements(itemId: Optional[str] = None):
+    try:
+        return repo.fetch_inventory_movements(item_id=itemId)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/inventory/movements/{movement_id}/return")
+def return_inventory_movement(movement_id: str, payload: ReturnMovementPayload):
+    try:
+        res = repo.return_inventory_movement(
+            movement_id=movement_id,
+            return_qty=payload.returnQuantity or 0,
+            return_notes=payload.notes or ""
+        )
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- INVENTORY CATEGORIES ---
+class CategoryPayload(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+    icon: Optional[str] = "Layers"
+
+@router.get("/inventory/categories")
+def get_inventory_categories():
+    try:
+        return repo.fetch_inventory_categories()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/inventory/categories")
+def save_inventory_category(payload: CategoryPayload):
+    try:
+        cat_id = repo.save_inventory_category(payload.model_dump())
+        return {"success": True, "id": cat_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/inventory/categories/{cat_id}")
+def delete_inventory_category(cat_id: str):
+    try:
+        success = repo.delete_inventory_category(cat_id)
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- COMPANY AREAS ---
+class AreaPayload(BaseModel):
+    id: Optional[str] = None
+    name: str
+    director: Optional[str] = ""
+    headOrCoord: Optional[str] = ""
+    email: Optional[str] = ""
+    budgetLimit: Optional[float] = 0.0
+    color: Optional[str] = "red"
+    icon: Optional[str] = "Building2"
+
+@router.get("/areas")
+def get_company_areas():
+    try:
+        return repo.fetch_areas()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/areas")
+def save_company_area(payload: AreaPayload):
+    try:
+        area_id = repo.save_area(payload.model_dump())
+        return {"success": True, "id": area_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/areas/{area_id}")
+def delete_company_area(area_id: str):
+    try:
+        success = repo.delete_area(area_id)
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- USERS (SUPERADMIN GESTIONA USUARIOS Y ASIGNA ADMINS POR ÁREA) ---
+class UserPayload(BaseModel):
+    id: Optional[str] = None
+    username: str
+    name: str
+    email: Optional[str] = ""
+    password: Optional[str] = ""
+    role: Optional[str] = "admin"
+    area: Optional[str] = "General"
+    status: Optional[str] = "Activo"
+
+@router.get("/users")
+def get_users():
+    try:
+        return repo.fetch_users()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/users")
+def save_user(payload: UserPayload):
+    try:
+        user_id = repo.save_user(payload.model_dump())
+        return {"success": True, "id": user_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str):
+    try:
+        success = repo.delete_user(user_id)
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

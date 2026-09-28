@@ -144,5 +144,104 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/inventory/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Error al eliminar artículo');
     return res.json();
+  },
+
+  // Movimientos de Inventario (Préstamos, Entregas y Devoluciones)
+  async getInventoryMovements(itemId?: string): Promise<any[]> {
+    const url = itemId ? `${API_BASE_URL}/inventory/movements?itemId=${itemId}` : `${API_BASE_URL}/inventory/movements`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al obtener movimientos de inventario');
+    return res.json();
+  },
+
+  async returnInventoryMovement(movementId: string, returnQuantity?: number, notes?: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory/movements/${movementId}/return`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnQuantity, notes })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al procesar devolución');
+    }
+    return res.json();
+  },
+
+  // Categorías de Inventario TI
+  async getInventoryCategories(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/inventory/categories`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar categorías');
+    return res.json();
+  },
+
+  async saveInventoryCategory(category: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory/categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(category)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar categoría');
+    }
+    return res.json();
+  },
+
+  async deleteInventoryCategory(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory/categories/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar categoría');
+    return res.json();
+  },
+
+  // Áreas de la Empresa (Alimentos Enriko S.A.S.)
+  async getCompanyAreas(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/areas`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar áreas de la empresa');
+    return res.json();
+  },
+
+  async saveCompanyArea(area: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/areas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(area)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar área');
+    }
+    return res.json();
+  },
+
+  async deleteCompanyArea(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/areas/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar área');
+    return res.json();
+  },
+
+  // Usuarios del Sistema (Control de Acceso SuperAdmin vs Admins de Área)
+  async getUsers(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/users`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar usuarios');
+    return res.json();
+  },
+
+  async saveUser(user: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar usuario');
+    }
+    return res.json();
+  },
+
+  async deleteUser(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar usuario');
+    return res.json();
   }
 };

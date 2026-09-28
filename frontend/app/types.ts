@@ -82,6 +82,55 @@ export interface TechInventoryItem {
   updatedAt?: string;
 }
 
+export interface InventoryMovement {
+  id: string;
+  itemId: string;
+  itemName: string;
+  itemCategory?: string | null;
+  quantity: number;
+  recipient: string;
+  area: string;
+  actionType: 'Préstamo' | 'Entrega' | string;
+  status: 'Activo' | 'Devuelto' | 'Entregado' | string;
+  notes?: string | null;
+  movementDate: string;
+  returnDate?: string | null;
+  returnedQuantity?: number;
+}
+
+export interface InventoryCategory {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  createdAt?: string;
+}
+
+export interface CompanyArea {
+  id: string;
+  name: string;
+  director?: string | null;
+  headOrCoord?: string | null;
+  email?: string | null;
+  budgetLimit?: number;
+  color?: string | null;
+  icon?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  email?: string | null;
+  password?: string | null;
+  role: 'superadmin' | 'admin' | 'viewer';
+  area: string;
+  status: 'Activo' | 'Inactivo';
+  createdAt?: string;
+}
+
 export interface DashboardMetrics {
   total: number;
   facCount: number;

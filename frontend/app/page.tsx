@@ -8,6 +8,9 @@ import { DashboardCharts } from '../components/DashboardCharts';
 import { SuppliersModule } from '../components/SuppliersModule';
 import { InvoicesModule } from '../components/InvoicesModule';
 import { TechInventoryModule } from '../components/TechInventoryModule';
+import { AreasModule } from '../components/AreasModule';
+import { CategoriesModule } from '../components/CategoriesModule';
+import { UsersModule } from '../components/UsersModule';
 import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
 import { MonthRolloverModal } from '../components/MonthRolloverModal';
@@ -20,11 +23,20 @@ import {
   confirmAction,
   EnrikoToast 
 } from '../lib/alerts';
-import { Invoice, Supplier, DashboardMetrics, TechInventoryItem } from './types';
-import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar } from 'lucide-react';
+import { 
+  Invoice, 
+  Supplier, 
+  DashboardMetrics, 
+  TechInventoryItem, 
+  InventoryMovement, 
+  InventoryCategory, 
+  CompanyArea, 
+  User 
+} from './types';
+import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
@@ -58,16 +70,31 @@ export default function Home() {
     });
   }, []);
 
-  // Filtros Globales de Mes y Año
-  const [selectedMonth, setSelectedMonth] = useState('Todos');
+  // Filtros Globales de Mes y Año (Sincronizados con la fecha actual del día)
+  const [selectedMonth, setSelectedMonth] = useState('Septiembre');
   const [selectedYear, setSelectedYear] = useState('2026');
 
-  // Estado de Datos
+  // Estado de Datos Principales
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [inventory, setInventory] = useState<TechInventoryItem[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [categories, setCategories] = useState<InventoryCategory[]>([]);
+  const [areas, setAreas] = useState<CompanyArea[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Usuario Activo (Por defecto SuperAdmin de Alimentos Enriko)
+  const [currentUser, setCurrentUser] = useState<User>({
+    id: 'usr-superadmin',
+    username: 'superadmin',
+    name: 'David Sarria (Superadmin)',
+    email: 'superadmin@alimentosenriko.com',
+    role: 'superadmin',
+    area: 'Dirección General',
+    status: 'Activo'
+  });
 
   // Estados de Modales
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
@@ -87,20 +114,35 @@ export default function Home() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invs, sups, mets, invt, srvDate] = await Promise.all([
+      const [invs, sups, mets, invt, movs, cats, ars, usrs, srvDate] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
         api.getMetrics(selectedMonth, selectedYear).catch(() => null),
         api.getInventory().catch(() => []),
+        api.getInventoryMovements().catch(() => []),
+        api.getInventoryCategories().catch(() => []),
+        api.getCompanyAreas().catch(() => []),
+        api.getUsers().catch(() => []),
         api.getSystemDateStatus(selectedMonth !== 'Todos' ? selectedMonth : undefined, selectedYear).catch(() => null)
       ]);
       setInvoices(invs);
       setSuppliers(sups);
       setMetrics(mets);
       setInventory(invt);
+      setMovements(movs);
+      setCategories(cats);
+      setAreas(ars);
+      setUsers(usrs);
+
       if (srvDate) {
         setServerDateInfo(srvDate);
         setRolloverPreviousMonth(srvDate.previousMonth || 'Septiembre');
+      }
+
+      // Si hay usuarios cargados y el usuario actual aún no tiene datos completos del servidor
+      if (usrs.length > 0 && currentUser.id === 'usr-superadmin') {
+        const foundSuper = usrs.find((u: User) => u.role === 'superadmin');
+        if (foundSuper) setCurrentUser(foundSuper);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -108,6 +150,27 @@ export default function Home() {
       setLoading(false);
     }
   }, [selectedMonth, selectedYear]);
+
+  // Sincronización con fecha de hoy al iniciar la sesión
+  useEffect(() => {
+    const initDate = async () => {
+      try {
+        const dateCheck = await api.getSystemDateStatus();
+        if (dateCheck) {
+          setServerDateInfo(dateCheck);
+          setSelectedMonth(dateCheck.currentMonth);
+          setSelectedYear(dateCheck.currentYear);
+        }
+      } catch (e) {
+        // Fallback local
+        const today = new Date();
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        setSelectedMonth(monthNames[today.getMonth()]);
+        setSelectedYear(String(today.getFullYear()));
+      }
+    };
+    initDate();
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -125,10 +188,11 @@ export default function Home() {
     }).length;
   }, [invoices]);
 
-  // Detección cuando el usuario cambia a un mes nuevo específico (ej: Octubre)
-  const handleSelectMonth = async (newMonth: string) => {
+  // Selector unificado de Mes y Año por Calendario
+  const handleSelectMonthYear = async (newMonth: string, newYear: string) => {
     setSelectedMonth(newMonth);
-    // Si cambia de 'Todos' a un mes específico o entre meses, y aún no tiene registros en ese mes
+    setSelectedYear(newYear);
+
     if (newMonth !== 'Todos') {
       const monthMap: Record<string, number> = {
         'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
@@ -144,19 +208,19 @@ export default function Home() {
 
       // Consultar verificación de fecha al servidor para el mes destino
       try {
-        const dateCheck = await api.getSystemDateStatus(newMonth, selectedYear);
+        const dateCheck = await api.getSystemDateStatus(newMonth, newYear);
         setServerDateInfo(dateCheck);
         if (dateCheck?.previousMonth) {
           setRolloverPreviousMonth(dateCheck.previousMonth);
         }
       } catch (e) {
-        // Fallback local
+        // fallback
       }
 
       // Si el mes no tiene facturas aún, preguntar para inicializar
       if (!existsInMonth) {
         setRolloverTargetMonth(newMonth);
-        setRolloverTargetYear(selectedYear);
+        setRolloverTargetYear(newYear);
         setIsRolloverModalOpen(true);
       }
     }
@@ -185,7 +249,22 @@ export default function Home() {
     }
   };
 
-  // Filtrado reactivo en el frontend para facturas según el mes y año seleccionados
+  // CONTROL DE ACCESOS POR ÁREA:
+  // Si el usuario es Superadmin, ve todos los proveedores y facturas.
+  // Si es Admin de Área, solo ve y gestiona proveedores y facturas de su área.
+  const isSuperAdmin = currentUser?.role === 'superadmin';
+  const userArea = currentUser?.area || 'General';
+
+  const scopedSuppliers = useMemo(() => {
+    if (isSuperAdmin) return suppliers;
+    return suppliers.filter(s => (s.area || '').toLowerCase() === userArea.toLowerCase());
+  }, [suppliers, isSuperAdmin, userArea]);
+
+  const scopedSupplierNames = useMemo(() => {
+    return scopedSuppliers.map(s => s.name.toLowerCase());
+  }, [scopedSuppliers]);
+
+  // Filtrado reactivo en el frontend para facturas según mes, año y área
   const filteredInvoicesByDate = useMemo(() => {
     const monthMap: Record<string, number> = {
       'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
@@ -194,6 +273,12 @@ export default function Home() {
     };
 
     return invoices.filter(inv => {
+      // Alcance por área para Admin de Área
+      if (!isSuperAdmin) {
+        const matchesSupplier = scopedSupplierNames.includes((inv.supplier || '').toLowerCase());
+        if (!matchesSupplier) return false;
+      }
+
       const dateStr = inv.emissionDate || inv.createdAt || '';
       if (!dateStr) return true;
       const cleanDate = dateStr.split('T')[0].split(' ')[0];
@@ -215,17 +300,18 @@ export default function Home() {
       }
       return true;
     });
-  }, [invoices, selectedMonth, selectedYear]);
+  }, [invoices, selectedMonth, selectedYear, isSuperAdmin, scopedSupplierNames]);
 
-  // Actualización de campo en factura (PATCH inmediato)
+  // Actualización rápida de campo inline en tabla de facturas
   const handleUpdateInvoiceField = async (id: string, field: string, value: any) => {
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, [field]: value } : inv));
     try {
       await api.updateInvoiceField(id, field, value);
-      const updatedMetrics = await api.getMetrics(selectedMonth, selectedYear);
-      setMetrics(updatedMetrics);
-    } catch (err) {
-      console.error('Error al actualizar campo:', err);
+      if (field === 'delivered' && value === 'SÍ') {
+        notifySuccess('Factura Entregada', 'Se registró la entrega efectiva del documento.');
+      }
+    } catch (err: any) {
+      notifyError('Error al actualizar campo', err.message);
       loadData();
     }
   };
@@ -233,7 +319,12 @@ export default function Home() {
   // Guardar Proveedor (Crear o Editar)
   const handleSaveSupplier = async (supplierData: Partial<Supplier>) => {
     try {
-      await api.createOrUpdateSupplier(supplierData);
+      // Si el usuario es admin de área, auto-asigna su área
+      const dataToSave = {
+        ...supplierData,
+        area: !isSuperAdmin ? userArea : (supplierData.area || 'General')
+      };
+      await api.createOrUpdateSupplier(dataToSave);
       notifySuccess('Proveedor Guardado', 'Los datos del proveedor se actualizaron correctamente.');
       await loadData();
     } catch (err: any) {
@@ -250,6 +341,12 @@ export default function Home() {
     } catch (err: any) {
       notifyError('Error al guardar documento', err.message);
     }
+  };
+
+  // Editar factura (abrir modal con lápiz)
+  const handleEditInvoice = (inv: Invoice) => {
+    setSelectedInvoiceForEdit(inv);
+    setIsInvoiceModalOpen(true);
   };
 
   // Eliminación de factura
@@ -319,6 +416,16 @@ export default function Home() {
     }
   };
 
+  const handleReturnInventoryMovement = async (movementId: string, returnQty?: number, notes?: string) => {
+    try {
+      await api.returnInventoryMovement(movementId, returnQty, notes);
+      notifySuccess('Devolución Procesada', 'El equipo fue reincorporado al stock disponible de TI.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al procesar devolución', err.message);
+    }
+  };
+
   const handleDeleteInventoryItem = async (id: string) => {
     const confirmed = await confirmDelete(
       '¿Eliminar del Inventario?',
@@ -332,6 +439,87 @@ export default function Home() {
       await loadData();
     } catch (err: any) {
       notifyError('Error al eliminar artículo', err.message);
+    }
+  };
+
+  // Funciones de Categorías TI
+  const handleSaveCategory = async (cat: Partial<InventoryCategory>) => {
+    try {
+      await api.saveInventoryCategory(cat);
+      notifySuccess('Categoría Guardada', 'La categoría fue registrada con éxito.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar categoría', err.message);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    const confirmed = await confirmDelete(
+      '¿Eliminar Categoría?',
+      'Se eliminará este tipo de clasificación del inventario.',
+      'Sí, eliminar'
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteInventoryCategory(id);
+      notifySuccess('Categoría Eliminada', 'Se eliminó la categoría del inventario.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al eliminar categoría', err.message);
+    }
+  };
+
+  // Funciones de Áreas de la Empresa
+  const handleSaveArea = async (areaData: Partial<CompanyArea>) => {
+    try {
+      await api.saveCompanyArea(areaData);
+      notifySuccess('Área Guardada', 'El área corporativa fue registrada con éxito.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar área', err.message);
+    }
+  };
+
+  const handleDeleteArea = async (id: string) => {
+    const confirmed = await confirmDelete(
+      '¿Eliminar Área?',
+      'Se eliminará este departamento de la estructura corporativa.',
+      'Sí, eliminar área'
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteCompanyArea(id);
+      notifySuccess('Área Eliminada', 'El área fue retirada del sistema.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al eliminar área', err.message);
+    }
+  };
+
+  // Funciones de Usuarios del Sistema
+  const handleSaveUser = async (userData: Partial<User>) => {
+    try {
+      await api.saveUser(userData);
+      notifySuccess('Usuario Guardado', 'El usuario y sus permisos se configuraron correctamente.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar usuario', err.message);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    const confirmed = await confirmDelete(
+      '¿Eliminar Usuario?',
+      'Se removerá el acceso de este usuario al sistema de Alimentos Enriko.',
+      'Sí, eliminar usuario'
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteUser(id);
+      notifySuccess('Usuario Eliminado', 'El usuario fue retirado del sistema.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al eliminar usuario', err.message);
     }
   };
 
@@ -362,21 +550,46 @@ export default function Home() {
         onClose={() => setIsSidebarOpen(false)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+        currentUser={currentUser}
+        onCleanDatabase={handleCleanDatabase}
       />
 
       {/* CONTENIDO PRINCIPAL CON AJUSTE COMPLETO Y SCROLL SUAVE */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <TopNavbar 
           selectedMonth={selectedMonth}
-          setSelectedMonth={handleSelectMonth}
+          setSelectedMonth={setSelectedMonth}
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
+          onSelectMonthYear={handleSelectMonthYear}
+          serverDateInfo={serverDateInfo}
           darkMode={darkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+          currentUser={currentUser}
+          users={users}
+          onSwitchUser={(u) => {
+            setCurrentUser(u);
+            notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : `Permisos restringidos a: ${u.area}`);
+          }}
         />
 
         <main className="p-4 sm:p-7 flex-1 max-w-full overflow-x-hidden">
+          {/* BANNER AVISO SI ES ADMIN DE ÁREA */}
+          {!isSuperAdmin && (
+            <div className="mb-6 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span>
+                  Estás navegando como <strong>Admin de Área ({userArea})</strong>. Solo puedes gestionar proveedores y facturas correspondientes a tu departamento.
+                </span>
+              </div>
+              <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-lg">
+                Vista Filtrada
+              </span>
+            </div>
+          )}
+
           {/* VISTA DASHBOARD */}
           {currentView === 'dashboard' && (
             <div>
@@ -385,70 +598,46 @@ export default function Home() {
                   <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2">
                     <span>Panel de Control y Analítica</span>
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
-                      Filtro Activo: {selectedMonth} {selectedYear}
+                      {selectedMonth} {selectedYear}
                     </span>
                   </h1>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                    Visualiza métricas, evolución mes a mes, flujos semanales y estudio de conceptos recurrentes.
+                    Control documental y cumplimiento en Alimentos Enriko S.A.S.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* BOTÓN PREPARAR NUEVO MES MANUALMENTE */}
-                  <button 
-                    onClick={() => {
-                      setRolloverTargetMonth(selectedMonth !== 'Todos' ? selectedMonth : 'Octubre');
-                      setRolloverTargetYear(selectedYear);
-                      setIsRolloverModalOpen(true);
-                    }}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center gap-1.5 transition-all border border-slate-200 dark:border-zinc-700 cursor-pointer"
-                    title="Preparar e inicializar un nuevo mes con plantilla recurrente"
-                  >
-                    <Calendar className="w-3.5 h-3.5 text-red-600" />
-                    <span>Iniciar Nuevo Mes</span>
-                  </button>
-
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button 
                     onClick={() => {
                       setSelectedInvoiceForEdit(null);
                       setIsInvoiceModalOpen(true);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-red-600/25 transition-all cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>+ Factura / Cotización</span>
-                  </button>
-
-                  <button 
-                    onClick={handleCleanDatabase}
-                    className="px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-red-50 hover:text-red-600 text-slate-600 dark:text-zinc-300 text-xs font-bold border border-slate-200 dark:border-zinc-700 transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Vaciar facturas de prueba"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Limpiar BD</span>
+                    <span>+ Agregar Factura / Cotización</span>
                   </button>
                 </div>
               </div>
 
-              {/* KPIS PRINCIPALES */}
+              {/* KPIS Y GRAFICOS */}
               <DashboardKpis metrics={metrics} loading={loading} />
-
-              {/* GRÁFICOS SOLICITADOS: MES A MES, FLUJO SEMANAL Y ESTUDIO DE RECURRENCIA */}
               <DashboardCharts 
-                monthlyStats={metrics?.monthlyStats || []}
-                weeklyData={metrics?.weeklyReceivedDelivered || []}
-                recurrenceStudy={metrics?.recurrenceStudy || []}
+                monthlyStats={metrics?.monthlyStats}
+                weeklyData={metrics?.weeklyReceivedDelivered}
+                recurrenceStudy={metrics?.recurrenceStudy}
                 selectedYear={selectedYear}
                 selectedMonth={selectedMonth}
               />
             </div>
           )}
 
-          {/* VISTA FACTURAS */}
+          {/* VISTA FACTURAS Y COTIZACIONES */}
           {currentView === 'invoices' && (
             <InvoicesModule 
               invoices={filteredInvoicesByDate}
               onUpdateField={handleUpdateInvoiceField}
               onDeleteInvoice={handleDeleteInvoice}
+              onEditInvoice={handleEditInvoice}
               onAddInvoice={() => {
                 setSelectedInvoiceForEdit(null);
                 setIsInvoiceModalOpen(true);
@@ -461,7 +650,7 @@ export default function Home() {
           {/* VISTA PROVEEDORES */}
           {currentView === 'suppliers' && (
             <SuppliersModule 
-              suppliers={suppliers}
+              suppliers={scopedSuppliers}
               onAddSupplier={() => {
                 setSelectedSupplierForEdit(null);
                 setIsSupplierModalOpen(true);
@@ -475,24 +664,48 @@ export default function Home() {
             />
           )}
 
-          {/* VISTA INVENTARIO TECNOLÓGICO */}
+          {/* VISTA INVENTARIO TI */}
           {currentView === 'inventory' && (
             <TechInventoryModule 
               inventory={inventory}
+              movements={movements}
+              categories={categories}
               onSaveItem={handleSaveInventoryItem}
               onLoanItem={handleLoanInventoryItem}
+              onReturnMovement={handleReturnInventoryMovement}
               onDeleteItem={handleDeleteInventoryItem}
             />
           )}
 
-          {/* OTRAS VISTAS */}
-          {(currentView === 'reports' || currentView === 'alerts') && (
-            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-12 text-center shadow-sm">
-              <h2 className="text-base font-black text-slate-800 dark:text-white mb-2">Módulo en Desarrollo</h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Los datos se sincronizan con los endpoints analíticos de FastAPI y MySQL.
-              </p>
-            </div>
+          {/* VISTA ÁREAS CORPORATIVAS */}
+          {currentView === 'areas' && (
+            <AreasModule 
+              areas={areas}
+              invoices={invoices}
+              suppliers={suppliers}
+              inventory={inventory}
+              onSaveArea={handleSaveArea}
+              onDeleteArea={handleDeleteArea}
+            />
+          )}
+
+          {/* VISTA CATEGORÍAS TI (SOLO SUPERADMIN) */}
+          {currentView === 'categories' && isSuperAdmin && (
+            <CategoriesModule 
+              categories={categories}
+              onSaveCategory={handleSaveCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          )}
+
+          {/* VISTA USUARIOS & ROLES (SOLO SUPERADMIN) */}
+          {currentView === 'users' && isSuperAdmin && (
+            <UsersModule 
+              users={users}
+              areas={areas}
+              onSaveUser={handleSaveUser}
+              onDeleteUser={handleDeleteUser}
+            />
           )}
         </main>
       </div>
@@ -516,7 +729,7 @@ export default function Home() {
           setSelectedInvoiceForEdit(null);
         }}
         onSave={handleSaveInvoice}
-        suppliers={suppliers}
+        suppliers={scopedSuppliers}
         defaultMonth={selectedMonth}
         defaultYear={selectedYear}
         initialInvoice={selectedInvoiceForEdit}

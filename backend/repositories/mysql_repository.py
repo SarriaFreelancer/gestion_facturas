@@ -29,7 +29,7 @@ class MySQLRepository:
                 return rows
 
     def save_invoice(self, data: Dict[str, Any]) -> str:
-        inv_id = data.get("id") or f"inv-{int(pymysql.time.time() * 1000)}"
+        inv_id = data.get("id") or f"inv-{int(time.time() * 1000)}"
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 sql = """
@@ -218,7 +218,7 @@ class MySQLRepository:
                 ))
                 return item_id
 
-    def loan_inventory_item(self, item_id: str, quantity_to_loan: int, recipient: str, area: str, action_type: str = "Préstamo") -> Dict[str, Any]:
+    def loan_inventory_item(self, item_id: str, quantity_to_loan: int, recipient: str, area: str, action_type: str = "Préstamo", notes: str = "") -> Dict[str, Any]:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT * FROM tech_inventory WHERE id = %s", (item_id,))
@@ -232,25 +232,120 @@ class MySQLRepository:
 
                 new_qty = current_qty - quantity_to_loan
                 new_status = "Disponible" if new_qty > 0 else "Agotado"
-                date_str = time.strftime('%Y-%m-%d')
+                date_str = time.strftime('%Y-%m-%d %H:%M:%S')
                 log_entry = f"\n[{action_type.upper()} {date_str}]: {quantity_to_loan} {row.get('unit', 'uds')} entregados a {recipient} ({area})."
                 updated_notes = (row.get("notes") or "") + log_entry
 
+                # Actualizar stock en tech_inventory
                 cursor.execute(
                     "UPDATE tech_inventory SET quantity = %s, status = %s, notes = %s, updatedAt = NOW() WHERE id = %s",
                     (new_qty, new_status, updated_notes, item_id)
                 )
+
+                # Registrar movimiento en inventory_movements
+                movement_id = f"mov-{int(time.time() * 1000)}"
+                cursor.execute("""
+                    INSERT INTO inventory_movements (
+                        id, itemId, itemName, itemCategory, quantity, recipient, area, actionType, status, notes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    movement_id,
+                    item_id,
+                    row.get("name") or "Artículo",
+                    row.get("category") or "General",
+                    quantity_to_loan,
+                    recipient,
+                    area,
+                    action_type,
+                    "Activo" if action_type == "Préstamo" else "Entregado",
+                    notes or log_entry.strip()
+                ))
+
                 return {
                     "success": True,
+                    "movementId": movement_id,
                     "previousQuantity": current_qty,
                     "loanedQuantity": quantity_to_loan,
                     "remainingQuantity": new_qty
                 }
 
+    def return_inventory_movement(self, movement_id: str, return_qty: int = 0, return_notes: str = "") -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM inventory_movements WHERE id = %s", (movement_id,))
+                mov = cursor.fetchone()
+                if not mov:
+                    raise ValueError("Movimiento no encontrado")
+
+                item_id = mov.get("itemId")
+                qty = return_qty if return_qty > 0 else int(mov.get("quantity") or 1)
+
+                # Devolver cantidad a stock
+                cursor.execute("SELECT quantity FROM tech_inventory WHERE id = %s", (item_id,))
+                inv_row = cursor.fetchone()
+                if inv_row:
+                    new_inv_qty = int(inv_row.get("quantity") or 0) + qty
+                    new_inv_status = "Disponible" if new_inv_qty > 0 else "Agotado"
+                    cursor.execute(
+                        "UPDATE tech_inventory SET quantity = %s, status = %s, updatedAt = NOW() WHERE id = %s",
+                        (new_inv_qty, new_inv_status, item_id)
+                    )
+
+                # Actualizar movimiento
+                cursor.execute("""
+                    UPDATE inventory_movements 
+                    SET status = 'Devuelto', returnDate = NOW(), returnedQuantity = %s, notes = CONCAT(COALESCE(notes,''), %s), updatedAt = NOW()
+                    WHERE id = %s
+                """, (
+                    qty,
+                    f"\n[DEVOLUCIÓN {time.strftime('%Y-%m-%d')}]: {qty} uds devueltas. {return_notes}".strip(),
+                    movement_id
+                ))
+
+                return {"success": True, "message": f"Devolución de {qty} unidades registrada correctamente"}
+
+    def fetch_inventory_movements(self, item_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                if item_id:
+                    cursor.execute("SELECT * FROM inventory_movements WHERE itemId = %s ORDER BY movementDate DESC", (item_id,))
+                else:
+                    cursor.execute("SELECT * FROM inventory_movements ORDER BY movementDate DESC")
+                return cursor.fetchall()
+
     def delete_inventory_item(self, item_id: str) -> bool:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DELETE FROM tech_inventory WHERE id = %s", (item_id,))
+                return cursor.rowcount > 0
+
+    # --- INVENTORY CATEGORIES ---
+    def fetch_inventory_categories(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM inventory_categories ORDER BY name ASC")
+                return cursor.fetchall()
+
+    def save_inventory_category(self, data: Dict[str, Any]) -> str:
+        cat_id = data.get("id") or f"cat-{int(time.time() * 1000)}"
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO inventory_categories (id, name, description, icon)
+                    VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), icon=VALUES(icon)
+                """, (
+                    cat_id,
+                    data.get("name", "").strip(),
+                    data.get("description", "").strip(),
+                    data.get("icon", "Layers")
+                ))
+                return cat_id
+
+    def delete_inventory_category(self, cat_id: str) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM inventory_categories WHERE id = %s", (cat_id,))
                 return cursor.rowcount > 0
 
     # --- INICIO DE MES: GENERAR PLANTILLA RECURRENTE Y MIGRAR NO ENTREGADAS ---
@@ -397,9 +492,88 @@ class MySQLRepository:
                 cursor.execute(sql, params)
                 return cursor.fetchall()
 
+    # --- COMPANY AREAS ---
+    def fetch_areas(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM company_areas ORDER BY name ASC")
+                rows = cursor.fetchall()
+                for r in rows:
+                    if "budgetLimit" in r and r["budgetLimit"] is not None:
+                        r["budgetLimit"] = float(r["budgetLimit"])
+                return rows
+
+    def save_area(self, data: Dict[str, Any]) -> str:
+        area_id = data.get("id") or f"area-{int(time.time() * 1000)}"
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO company_areas (id, name, director, headOrCoord, email, budgetLimit, color, icon)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        name = VALUES(name),
+                        director = VALUES(director),
+                        headOrCoord = VALUES(headOrCoord),
+                        email = VALUES(email),
+                        budgetLimit = VALUES(budgetLimit),
+                        color = VALUES(color),
+                        icon = VALUES(icon)
+                """, (
+                    area_id,
+                    data.get("name", "").strip(),
+                    data.get("director", "").strip(),
+                    data.get("headOrCoord", "").strip(),
+                    data.get("email", "").strip(),
+                    float(data.get("budgetLimit") or 0.0),
+                    data.get("color", "red"),
+                    data.get("icon", "Building2")
+                ))
+                return area_id
+
+    def delete_area(self, area_id: str) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM company_areas WHERE id = %s", (area_id,))
+                return cursor.rowcount > 0
+
     # --- USERS ---
     def fetch_users(self) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT id, username, name, role, area, status, createdAt FROM users ORDER BY name ASC")
+                cursor.execute("SELECT id, username, name, email, role, area, status, createdAt FROM users ORDER BY role ASC, name ASC")
                 return cursor.fetchall()
+
+    def save_user(self, data: Dict[str, Any]) -> str:
+        user_id = data.get("id") or f"usr-{int(time.time() * 1000)}"
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Si viene con contraseña nueva, se actualiza, si no se mantiene la existente
+                password = data.get("password") or "123456"
+                cursor.execute("""
+                    INSERT INTO users (id, username, name, email, password, role, area, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        username = VALUES(username),
+                        name = VALUES(name),
+                        email = VALUES(email),
+                        password = IF(VALUES(password) != '', VALUES(password), password),
+                        role = VALUES(role),
+                        area = VALUES(area),
+                        status = VALUES(status)
+                """, (
+                    user_id,
+                    data.get("username", "").strip(),
+                    data.get("name", "").strip(),
+                    data.get("email", "").strip(),
+                    password,
+                    data.get("role", "admin"),
+                    data.get("area", "General"),
+                    data.get("status", "Activo")
+                ))
+                return user_id
+
+    def delete_user(self, user_id: str) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                return cursor.rowcount > 0

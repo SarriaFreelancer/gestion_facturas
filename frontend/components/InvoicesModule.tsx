@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  Hash
+  Hash,
+  Pencil
 } from 'lucide-react';
 import { Invoice } from '../app/types';
 
@@ -20,6 +21,7 @@ interface InvoicesModuleProps {
   invoices: Invoice[];
   onUpdateField: (id: string, field: string, value: any) => void;
   onDeleteInvoice: (id: string) => void;
+  onEditInvoice?: (invoice: Invoice) => void;
   onAddInvoice: () => void;
   selectedMonth: string;
   selectedYear: string;
@@ -29,6 +31,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   invoices,
   onUpdateField,
   onDeleteInvoice,
+  onEditInvoice,
   onAddInvoice,
   selectedMonth,
   selectedYear
@@ -305,13 +308,22 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
 
                       {/* ACCIONES */}
                       <td className="px-3 py-3 text-center">
-                        <button 
-                          onClick={() => onDeleteInvoice(inv.id)}
-                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors cursor-pointer"
-                          title="Eliminar factura"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button 
+                            onClick={() => onEditInvoice && onEditInvoice(inv)}
+                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            title="Editar factura completa"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => onDeleteInvoice(inv.id)}
+                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            title="Eliminar factura"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
