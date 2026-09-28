@@ -12,6 +12,14 @@ import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
 import { MonthRolloverModal } from '../components/MonthRolloverModal';
 import { api } from '../lib/api';
+import { 
+  notifySuccess, 
+  notifyError, 
+  notifyInfo, 
+  confirmDelete, 
+  confirmAction,
+  EnrikoToast 
+} from '../lib/alerts';
 import { Invoice, Supplier, DashboardMetrics, TechInventoryItem } from './types';
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar } from 'lucide-react';
 
@@ -165,9 +173,15 @@ export default function Home() {
         keepUndelivered
       );
       setIsRolloverModalOpen(false);
+      notifySuccess(
+        `Mes ${rolloverTargetMonth} Inicializado`,
+        keepUndelivered
+          ? 'Se cargó la plantilla en $0.00 y se mantuvieron las facturas pendientes.'
+          : 'Se generó la plantilla de conceptos recurrentes en $0.00.'
+      );
       await loadData();
-    } catch (err) {
-      console.error('Error en transición de mes:', err);
+    } catch (err: any) {
+      notifyError('Error en inicio de mes', err.message);
     }
   };
 
@@ -218,35 +232,57 @@ export default function Home() {
 
   // Guardar Proveedor (Crear o Editar)
   const handleSaveSupplier = async (supplierData: Partial<Supplier>) => {
-    await api.createOrUpdateSupplier(supplierData);
-    await loadData();
+    try {
+      await api.createOrUpdateSupplier(supplierData);
+      notifySuccess('Proveedor Guardado', 'Los datos del proveedor se actualizaron correctamente.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar proveedor', err.message);
+    }
   };
 
   // Guardar Factura / Cotización (No recurrente o regular)
   const handleSaveInvoice = async (invoiceData: Partial<Invoice>) => {
-    await api.createOrUpdateInvoice(invoiceData);
-    await loadData();
+    try {
+      await api.createOrUpdateInvoice(invoiceData);
+      notifySuccess('Factura Registrada', 'El documento se guardó correctamente.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar documento', err.message);
+    }
   };
 
   // Eliminación de factura
   const handleDeleteInvoice = async (id: string) => {
-    if (!confirm('¿Deseas eliminar este registro de factura?')) return;
+    const confirmed = await confirmDelete(
+      '¿Eliminar Factura?',
+      '¿Deseas eliminar este registro de factura? Esta acción no se puede revertir.',
+      'Sí, eliminar factura'
+    );
+    if (!confirmed) return;
     try {
       await api.deleteInvoice(id);
+      notifySuccess('Factura eliminada', 'El registro ha sido removido del sistema.');
       loadData();
-    } catch (err) {
-      console.error('Error al eliminar factura:', err);
+    } catch (err: any) {
+      notifyError('Error al eliminar', err.message);
     }
   };
 
   // Eliminación de proveedor
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('¿Deseas eliminar este proveedor del directorio?')) return;
+    const confirmed = await confirmDelete(
+      '¿Eliminar Proveedor?',
+      'Se removerá este proveedor del directorio corporativo junto con sus conceptos asociados.',
+      'Sí, eliminar proveedor'
+    );
+    if (!confirmed) return;
     try {
       await api.deleteSupplier(id);
+      notifySuccess('Proveedor eliminado', 'El proveedor fue retirado del sistema.');
       loadData();
-    } catch (err) {
-      console.error('Error al eliminar proveedor:', err);
+    } catch (err: any) {
+      notifyError('Error al eliminar proveedor', err.message);
     }
   };
 
@@ -255,36 +291,64 @@ export default function Home() {
     setSuppliers(prev => prev.map(s => s.id === supId ? { ...s, services } : s));
     try {
       await api.updateSupplierServices(supId, services);
-    } catch (err) {
-      console.error('Error al guardar conceptos:', err);
+      notifySuccess('Conceptos Actualizados', 'La lista de conceptos recurrentes se actualizó.');
+    } catch (err: any) {
+      notifyError('Error al guardar conceptos', err.message);
       loadData();
     }
   };
 
   // Funciones de Inventario TI
   const handleSaveInventoryItem = async (item: Partial<TechInventoryItem>) => {
-    await api.saveInventoryItem(item);
-    await loadData();
+    try {
+      await api.saveInventoryItem(item);
+      notifySuccess('Artículo Guardado', 'El equipo o periférico fue registrado con éxito en el stock.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al guardar artículo', err.message);
+    }
   };
 
   const handleLoanInventoryItem = async (id: string, qty: number, recipient: string, area: string, actionType: string) => {
-    await api.loanInventoryItem(id, qty, recipient, area, actionType);
-    await loadData();
+    try {
+      await api.loanInventoryItem(id, qty, recipient, area, actionType);
+      notifySuccess('Movimiento Registrado', `${actionType} procesado para ${recipient} (${area}).`);
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error en préstamo / entrega', err.message);
+    }
   };
 
   const handleDeleteInventoryItem = async (id: string) => {
-    await api.deleteInventoryItem(id);
-    await loadData();
+    const confirmed = await confirmDelete(
+      '¿Eliminar del Inventario?',
+      '¿Deseas eliminar definitivamente este artículo del inventario de TI?',
+      'Sí, eliminar equipo'
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteInventoryItem(id);
+      notifySuccess('Artículo Eliminado', 'El registro fue retirado del inventario.');
+      await loadData();
+    } catch (err: any) {
+      notifyError('Error al eliminar artículo', err.message);
+    }
   };
 
   // Limpiar base de datos
   const handleCleanDatabase = async () => {
-    if (!confirm('¿Seguro que deseas vaciar todas las facturas de la base de datos para comenzar en limpio?')) return;
+    const confirmed = await confirmDelete(
+      '¿Vaciar Base de Datos?',
+      '¡Atención! Esta acción borrará todas las facturas y conceptos cargados para comenzar en limpio.',
+      'Sí, vaciar facturas'
+    );
+    if (!confirmed) return;
     try {
       await api.cleanDatabase();
+      notifySuccess('Base de datos vaciada', 'Se eliminaron los registros de facturas.');
       loadData();
-    } catch (err) {
-      console.error('Error al limpiar base de datos:', err);
+    } catch (err: any) {
+      notifyError('Error al limpiar base de datos', err.message);
     }
   };
 

@@ -298,11 +298,7 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
                           </button>
 
                           <button 
-                            onClick={() => {
-                              if (confirm(`¿Eliminar ${item.name} del inventario?`)) {
-                                onDeleteItem(item.id);
-                              }
-                            }}
+                            onClick={() => onDeleteItem(item.id)}
                             className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
                             title="Eliminar artículo"
                           >

@@ -45,3 +45,21 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #dc2626;
 }
+
+/* SweetAlert2 Enhancements */
+.swal2-container {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99999 !important;
+}
+
+div:where(.swal2-icon) {
+  transform: scale(0.9);
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.swal2-html-container {
+  margin: 0.5rem 1rem !important;
+}
+
