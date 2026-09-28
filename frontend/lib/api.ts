@@ -299,7 +299,7 @@ export const api = {
     return res.json();
   },
 
-  async sendInvoicesEmailDirect(payload: { invoiceIds: string[]; recipientEmail?: string; subject?: string; introMessage?: string }): Promise<any> {
+  async sendInvoicesEmailDirect(payload: { invoiceIds: string[]; recipientEmail?: string; ccEmails?: string; subject?: string; introMessage?: string }): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/invoices/send-email-direct`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -312,11 +312,11 @@ export const api = {
     return res.json();
   },
 
-  async testEmailConnection(recipientEmail?: string): Promise<any> {
+  async testEmailConnection(recipientEmail?: string, ccEmails?: string): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/settings/test-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipientEmail })
+      body: JSON.stringify({ recipientEmail, ccEmails })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

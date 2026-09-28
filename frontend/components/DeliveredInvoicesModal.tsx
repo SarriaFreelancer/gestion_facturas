@@ -64,6 +64,7 @@ export const DeliveredInvoicesModal: React.FC<DeliveredInvoicesModalProps> = ({
       const res = await api.sendInvoicesEmailDirect({
         invoiceIds: targetInvoices.map(i => i.id),
         recipientEmail: emailSettings?.recipientEmail,
+        ccEmails: emailSettings?.ccEmails,
         subject: emailSettings?.emailSubject,
         introMessage: emailSettings?.emailTemplate
       });
@@ -281,7 +282,8 @@ export const DeliveredInvoicesModal: React.FC<DeliveredInvoicesModalProps> = ({
       // 1. Abrir Outlook Web o Cliente Local
       const encodedSubject = encodeURIComponent(subject);
       const encodedBody = encodeURIComponent(bodyText);
-      const mailtoUrl = `mailto:${recipient}?subject=${encodedSubject}&body=${encodedBody}`;
+      const ccParam = emailSettings?.ccEmails ? `&cc=${encodeURIComponent(emailSettings.ccEmails)}` : '';
+      const mailtoUrl = `mailto:${recipient}?subject=${encodedSubject}${ccParam}&body=${encodedBody}`;
 
       // Abrir Outlook
       window.location.href = mailtoUrl;

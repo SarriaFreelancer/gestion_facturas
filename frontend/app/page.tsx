@@ -219,39 +219,56 @@ export default function Home() {
 
   // Selector unificado de Mes y Año por Calendario
   const handleSelectMonthYear = async (newMonth: string, newYear: string) => {
-    setSelectedMonth(newMonth);
-    setSelectedYear(newYear);
+    if (newMonth === 'Todos') {
+      setSelectedMonth('Todos');
+      setSelectedYear(newYear);
+      return;
+    }
 
-    if (newMonth !== 'Todos') {
-      const monthMap: Record<string, number> = {
-        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
-        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
-        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
-      };
-      const targetNum = monthMap[newMonth.toLowerCase()];
-      const existsInMonth = invoices.some(inv => {
-        const d = inv.emissionDate || inv.createdAt || '';
-        const m = parseInt(d.split(/[-/]/)[1], 10);
-        return m === targetNum;
-      });
+    const monthMap: Record<string, number> = {
+      'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+      'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+      'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+    };
+    const targetNum = monthMap[newMonth.toLowerCase()];
+    
+    // Comprobar si existen facturas ya cargadas para ese mes y año
+    const existsInMonth = invoices.some(inv => {
+      if (inv.id && inv.id.toLowerCase().includes(`${newYear}-${newMonth.toLowerCase()}`)) {
+        return true;
+      }
+      const d = inv.emissionDate || inv.createdAt || '';
+      if (!d) return false;
+      const cleanDate = d.split('T')[0].split(' ')[0];
+      const parts = cleanDate.split(/[-/]/);
+      if (parts.length >= 3) {
+        const y = parts[0].length === 4 ? parts[0] : parts[2];
+        const m = parseInt(parts[0].length === 4 ? parts[1] : parts[1], 10);
+        return m === targetNum && y === newYear;
+      }
+      return false;
+    });
 
-      // Consultar verificación de fecha al servidor para el mes destino
+    if (existsInMonth) {
+      setSelectedMonth(newMonth);
+      setSelectedYear(newYear);
+    } else {
+      // Si el mes no tiene facturas aún, preguntar para inicializar
+      // NO modificamos selectedMonth/selectedYear hasta que el usuario confirme
       try {
         const dateCheck = await api.getSystemDateStatus(newMonth, newYear);
-        setServerDateInfo(dateCheck);
-        if (dateCheck?.previousMonth) {
-          setRolloverPreviousMonth(dateCheck.previousMonth);
+        if (dateCheck) {
+          setServerDateInfo(dateCheck);
+          if (dateCheck.previousMonth) {
+            setRolloverPreviousMonth(dateCheck.previousMonth);
+          }
         }
       } catch (e) {
         // fallback
       }
-
-      // Si el mes no tiene facturas aún, preguntar para inicializar
-      if (!existsInMonth) {
-        setRolloverTargetMonth(newMonth);
-        setRolloverTargetYear(newYear);
-        setIsRolloverModalOpen(true);
-      }
+      setRolloverTargetMonth(newMonth);
+      setRolloverTargetYear(newYear);
+      setIsRolloverModalOpen(true);
     }
   };
 
@@ -265,6 +282,8 @@ export default function Home() {
         rolloverPreviousMonth,
         keepUndelivered
       );
+      setSelectedMonth(rolloverTargetMonth);
+      setSelectedYear(rolloverTargetYear);
       setIsRolloverModalOpen(false);
       notifySuccess(
         `Mes ${rolloverTargetMonth} Inicializado`,
@@ -308,8 +327,16 @@ export default function Home() {
         if (!matchesSupplier) return false;
       }
 
+      // Si el id contiene explícitamente el mes y año (ej: rec-sup-1-0-2026-octubre)
+      if (selectedMonth !== 'Todos') {
+        const monthTag = `${selectedYear}-${selectedMonth.toLowerCase()}`;
+        if (inv.id && inv.id.toLowerCase().includes(monthTag)) {
+          return true;
+        }
+      }
+
       const dateStr = inv.emissionDate || inv.createdAt || '';
-      if (!dateStr) return true;
+      if (!dateStr) return selectedMonth === 'Todos';
       const cleanDate = dateStr.split('T')[0].split(' ')[0];
       const parts = cleanDate.split(/[-/]/);
       if (parts.length >= 3) {

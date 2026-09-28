@@ -42,6 +42,7 @@ export interface Invoice {
 export interface EmailSettings {
   id: string;
   recipientEmail: string;
+  ccEmails?: string;
   senderName?: string;
   emailSubject?: string;
   emailTemplate?: string;

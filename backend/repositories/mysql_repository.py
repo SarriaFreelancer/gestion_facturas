@@ -103,12 +103,19 @@ class MySQLRepository:
                     return {
                         "id": "default",
                         "recipientEmail": "contabilidad@alimentosenriko.com",
+                        "ccEmails": "",
                         "senderName": "Alimentos Enriko S.A.S. — Control de Facturas",
                         "emailSubject": "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S.",
                         "emailTemplate": "Estimado equipo de Contabilidad y Pagos,\n\nAdjunto remitimos el reporte detallado de las facturas que han sido radicadas y entregadas formalmente para su respectiva causación y trámite de pago.\n\nPor favor verificar el detalle en la tabla anexa.",
                         "frequency": "manual",
-                        "outlookIntegrationEnabled": 1
+                        "outlookIntegrationEnabled": 1,
+                        "smtpHost": "smtp.office365.com",
+                        "smtpPort": 587,
+                        "smtpUser": "",
+                        "smtpPassword": ""
                     }
+                if row.get("ccEmails") is None:
+                    row["ccEmails"] = ""
                 return row
 
     def save_email_settings(self, data: Dict[str, Any]) -> bool:
@@ -116,11 +123,12 @@ class MySQLRepository:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO email_settings (
-                        id, recipientEmail, senderName, emailSubject, emailTemplate,
+                        id, recipientEmail, ccEmails, senderName, emailSubject, emailTemplate,
                         frequency, outlookIntegrationEnabled, smtpHost, smtpPort, smtpUser, smtpPassword
-                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         recipientEmail = VALUES(recipientEmail),
+                        ccEmails = VALUES(ccEmails),
                         senderName = VALUES(senderName),
                         emailSubject = VALUES(emailSubject),
                         emailTemplate = VALUES(emailTemplate),
@@ -132,6 +140,7 @@ class MySQLRepository:
                         smtpPassword = VALUES(smtpPassword)
                 """, (
                     data.get("recipientEmail", "contabilidad@alimentosenriko.com"),
+                    data.get("ccEmails", ""),
                     data.get("senderName", "Alimentos Enriko S.A.S. — Control de Facturas"),
                     data.get("emailSubject", "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."),
                     data.get("emailTemplate", ""),
@@ -412,11 +421,19 @@ class MySQLRepository:
         """
         Genera para el nuevo mes las facturas y cotizaciones recurrentes vacías
         basadas en los conceptos configurados en cada proveedor.
-        En fechas vacías y con todos los interruptores en NO.
+        En fechas del 1° del mes y con todos los interruptores en NO.
         """
         suppliers = self.fetch_all_suppliers()
         existing_invoices = self.fetch_all_invoices()
         created_count = 0
+
+        month_map_rev = {
+            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+            'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+            'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+        }
+        target_m_num = month_map_rev.get(target_month.lower(), 1)
+        default_emission_date = f"{target_year}-{target_m_num:02d}-01"
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -428,8 +445,6 @@ class MySQLRepository:
                         
                         srv_name = srv.get("serviceName") or f"Servicio #{idx + 1}"
                         srv_type = srv.get("type") or "factura"
-                        prefix = "COT" if srv_type == "cotizacion" else "FAC"
-                        # Identificador único de plantilla recurrente para ese mes
                         clean_sup_id = (sup.get("id") or "").replace(" ", "-")
                         auto_id = f"rec-{clean_sup_id}-{idx}-{target_year}-{target_month.lower()}"
 
@@ -451,7 +466,7 @@ class MySQLRepository:
                             sup.get("name"),
                             srv_name,
                             "", # Número en blanco
-                            "", # Fecha emisión vacía
+                            default_emission_date, # Fecha inicio de mes
                             "", # Fecha entrega vacía
                             0.0,
                             "NO", # Firmado en NO
@@ -478,7 +493,8 @@ class MySQLRepository:
             'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
             'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
         }
-        target_from_m = month_map_rev.get(from_month.lower())
+        to_m_num = month_map_rev.get(to_month.lower(), 1)
+        default_rollover_date = f"{to_year}-{to_m_num:02d}-01"
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -487,11 +503,6 @@ class MySQLRepository:
                     if is_delivered:
                         continue # Ya fue entregada, no se pasa
 
-                    # Verificar si pertenecía al mes anterior
-                    d_str = inv.get("emissionDate") or str(inv.get("createdAt") or "")
-                    if not d_str:
-                        continue
-                    
                     # Si no está entregada, se permite mantenerla en el mes actual
                     inv_id = inv.get("id")
                     new_id = f"rollover-{inv_id}-{to_year}-{to_month.lower()}"
@@ -501,14 +512,6 @@ class MySQLRepository:
                     if cursor.fetchone():
                         continue
 
-                    # Insertar copia para el nuevo mes manteniendo sus datos
-                    sql = """
-                        INSERT INTO invoices (
-                            id, supplier, service, invoiceNumber, emissionDate, deliveryDate,
-                            value, signed, orderStd, oc, enFacture, delivered, notes
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
-                    # Comprobar si la columna notes existe en invoices o no
                     try:
                         cursor.execute("""
                             INSERT INTO invoices (
@@ -520,7 +523,7 @@ class MySQLRepository:
                             inv.get("supplier"),
                             f"{inv.get('service', '')} (Pendiente mes anterior)",
                             inv.get("invoiceNumber"),
-                            inv.get("emissionDate") or "",
+                            default_rollover_date,
                             "",
                             float(inv.get("value") or 0),
                             inv.get("signed") or "NO",

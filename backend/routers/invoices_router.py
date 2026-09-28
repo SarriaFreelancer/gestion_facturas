@@ -435,6 +435,7 @@ from backend.services.email_service import EmailNotificationService
 # --- EMAIL SETTINGS & DELIVERED INVOICES REPORTING (AUTOMATIC SMTP & OUTLOOK) ---
 class EmailSettingsPayload(BaseModel):
     recipientEmail: Optional[str] = "contabilidad@alimentosenriko.com"
+    ccEmails: Optional[str] = ""
     senderName: Optional[str] = "Alimentos Enriko S.A.S. — Control de Facturas"
     emailSubject: Optional[str] = "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."
     emailTemplate: Optional[str] = ""
@@ -474,6 +475,7 @@ def mark_invoices_email_sent(payload: MarkEmailSentPayload):
 class SendDirectEmailPayload(BaseModel):
     invoiceIds: List[str]
     recipientEmail: Optional[str] = None
+    ccEmails: Optional[str] = None
     subject: Optional[str] = None
     introMessage: Optional[str] = None
 
@@ -505,6 +507,7 @@ def send_invoices_email_direct(payload: SendDirectEmailPayload):
             )
 
         recipient = payload.recipientEmail or settings.get("recipientEmail") or "contabilidad@alimentosenriko.com"
+        cc_emails = payload.ccEmails if payload.ccEmails is not None else settings.get("ccEmails")
         subject = payload.subject or settings.get("emailSubject") or "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."
         intro = payload.introMessage or settings.get("emailTemplate") or ""
 
@@ -522,6 +525,7 @@ def send_invoices_email_direct(payload: SendDirectEmailPayload):
             smtp_password=smtp_password,
             sender_name=sender_name,
             recipient_emails=recipient,
+            cc_emails=cc_emails,
             subject=subject,
             html_body=html_content
         )
@@ -531,9 +535,10 @@ def send_invoices_email_direct(payload: SendDirectEmailPayload):
 
         return {
             "success": True,
-            "message": f"Correo enviado exitosamente a {recipient} con {len(selected_invoices)} facturas.",
+            "message": f"Correo enviado exitosamente a {recipient}{f' (CC: {cc_emails})' if cc_emails else ''} con {len(selected_invoices)} facturas.",
             "count": len(selected_invoices),
-            "recipient": recipient
+            "recipient": recipient,
+            "cc": cc_emails
         }
     except HTTPException:
         raise
@@ -544,6 +549,7 @@ def send_invoices_email_direct(payload: SendDirectEmailPayload):
 
 class TestEmailPayload(BaseModel):
     recipientEmail: Optional[str] = None
+    ccEmails: Optional[str] = None
 
 @router.post("/settings/test-email")
 def test_email_connection(payload: TestEmailPayload):
@@ -562,6 +568,7 @@ def test_email_connection(payload: TestEmailPayload):
             )
 
         recipient = payload.recipientEmail or settings.get("recipientEmail") or smtp_user
+        cc_emails = payload.ccEmails if payload.ccEmails is not None else settings.get("ccEmails")
         subject = "Prueba de Conexión SMTP — Alimentos Enriko S.A.S."
 
         test_html = f"""
@@ -590,13 +597,14 @@ def test_email_connection(payload: TestEmailPayload):
             smtp_password=smtp_password,
             sender_name=sender_name,
             recipient_emails=recipient,
+            cc_emails=cc_emails,
             subject=subject,
             html_body=test_html
         )
 
         return {
             "success": True,
-            "message": f"Correo de prueba enviado con éxito a {recipient}."
+            "message": f"Correo de prueba enviado con éxito a {recipient}{f' (CC: {cc_emails})' if cc_emails else ''}."
         }
     except HTTPException:
         raise

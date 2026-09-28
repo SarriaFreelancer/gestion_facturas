@@ -24,6 +24,7 @@ interface SettingsModuleProps {
 
 export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdated }) => {
   const [recipientEmail, setRecipientEmail] = useState('contabilidad@alimentosenriko.com');
+  const [ccEmails, setCcEmails] = useState('');
   const [senderName, setSenderName] = useState('Alimentos Enriko S.A.S. — Facturación');
   const [emailSubject, setEmailSubject] = useState('Reporte de Facturas Entregadas — Alimentos Enriko S.A.S.');
   const [emailTemplate, setEmailTemplate] = useState(
@@ -49,6 +50,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
       const data = await api.getEmailSettings();
       if (data) {
         if (data.recipientEmail) setRecipientEmail(data.recipientEmail);
+        if (data.ccEmails) setCcEmails(data.ccEmails);
         if (data.senderName) setSenderName(data.senderName);
         if (data.emailSubject) setEmailSubject(data.emailSubject);
         if (data.emailTemplate) setEmailTemplate(data.emailTemplate);
@@ -79,6 +81,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
       setSaving(true);
       await api.saveEmailSettings({
         recipientEmail: recipientEmail.trim(),
+        ccEmails: ccEmails.trim(),
         senderName: senderName.trim(),
         emailSubject: emailSubject.trim(),
         emailTemplate: emailTemplate.trim(),
@@ -108,6 +111,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
       // Primero guardar por si hubo cambios
       await api.saveEmailSettings({
         recipientEmail: recipientEmail.trim(),
+        ccEmails: ccEmails.trim(),
         senderName: senderName.trim(),
         emailSubject: emailSubject.trim(),
         emailTemplate: emailTemplate.trim(),
@@ -119,7 +123,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         smtpPassword: smtpPassword.trim()
       });
 
-      const res = await api.testEmailConnection(recipientEmail.trim());
+      const res = await api.testEmailConnection(recipientEmail.trim(), ccEmails.trim());
       notifySuccess('¡Prueba Exitosa!', res.message || 'Se envió el correo de prueba satisfactoriamente.');
     } catch (err: any) {
       notifyError('Fallo en la prueba SMTP', err.message);
@@ -174,7 +178,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
           {/* CORREO DESTINATARIO */}
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
-              Correo Electrónico Destinatario <span className="text-red-500">*</span>
+              Correo Electrónico Destinatario (Para) <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -185,7 +189,24 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
               required
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Dirección de correo electrónico a donde se dirigirán los reportes de facturas entregadas en Outlook.
+              Dirección de correo electrónico principal a donde se dirigirán los reportes de facturas entregadas.
+            </p>
+          </div>
+
+          {/* CORREOS EN COPIA (CC) */}
+          <div>
+            <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
+              Usuarios / Correos en Copia (CC)
+            </label>
+            <input
+              type="text"
+              value={ccEmails}
+              onChange={(e) => setCcEmails(e.target.value)}
+              placeholder="gerencia@alimentosenriko.com, auditoria@alimentosenriko.com"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-red-500 outline-none text-xs"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Agrega uno o varios correos en copia separados por coma para que también reciban la notificación automáticamente.
             </p>
           </div>
 

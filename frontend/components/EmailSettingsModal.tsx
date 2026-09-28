@@ -29,6 +29,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
   onSaved
 }) => {
   const [recipientEmail, setRecipientEmail] = useState('contabilidad@alimentosenriko.com');
+  const [ccEmails, setCcEmails] = useState('');
   const [senderName, setSenderName] = useState('Alimentos Enriko S.A.S. — Facturación');
   const [emailSubject, setEmailSubject] = useState('Reporte de Facturas Entregadas — Alimentos Enriko S.A.S.');
   const [emailTemplate, setEmailTemplate] = useState(
@@ -51,6 +52,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
       const data = await api.getEmailSettings();
       if (data) {
         if (data.recipientEmail) setRecipientEmail(data.recipientEmail);
+        if (data.ccEmails) setCcEmails(data.ccEmails);
         if (data.senderName) setSenderName(data.senderName);
         if (data.emailSubject) setEmailSubject(data.emailSubject);
         if (data.emailTemplate) setEmailTemplate(data.emailTemplate);
@@ -77,6 +79,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
       setSaving(true);
       await api.saveEmailSettings({
         recipientEmail: recipientEmail.trim(),
+        ccEmails: ccEmails.trim(),
         senderName: senderName.trim(),
         emailSubject: emailSubject.trim(),
         emailTemplate: emailTemplate.trim(),
@@ -131,7 +134,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
           {/* CORREO DESTINATARIO */}
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
-              Correo Electrónico Destinatario (Correo X) <span className="text-red-500">*</span>
+              Correo Electrónico Destinatario (Para) <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -142,7 +145,24 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
               required
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Puedes ingresar uno o varios correos separados por comas.
+              Puedes ingresar uno o varios correos principales separados por comas.
+            </p>
+          </div>
+
+          {/* CORREOS EN COPIA (CC) */}
+          <div>
+            <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
+              Usuarios / Correos en Copia (CC)
+            </label>
+            <input
+              type="text"
+              value={ccEmails}
+              onChange={(e) => setCcEmails(e.target.value)}
+              placeholder="gerencia@alimentosenriko.com, auditoria@alimentosenriko.com"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-red-500 outline-none transition-all"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Agrega correos en copia separados por comas para que también les llegue el reporte.
             </p>
           </div>
 

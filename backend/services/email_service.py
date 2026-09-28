@@ -14,28 +14,37 @@ class EmailNotificationService:
         recipient_emails: str,
         subject: str,
         html_body: str,
-        text_body: Optional[str] = None
+        text_body: Optional[str] = None,
+        cc_emails: Optional[str] = None
     ) -> bool:
         if not smtp_host or not smtp_user or not smtp_password:
             raise ValueError(
                 "Configuración SMTP incompleta. Ingrese el servidor SMTP, usuario/correo remitente y contraseña en el módulo de Configuración."
             )
 
-        # Limpiar lista de destinatarios
+        # Limpiar lista de destinatarios principales
         recipients = [e.strip() for e in recipient_emails.replace(";", ",").split(",") if e.strip()]
         if not recipients:
-            raise ValueError("Debe especificar al menos un correo destinatario.")
+            raise ValueError("Debe especificar al menos un correo destinatario principal.")
+
+        # Limpiar lista de destinatarios en copia (CC)
+        cc_list = []
+        if cc_emails:
+            cc_list = [e.strip() for e in cc_emails.replace(";", ",").split(",") if e.strip()]
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{sender_name} <{smtp_user}>" if sender_name else smtp_user
         msg["To"] = ", ".join(recipients)
+        if cc_list:
+            msg["Cc"] = ", ".join(cc_list)
 
         if text_body:
             msg.attach(MIMEText(text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         port = int(smtp_port or 587)
+        all_envelope_recipients = list(set(recipients + cc_list))
         
         try:
             if port == 465:
@@ -47,7 +56,7 @@ class EmailNotificationService:
                 server.ehlo()
 
             server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, recipients, msg.as_string())
+            server.sendmail(smtp_user, all_envelope_recipients, msg.as_string())
             return True
         except smtplib.SMTPAuthenticationError as auth_err:
             raise ValueError(f"Error de autenticación SMTP: Usuario o contraseña incorrectos en {smtp_host}. Si usas Outlook/Microsoft 365 o Gmail con 2FA, utiliza una 'Contraseña de Aplicación'. Detalle: {auth_err}")
