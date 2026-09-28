@@ -572,18 +572,39 @@ export default function Home() {
         />
 
         <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
-          {/* BANNER AVISO SI ES ADMIN DE ÁREA */}
+          {/* BANNER AVISO SI ES ADMIN DE ÁREA CON BOTÓN RÁPIDO PARA VOLVER */}
           {!isSuperAdmin && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in duration-150">
+              <div className="flex items-center gap-2 min-w-0">
                 <Building2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span>
+                <span className="truncate">
                   Estás navegando como <strong>Admin de Área ({userArea})</strong>. Solo puedes gestionar proveedores y facturas correspondientes a tu departamento.
                 </span>
               </div>
-              <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-lg flex-shrink-0">
-                Vista Filtrada
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    const superAdmin = users.find(u => u.role === 'superadmin') || {
+                      id: 'usr-superadmin',
+                      username: 'superadmin',
+                      name: 'David Sarria (Superadmin)',
+                      email: 'superadmin@alimentosenriko.com',
+                      role: 'superadmin',
+                      area: 'Dirección General',
+                      status: 'Activo'
+                    };
+                    setCurrentUser(superAdmin);
+                    notifySuccess('Sesión Restaurada', 'Has vuelto al perfil de Superadministrador con control global.');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Regresar al usuario Super Administrador"
+                >
+                  <span>↩ Volver a Superadmin</span>
+                </button>
+                <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-1 rounded-lg">
+                  Vista Filtrada
+                </span>
+              </div>
             </div>
           )}
 
