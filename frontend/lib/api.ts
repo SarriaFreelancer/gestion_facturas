@@ -85,5 +85,52 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/clean-database`, { method: 'POST' });
     if (!res.ok) throw new Error('Error al limpiar base de datos');
     return res.json();
+  },
+
+  // Inicio de Mes & Rollover
+  async handleMonthTransition(targetYear: string, targetMonth: string, fromYear?: string, fromMonth?: string, keepUndelivered: boolean = true): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/month-transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetYear, targetMonth, fromYear, fromMonth, keepUndelivered })
+    });
+    if (!res.ok) throw new Error('Error al inicializar mes');
+    return res.json();
+  },
+
+  // Tech Inventory
+  async getInventory(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/inventory`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar inventario TI');
+    return res.json();
+  },
+
+  async saveInventoryItem(item: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+    if (!res.ok) throw new Error('Error al guardar artículo en inventario');
+    return res.json();
+  },
+
+  async loanInventoryItem(id: string, quantity: number, recipient: string, area: string, actionType: string = 'Préstamo'): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory/${id}/loan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, recipient, area, actionType })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al prestar/entregar equipo');
+    }
+    return res.json();
+  },
+
+  async deleteInventoryItem(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/inventory/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar artículo');
+    return res.json();
   }
 };

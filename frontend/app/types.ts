@@ -67,6 +67,21 @@ export interface RecurrenceStudyItem {
   compliance: number;
 }
 
+export interface TechInventoryItem {
+  id: string;
+  category: string;
+  name: string;
+  brandModel?: string | null;
+  serialCode?: string | null;
+  quantity: number;
+  unit?: string | null;
+  areaAssigned?: string | null;
+  status: string;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface DashboardMetrics {
   total: number;
   facCount: number;

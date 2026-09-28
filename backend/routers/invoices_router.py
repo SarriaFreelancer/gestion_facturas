@@ -126,3 +126,95 @@ def clean_database():
         return {"success": True, "message": "Base de datos de facturas limpiada exitosamente."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- INICIO DE MES & RECURRENCIA ---
+class MonthTransitionPayload(BaseModel):
+    targetYear: str
+    targetMonth: str
+    fromYear: Optional[str] = None
+    fromMonth: Optional[str] = None
+    keepUndelivered: bool = True
+
+@router.post("/month-transition")
+def handle_month_transition(payload: MonthTransitionPayload):
+    try:
+        # 1. Generar conceptos recurrentes en blanco para el nuevo mes
+        template_res = repo.generate_month_template(payload.targetYear, payload.targetMonth)
+        
+        # 2. Si se solicitó mantener las no entregadas del mes anterior, migrarlas
+        rollover_count = 0
+        if payload.keepUndelivered and payload.fromYear and payload.fromMonth:
+            roll_res = repo.rollover_unpaid_invoices(
+                from_year=payload.fromYear,
+                from_month=payload.fromMonth,
+                to_year=payload.targetYear,
+                to_month=payload.targetMonth
+            )
+            rollover_count = roll_res.get("rolloverCount", 0)
+
+        return {
+            "success": True,
+            "createdRecurrent": template_res.get("createdConcepts", 0),
+            "keptUndelivered": rollover_count,
+            "message": f"Mes {payload.targetMonth} {payload.targetYear} inicializado exitosamente."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- TECH INVENTORY ENDPOINTS ---
+class InventoryItemPayload(BaseModel):
+    id: Optional[str] = None
+    category: str
+    name: str
+    brandModel: Optional[str] = ""
+    serialCode: Optional[str] = ""
+    quantity: int = 1
+    unit: Optional[str] = "Unidades"
+    areaAssigned: Optional[str] = "Tecnología (TI)"
+    status: Optional[str] = "Disponible"
+    notes: Optional[str] = ""
+
+class LoanPayload(BaseModel):
+    quantity: int = 1
+    recipient: str
+    area: str
+    actionType: Optional[str] = "Préstamo"
+
+@router.get("/inventory")
+def get_inventory():
+    try:
+        return repo.fetch_inventory()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/inventory")
+def save_inventory(payload: InventoryItemPayload):
+    try:
+        item_id = repo.save_inventory_item(payload.model_dump())
+        return {"success": True, "id": item_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/inventory/{item_id}/loan")
+def loan_inventory(item_id: str, payload: LoanPayload):
+    try:
+        res = repo.loan_inventory_item(
+            item_id=item_id,
+            quantity_to_loan=payload.quantity,
+            recipient=payload.recipient,
+            area=payload.area,
+            action_type=payload.actionType or "Préstamo"
+        )
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/inventory/{item_id}")
+def delete_inventory(item_id: str):
+    try:
+        success = repo.delete_inventory_item(item_id)
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

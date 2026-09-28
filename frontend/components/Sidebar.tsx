@@ -10,7 +10,8 @@ import {
   Bell, 
   Menu, 
   X,
-  Sparkles
+  Sparkles,
+  Laptop
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
     { id: 'suppliers', label: 'Proveedores', icon: Users },
+    { id: 'inventory', label: 'Inventario TI', icon: Laptop },
     { id: 'reports', label: 'Reportes', icon: BarChart3 },
     { id: 'alerts', label: 'Alertas', icon: Bell, badge: alertCount },
   ];

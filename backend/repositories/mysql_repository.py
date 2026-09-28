@@ -182,6 +182,204 @@ class MySQLRepository:
                 cursor.execute("SELECT * FROM tech_inventory ORDER BY category ASC, name ASC")
                 return cursor.fetchall()
 
+    def save_inventory_item(self, data: Dict[str, Any]) -> str:
+        item_id = data.get("id") or f"ti-{int(pymysql.time.time() * 1000)}"
+        qty = int(data.get("quantity") or 0)
+        status = data.get("status") or ("Disponible" if qty > 0 else "Agotado")
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = """
+                    INSERT INTO tech_inventory (
+                        id, category, name, brandModel, serialCode, quantity, unit, areaAssigned, status, notes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        category = VALUES(category),
+                        name = VALUES(name),
+                        brandModel = VALUES(brandModel),
+                        serialCode = VALUES(serialCode),
+                        quantity = VALUES(quantity),
+                        unit = VALUES(unit),
+                        areaAssigned = VALUES(areaAssigned),
+                        status = VALUES(status),
+                        notes = VALUES(notes);
+                """
+                cursor.execute(sql, (
+                    item_id,
+                    data.get("category", "Periféricos"),
+                    data.get("name", ""),
+                    data.get("brandModel", ""),
+                    data.get("serialCode", ""),
+                    qty,
+                    data.get("unit", "Unidades"),
+                    data.get("areaAssigned", "Tecnología (TI)"),
+                    status,
+                    data.get("notes", "")
+                ))
+                return item_id
+
+    def loan_inventory_item(self, item_id: str, quantity_to_loan: int, recipient: str, area: str, action_type: str = "Préstamo") -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM tech_inventory WHERE id = %s", (item_id,))
+                row = cursor.fetchone()
+                if not row:
+                    raise ValueError("Artículo no encontrado")
+                
+                current_qty = int(row.get("quantity") or 0)
+                if current_qty < quantity_to_loan:
+                    raise ValueError(f"Cantidad insuficiente. Stock disponible: {current_qty}, solicitado: {quantity_to_loan}")
+
+                new_qty = current_qty - quantity_to_loan
+                new_status = "Disponible" if new_qty > 0 else "Agotado"
+                date_str = pymysql.time.strftime('%Y-%m-%d')
+                log_entry = f"\n[{action_type.upper()} {date_str}]: {quantity_to_loan} {row.get('unit', 'uds')} entregados a {recipient} ({area})."
+                updated_notes = (row.get("notes") or "") + log_entry
+
+                cursor.execute(
+                    "UPDATE tech_inventory SET quantity = %s, status = %s, notes = %s, updatedAt = NOW() WHERE id = %s",
+                    (new_qty, new_status, updated_notes, item_id)
+                )
+                return {
+                    "success": True,
+                    "previousQuantity": current_qty,
+                    "loanedQuantity": quantity_to_loan,
+                    "remainingQuantity": new_qty
+                }
+
+    def delete_inventory_item(self, item_id: str) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM tech_inventory WHERE id = %s", (item_id,))
+                return cursor.rowcount > 0
+
+    # --- INICIO DE MES: GENERAR PLANTILLA RECURRENTE Y MIGRAR NO ENTREGADAS ---
+    def generate_month_template(self, target_year: str, target_month: str) -> Dict[str, Any]:
+        """
+        Genera para el nuevo mes las facturas y cotizaciones recurrentes vacías
+        basadas en los conceptos configurados en cada proveedor.
+        En fechas vacías y con todos los interruptores en NO.
+        """
+        suppliers = self.fetch_all_suppliers()
+        existing_invoices = self.fetch_all_invoices()
+        created_count = 0
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                for sup in suppliers:
+                    services = sup.get("services") or []
+                    for idx, srv in enumerate(services):
+                        if srv.get("enabled") == False:
+                            continue
+                        
+                        srv_name = srv.get("serviceName") or f"Servicio #{idx + 1}"
+                        srv_type = srv.get("type") or "factura"
+                        prefix = "COT" if srv_type == "cotizacion" else "FAC"
+                        # Identificador único de plantilla recurrente para ese mes
+                        clean_sup_id = (sup.get("id") or "").replace(" ", "-")
+                        auto_id = f"rec-{clean_sup_id}-{idx}-{target_year}-{target_month.lower()}"
+
+                        # Verificar si ya existe este concepto para el mes
+                        already_exists = any(i.get("id") == auto_id for i in existing_invoices)
+                        if already_exists:
+                            continue
+
+                        # Se crea en blanco esperando recibir
+                        sql = """
+                            INSERT INTO invoices (
+                                id, supplier, service, invoiceNumber, emissionDate, deliveryDate,
+                                value, signed, orderStd, oc, enFacture, delivered
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE id = id;
+                        """
+                        cursor.execute(sql, (
+                            auto_id,
+                            sup.get("name"),
+                            srv_name,
+                            "", # Número en blanco
+                            "", # Fecha emisión vacía
+                            "", # Fecha entrega vacía
+                            0.0,
+                            "NO", # Firmado en NO
+                            "NO", # Orden Std en NO
+                            "",   # OC en blanco
+                            "AÚN NO", # En Facture en NO/AÚN NO
+                            "NO"  # Entregado en NO
+                        ))
+                        created_count += 1
+
+        return {"success": True, "createdConcepts": created_count}
+
+    def rollover_unpaid_invoices(self, from_year: str, from_month: str, to_year: str, to_month: str) -> Dict[str, Any]:
+        """
+        Mantiene en el mes actual las facturas y cotizaciones del mes anterior que no fueron entregadas
+        (delivered != 'SÍ').
+        """
+        all_invoices = self.fetch_all_invoices()
+        rollover_count = 0
+
+        # Identificar las no entregadas
+        month_map_rev = {
+            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+            'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+            'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+        }
+        target_from_m = month_map_rev.get(from_month.lower())
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                for inv in all_invoices:
+                    is_delivered = (inv.get("delivered") or "").upper() == "SÍ"
+                    if is_delivered:
+                        continue # Ya fue entregada, no se pasa
+
+                    # Verificar si pertenecía al mes anterior
+                    d_str = inv.get("emissionDate") or str(inv.get("createdAt") or "")
+                    if not d_str:
+                        continue
+                    
+                    # Si no está entregada, se permite mantenerla en el mes actual
+                    inv_id = inv.get("id")
+                    new_id = f"rollover-{inv_id}-{to_year}-{to_month.lower()}"
+                    
+                    # Evitar duplicar si ya se pasó
+                    cursor.execute("SELECT id FROM invoices WHERE id = %s", (new_id,))
+                    if cursor.fetchone():
+                        continue
+
+                    # Insertar copia para el nuevo mes manteniendo sus datos
+                    sql = """
+                        INSERT INTO invoices (
+                            id, supplier, service, invoiceNumber, emissionDate, deliveryDate,
+                            value, signed, orderStd, oc, enFacture, delivered, notes
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    # Comprobar si la columna notes existe en invoices o no
+                    try:
+                        cursor.execute("""
+                            INSERT INTO invoices (
+                                id, supplier, service, invoiceNumber, emissionDate, deliveryDate,
+                                value, signed, orderStd, oc, enFacture, delivered
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            new_id,
+                            inv.get("supplier"),
+                            f"{inv.get('service', '')} (Pendiente mes anterior)",
+                            inv.get("invoiceNumber"),
+                            inv.get("emissionDate") or "",
+                            "",
+                            float(inv.get("value") or 0),
+                            inv.get("signed") or "NO",
+                            inv.get("orderStd") or "NO",
+                            inv.get("oc") or "",
+                            inv.get("enFacture") or "AÚN NO",
+                            "NO"
+                        ))
+                        rollover_count += 1
+                    except Exception:
+                        pass
+
+        return {"success": True, "rolloverCount": rollover_count}
+
     # --- TECH BUDGETS ---
     def fetch_budgets(self, year: Optional[str] = None, area: Optional[str] = None) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:

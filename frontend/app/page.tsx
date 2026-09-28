@@ -7,16 +7,19 @@ import { DashboardKpis } from '../components/DashboardKpis';
 import { DashboardCharts } from '../components/DashboardCharts';
 import { SuppliersModule } from '../components/SuppliersModule';
 import { InvoicesModule } from '../components/InvoicesModule';
+import { TechInventoryModule } from '../components/TechInventoryModule';
 import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
+import { MonthRolloverModal } from '../components/MonthRolloverModal';
 import { api } from '../lib/api';
-import { Invoice, Supplier, DashboardMetrics } from './types';
-import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
+import { Invoice, Supplier, DashboardMetrics, TechInventoryItem } from './types';
+import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
   // Modo claro como predeterminado (false) con persistencia en localStorage
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -45,6 +48,7 @@ export default function Home() {
   // Estado de Datos
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [inventory, setInventory] = useState<TechInventoryItem[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,18 +59,25 @@ export default function Home() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<Invoice | null>(null);
 
+  // Modal Inicio de Mes (Rollover de no entregadas y plantilla en blanco)
+  const [isRolloverModalOpen, setIsRolloverModalOpen] = useState(false);
+  const [rolloverTargetMonth, setRolloverTargetMonth] = useState('Octubre');
+  const [rolloverTargetYear, setRolloverTargetYear] = useState('2026');
+
   // Cargar datos desde FastAPI backend con soporte a filtros de mes y año
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invs, sups, mets] = await Promise.all([
+      const [invs, sups, mets, invt] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
-        api.getMetrics(selectedMonth, selectedYear).catch(() => null)
+        api.getMetrics(selectedMonth, selectedYear).catch(() => null),
+        api.getInventory().catch(() => [])
       ]);
       setInvoices(invs);
       setSuppliers(sups);
       setMetrics(mets);
+      setInventory(invt);
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -77,6 +88,61 @@ export default function Home() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Conteo de facturas y cotizaciones no entregadas
+  const undeliveredCount = useMemo(() => {
+    return invoices.filter(i => (i.delivered || '').toUpperCase() !== 'SÍ').length;
+  }, [invoices]);
+
+  const quotationsToRollCount = useMemo(() => {
+    return invoices.filter(i => {
+      const isCot = (i.invoiceNumber || '').toUpperCase().startsWith('COT') || (i.service || '').toUpperCase().startsWith('COT');
+      return isCot && (i.delivered || '').toUpperCase() !== 'SÍ';
+    }).length;
+  }, [invoices]);
+
+  // Detección cuando el usuario cambia a un mes nuevo específico (ej: Octubre)
+  const handleSelectMonth = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+    // Si cambia de 'Todos' a un mes específico o entre meses, y aún no tiene registros en ese mes
+    if (newMonth !== 'Todos') {
+      const monthMap: Record<string, number> = {
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+      };
+      const targetNum = monthMap[newMonth.toLowerCase()];
+      const existsInMonth = invoices.some(inv => {
+        const d = inv.emissionDate || inv.createdAt || '';
+        const m = parseInt(d.split(/[-/]/)[1], 10);
+        return m === targetNum;
+      });
+
+      // Si el mes no tiene facturas aún, preguntar para inicializar
+      if (!existsInMonth) {
+        setRolloverTargetMonth(newMonth);
+        setRolloverTargetYear(selectedYear);
+        setIsRolloverModalOpen(true);
+      }
+    }
+  };
+
+  // Confirmación de inicio de mes
+  const handleConfirmRollover = async (keepUndelivered: boolean) => {
+    try {
+      await api.handleMonthTransition(
+        rolloverTargetYear,
+        rolloverTargetMonth,
+        selectedYear,
+        'Septiembre', // mes previo o contexto
+        keepUndelivered
+      );
+      setIsRolloverModalOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error('Error en transición de mes:', err);
+    }
+  };
 
   // Filtrado reactivo en el frontend para facturas según el mes y año seleccionados
   const filteredInvoicesByDate = useMemo(() => {
@@ -168,6 +234,22 @@ export default function Home() {
     }
   };
 
+  // Funciones de Inventario TI
+  const handleSaveInventoryItem = async (item: Partial<TechInventoryItem>) => {
+    await api.saveInventoryItem(item);
+    await loadData();
+  };
+
+  const handleLoanInventoryItem = async (id: string, qty: number, recipient: string, area: string, actionType: string) => {
+    await api.loanInventoryItem(id, qty, recipient, area, actionType);
+    await loadData();
+  };
+
+  const handleDeleteInventoryItem = async (id: string) => {
+    await api.deleteInventoryItem(id);
+    await loadData();
+  };
+
   // Limpiar base de datos
   const handleCleanDatabase = async () => {
     if (!confirm('¿Seguro que deseas vaciar todas las facturas de la base de datos para comenzar en limpio?')) return;
@@ -180,7 +262,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 flex ${darkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 flex flex-col ${darkMode ? 'dark' : ''}`}>
       {/* SIDEBAR CORPORATIVO */}
       <Sidebar 
         currentView={currentView}
@@ -191,11 +273,11 @@ export default function Home() {
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
       />
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO PRINCIPAL CON AJUSTE COMPLETO Y SCROLL SUAVE */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <TopNavbar 
           selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
+          setSelectedMonth={handleSelectMonth}
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
           darkMode={darkMode}
@@ -203,7 +285,7 @@ export default function Home() {
           onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         />
 
-        <main className="p-4 sm:p-7 flex-1">
+        <main className="p-4 sm:p-7 flex-1 max-w-full overflow-x-hidden">
           {/* VISTA DASHBOARD */}
           {currentView === 'dashboard' && (
             <div>
@@ -220,7 +302,21 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* BOTÓN PREPARAR NUEVO MES MANUALMENTE */}
+                  <button 
+                    onClick={() => {
+                      setRolloverTargetMonth(selectedMonth !== 'Todos' ? selectedMonth : 'Octubre');
+                      setRolloverTargetYear(selectedYear);
+                      setIsRolloverModalOpen(true);
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center gap-1.5 transition-all border border-slate-200 dark:border-zinc-700 cursor-pointer"
+                    title="Preparar e inicializar un nuevo mes con plantilla recurrente"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-red-600" />
+                    <span>Iniciar Nuevo Mes</span>
+                  </button>
+
                   <button 
                     onClick={() => {
                       setSelectedInvoiceForEdit(null);
@@ -242,7 +338,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* KPIS PRINCIPALES (SENSIBLES AL FILTRO DE MES Y AÑO) */}
+              {/* KPIS PRINCIPALES */}
               <DashboardKpis metrics={metrics} loading={loading} />
 
               {/* GRÁFICOS SOLICITADOS: MES A MES, FLUJO SEMANAL Y ESTUDIO DE RECURRENCIA */}
@@ -288,6 +384,16 @@ export default function Home() {
             />
           )}
 
+          {/* VISTA INVENTARIO TECNOLÓGICO */}
+          {currentView === 'inventory' && (
+            <TechInventoryModule 
+              inventory={inventory}
+              onSaveItem={handleSaveInventoryItem}
+              onLoanItem={handleLoanInventoryItem}
+              onDeleteItem={handleDeleteInventoryItem}
+            />
+          )}
+
           {/* OTRAS VISTAS */}
           {(currentView === 'reports' || currentView === 'alerts') && (
             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-12 text-center shadow-sm">
@@ -323,6 +429,18 @@ export default function Home() {
         defaultMonth={selectedMonth}
         defaultYear={selectedYear}
         initialInvoice={selectedInvoiceForEdit}
+      />
+
+      {/* MODAL PREGUNTA INICIO DE MES & ROLLOVER DE NO ENTREGADAS */}
+      <MonthRolloverModal 
+        isOpen={isRolloverModalOpen}
+        onClose={() => setIsRolloverModalOpen(false)}
+        onConfirm={handleConfirmRollover}
+        targetMonth={rolloverTargetMonth}
+        targetYear={rolloverTargetYear}
+        previousMonth="Septiembre"
+        undeliveredCount={undeliveredCount}
+        quotationsToRollCount={quotationsToRollCount}
       />
     </div>
   );
