@@ -49,27 +49,28 @@ export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* ENCABEZADO MODAL */}
-        <div className="px-6 py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center gap-3.5 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
-            <Calendar className="w-6 h-6 text-white" />
+        <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center gap-3 sm:gap-3.5 shadow-sm flex-shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 flex-wrap">
               <span>Inicio de Mes: {targetMonth} {targetYear}</span>
-              <Sparkles className="w-4 h-4 text-amber-300" />
+              <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0" />
             </h2>
-            <p className="text-[11px] text-white/90 font-medium">
+            <p className="text-[10px] sm:text-[11px] text-white/90 font-medium truncate">
               Verificación oficial con fecha del servidor: {serverDateInfo?.serverDate ? serverDateInfo.serverDate.split(' ')[0] : 'Sincronizada'}
             </p>
           </div>
         </div>
 
         {/* CONTENIDO EXPLICATIVO */}
-        <div className="p-6 space-y-4 text-xs">
+        <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto">
+
           {/* BANNER REGLA DEL DÍA 1 */}
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 space-y-1">
             <div className="flex items-center gap-2 font-black text-xs text-red-600 dark:text-red-400">

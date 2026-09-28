@@ -84,21 +84,21 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   return (
     <div className="w-full">
       {/* HEADER DE MÓDULO CON BOTÓN DE AGREGAR FACTURA / COTIZACIÓN */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
-            <FileText className="w-6 h-6 text-white" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2 flex-wrap">
               <span>Control de Facturas & Cotizaciones</span>
               {selectedMonth !== 'Todos' && (
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
                   {selectedMonth} {selectedYear}
                 </span>
               )}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
               Registro y control mensual de documentos. Al marcar "Entregado: SÍ", la fecha de entrega se monta automáticamente.
             </p>
           </div>
@@ -107,7 +107,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
         {/* BOTÓN: AGREGAR FACTURA O COTIZACIÓN */}
         <button 
           onClick={onAddInvoice}
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer"
+          className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4 h-4 text-white" />
           <span>Agregar Factura o Cotización</span>
@@ -115,13 +115,13 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
       </div>
 
       {/* TABS Y BUSCADOR */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm mb-6">
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/80">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6">
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-x-auto">
           {(['Todos', 'Facturas', 'Cotizaciones'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setCurrentTab(tab)}
-              className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-black transition-all cursor-pointer text-center whitespace-nowrap ${
                 currentTab === tab 
                   ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-sm shadow-red-600/20' 
                   : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -132,8 +132,8 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
           ))}
         </div>
 
-        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 w-full sm:w-80 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
-          <Search className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 sm:py-2.5 w-full sm:w-80 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
+          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <input 
             type="text"
             placeholder="Buscar por proveedor, N° documento, OC..."
@@ -143,6 +143,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
           />
         </div>
       </div>
+
 
       {/* TABLA PRINCIPAL DE FACTURAS CON FECHA EMISIÓN EDITABLE Y FECHA ENTREGA AUTOMÁTICA */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">

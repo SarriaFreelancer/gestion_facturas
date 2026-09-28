@@ -220,20 +220,20 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
   return (
     <div className="space-y-6">
       {/* HEADER PRINCIPAL */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 flex items-center justify-center text-red-600">
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 flex items-center justify-center text-red-600 flex-shrink-0">
               <Laptop className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 flex-wrap">
                 <span>Inventario & Equipamiento TI</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40">
                   Alimentos Enriko S.A.S.
                 </span>
               </h1>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 Control de hardware, periféricos, compras y registro oficial de préstamos y asignaciones
               </p>
             </div>
@@ -244,7 +244,7 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
         <div className="flex items-center gap-2 w-full md:w-auto">
           <button
             onClick={handleOpenCreate}
-            className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Registrar Compra / Ingreso</span>
@@ -253,43 +253,43 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
       </div>
 
       {/* MÉTRICAS DE INVENTARIO */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center flex-shrink-0">
             <Package className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Unidades en Stock</span>
-            <div className="text-lg font-black text-slate-900 dark:text-white">{totalStockItems} <span className="text-xs font-normal text-slate-400">uds</span></div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Unidades en Stock</span>
+            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{totalStockItems} <span className="text-xs font-normal text-slate-400">uds</span></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center flex-shrink-0">
             <Share2 className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Préstamos Activos</span>
-            <div className="text-lg font-black text-amber-600 dark:text-amber-400">{activeLoansCount} <span className="text-xs font-normal text-slate-400">asignaciones</span></div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Préstamos Activos</span>
+            <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">{activeLoansCount} <span className="text-xs font-normal text-slate-400">asignaciones</span></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center flex-shrink-0">
             <Tag className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categorías Activas</span>
-            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{totalCategoriesCount} <span className="text-xs font-normal text-slate-400">tipos</span></div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categorías Activas</span>
+            <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">{totalCategoriesCount} <span className="text-xs font-normal text-slate-400">tipos</span></div>
           </div>
         </div>
       </div>
 
       {/* SELECTOR DE VISTA: STOCK VS HISTORIAL DE PRÉSTAMOS */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-2">
         <button
           onClick={() => setActiveTab('stock')}
-          className={`px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex-1 sm:flex-none px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeTab === 'stock'
               ? 'bg-red-600 text-white shadow-sm'
               : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800'
@@ -301,7 +301,7 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
 
         <button
           onClick={() => setActiveTab('movements')}
-          className={`px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex-1 sm:flex-none px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeTab === 'movements'
               ? 'bg-red-600 text-white shadow-sm'
               : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800'
@@ -603,10 +603,10 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
       {/* MODAL CREAR / EDITAR ARTÍCULO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-800/50">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-800/50 flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 flex items-center justify-center text-red-600">
+                <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 flex items-center justify-center text-red-600 flex-shrink-0">
                   {editingItem ? <Pencil className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 </div>
                 <div>
@@ -626,8 +626,9 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
                     Nombre del Equipo o Artículo <span className="text-red-500">*</span>
@@ -757,17 +758,17 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
       {/* MODAL PRÉSTAMO / ENTREGA */}
       {isLoanModalOpen && selectedItemForAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/30">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/30 flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center flex-shrink-0">
                   <Share2 className="w-4 h-4" />
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-slate-900 dark:text-white">
                     Asignar o Prestar Equipo
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
                     {selectedItemForAction.name}
                   </p>
                 </div>
@@ -780,7 +781,8 @@ export const TechInventoryModule: React.FC<TechInventoryModuleProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleLoanSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleLoanSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto">
+
               {loanError && (
                 <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />

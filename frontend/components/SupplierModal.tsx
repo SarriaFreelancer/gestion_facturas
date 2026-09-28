@@ -107,16 +107,16 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
         onClick={e => e.stopPropagation()}
       >
         {/* ENCABEZADO CON GRADIENTE ENRIKO */}
-        <div className="px-6 py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center justify-between shadow-sm">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center justify-between shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-black tracking-tight text-white">
+              <h2 className="text-sm sm:text-base font-black tracking-tight text-white">
                 {initialSupplier ? 'Editar Proveedor' : 'Registrar Nuevo Proveedor'}
               </h2>
-              <p className="text-[11px] text-white/90 font-medium">
+              <p className="text-[10px] sm:text-[11px] text-white/90 font-medium">
                 Alimentos Enriko — Directorio Autorizado
               </p>
             </div>
@@ -132,7 +132,8 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
         </div>
 
         {/* CUERPO DEL FORMULARIO CON METRICA VISUAL Y PADDINGS AMPLIOS */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 text-xs">
+
           {error && (
             <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 font-bold text-xs flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-600"></span>

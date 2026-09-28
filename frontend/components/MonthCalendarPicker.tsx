@@ -97,20 +97,23 @@ export const MonthCalendarPicker: React.FC<MonthCalendarPickerProps> = ({
       {/* BOTÓN CALENDARIO EN TOPNAVBAR */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="h-10 px-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center gap-2 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/40 dark:hover:bg-red-950/30 transition-all shadow-2xs cursor-pointer group"
+        className="h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 sm:gap-2 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/40 dark:hover:bg-red-950/30 transition-all shadow-2xs cursor-pointer group flex-shrink-0"
         title="Filtrar por Calendario de Mes y Año"
       >
-        <CalendarDays className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
-        <div className="flex items-center gap-1.5 text-xs font-black">
-          <span className="text-slate-900 dark:text-white capitalize">
+        <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600 group-hover:scale-110 transition-transform flex-shrink-0" />
+        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black">
+          <span className="text-slate-900 dark:text-white capitalize hidden sm:inline">
             {selectedMonth === 'Todos' ? `Todo ${selectedYear}` : `${selectedMonth} ${selectedYear}`}
+          </span>
+          <span className="text-slate-900 dark:text-white capitalize sm:hidden">
+            {selectedMonth === 'Todos' ? `Todo '${selectedYear.slice(-2)}` : `${selectedMonth.substring(0, 3)} '${selectedYear.slice(-2)}`}
           </span>
         </div>
       </button>
 
       {/* MODAL / POPOVER CALENDARIO */}
       {isOpen && (
-        <div className="absolute right-0 top-12 z-50 w-72 bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-4 animate-in fade-in duration-150">
+        <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-12 z-50 w-[calc(100vw-1rem)] sm:w-72 max-w-xs bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-4 animate-in fade-in duration-150">
           {/* CABECERA CON NAVEGACIÓN DE AÑO */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
             <button
@@ -186,5 +189,6 @@ export const MonthCalendarPicker: React.FC<MonthCalendarPickerProps> = ({
         </div>
       )}
     </div>
+
   );
 };

@@ -574,17 +574,17 @@ export default function Home() {
           }}
         />
 
-        <main className="p-4 sm:p-7 flex-1 max-w-full overflow-x-hidden">
+        <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
           {/* BANNER AVISO SI ES ADMIN DE ÁREA */}
           {!isSuperAdmin && (
-            <div className="mb-6 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex items-center justify-between text-xs">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
                 <span>
                   Estás navegando como <strong>Admin de Área ({userArea})</strong>. Solo puedes gestionar proveedores y facturas correspondientes a tu departamento.
                 </span>
               </div>
-              <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-lg">
+              <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-lg flex-shrink-0">
                 Vista Filtrada
               </span>
             </div>
@@ -593,15 +593,15 @@ export default function Home() {
           {/* VISTA DASHBOARD */}
           {currentView === 'dashboard' && (
             <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
                 <div>
-                  <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2 flex-wrap">
                     <span>Panel de Control y Analítica</span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                    <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40">
                       {selectedMonth} {selectedYear}
                     </span>
                   </h1>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                  <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
                     Control documental y cumplimiento en Alimentos Enriko S.A.S.
                   </p>
                 </div>
@@ -612,12 +612,13 @@ export default function Home() {
                       setSelectedInvoiceForEdit(null);
                       setIsInvoiceModalOpen(true);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
                   >
                     <span>+ Agregar Factura / Cotización</span>
                   </button>
                 </div>
               </div>
+
 
               {/* KPIS Y GRAFICOS */}
               <DashboardKpis metrics={metrics} loading={loading} />

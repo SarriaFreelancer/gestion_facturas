@@ -88,16 +88,16 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
   return (
     <div className="w-full">
       {/* HEADER DE MÓDULO */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
-            <Users className="w-6 h-6 text-white" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
               Directorio de Proveedores Autorizados
             </h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
               Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones.
             </p>
           </div>
@@ -105,7 +105,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
 
         <button 
           onClick={onAddSupplier}
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer"
+          className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4 h-4 text-white" />
           <span>Registrar Proveedor</span>
@@ -113,9 +113,9 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
       </div>
 
       {/* BARRA DE BÚSQUEDA ESPACIOSA Y CON SEPARACIÓN VISUAL */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm my-6 flex items-center gap-3">
-        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
-          <Search className="w-4 h-4 text-slate-400" />
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm my-4 sm:my-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
+          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Buscar proveedor por razón social, NIT, contacto o área..."
@@ -136,13 +136,14 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
 
         <button 
           onClick={() => setSearchTerm('')}
-          className="px-5 py-3 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs cursor-pointer"
+          className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs cursor-pointer"
           title="Restablecer búsqueda"
         >
           <History className="w-3.5 h-3.5 text-slate-500" />
           <span>Limpiar</span>
         </button>
       </div>
+
 
       {/* TABLA DE PROVEEDORES CON SEPARACIÓN GENEROSA */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">

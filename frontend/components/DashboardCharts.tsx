@@ -40,10 +40,10 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
       {/* SECCIÓN 1: GRÁFICO MES A MES + FACTURAS SEMANALES RECIBIDAS VS ENTREGADAS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* GRÁFICO 1: EVOLUCIÓN MES A MES */}
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 sm:mb-6">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center flex-shrink-0">
                 <BarChart2 className="w-5 h-5 text-red-600" />
               </div>
               <div>
@@ -61,44 +61,47 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
             </span>
           </div>
 
-          {/* BARRAS DE MES A MES */}
-          <div className="grid grid-cols-12 gap-2 items-end h-48 pt-6 pb-2 border-b border-slate-100 dark:border-zinc-800">
-            {monthlyStats.map((item, idx) => {
-              const heightPercent = Math.round((item.totalAmount / maxMonthlyAmount) * 100);
-              const isSelected = selectedMonth !== 'Todos' && item.month.toLowerCase() === selectedMonth.toLowerCase();
+          {/* BARRAS DE MES A MES CON CONTENEDOR RESPONSIVE */}
+          <div className="overflow-x-auto pb-1">
+            <div className="min-w-[340px] grid grid-cols-12 gap-1.5 sm:gap-2 items-end h-48 pt-6 pb-2 border-b border-slate-100 dark:border-zinc-800">
+              {monthlyStats.map((item, idx) => {
+                const heightPercent = Math.round((item.totalAmount / maxMonthlyAmount) * 100);
+                const isSelected = selectedMonth !== 'Todos' && item.month.toLowerCase() === selectedMonth.toLowerCase();
 
-              return (
-                <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
-                  {/* Tooltip flotante */}
-                  <div className="absolute -top-12 z-20 hidden group-hover:flex flex-col items-center bg-slate-900 text-white text-[10px] rounded-lg px-2 py-1 shadow-lg pointer-events-none whitespace-nowrap">
-                    <span className="font-bold">{item.month}: $ {item.totalAmount.toLocaleString('es-CO')}</span>
-                    <span className="text-[9px] text-slate-400">{item.count} documentos</span>
+                return (
+                  <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
+                    {/* Tooltip flotante */}
+                    <div className="absolute -top-12 z-20 hidden group-hover:flex flex-col items-center bg-slate-900 text-white text-[10px] rounded-lg px-2 py-1 shadow-lg pointer-events-none whitespace-nowrap">
+                      <span className="font-bold">{item.month}: $ {item.totalAmount.toLocaleString('es-CO')}</span>
+                      <span className="text-[9px] text-slate-400">{item.count} documentos</span>
+                    </div>
+
+                    {/* Barra visual */}
+                    <div className="w-full max-w-[28px] bg-slate-100 dark:bg-zinc-800 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
+                      <div 
+                        className={`w-full rounded-t-lg transition-all duration-500 ${
+                          isSelected 
+                            ? 'bg-gradient-to-t from-red-600 to-red-500 shadow-md ring-2 ring-red-400' 
+                            : item.totalAmount > 0
+                              ? 'bg-gradient-to-t from-red-600/80 to-rose-500/80 group-hover:from-red-600 group-hover:to-red-500'
+                              : 'bg-transparent'
+                        }`}
+                        style={{ height: `${Math.max(heightPercent, item.count > 0 ? 8 : 0)}%` }}
+                      />
+                    </div>
+
+                    {/* Label mes */}
+                    <span className={`text-[9px] sm:text-[10px] font-extrabold mt-2 ${
+                      isSelected ? 'text-red-600 dark:text-red-400 font-black' : 'text-slate-500 dark:text-zinc-400'
+                    }`}>
+                      {item.short}
+                    </span>
                   </div>
-
-                  {/* Barra visual */}
-                  <div className="w-full max-w-[28px] bg-slate-100 dark:bg-zinc-800 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
-                    <div 
-                      className={`w-full rounded-t-lg transition-all duration-500 ${
-                        isSelected 
-                          ? 'bg-gradient-to-t from-red-600 to-red-500 shadow-md ring-2 ring-red-400' 
-                          : item.totalAmount > 0
-                            ? 'bg-gradient-to-t from-red-600/80 to-rose-500/80 group-hover:from-red-600 group-hover:to-red-500'
-                            : 'bg-transparent'
-                      }`}
-                      style={{ height: `${Math.max(heightPercent, item.count > 0 ? 8 : 0)}%` }}
-                    />
-                  </div>
-
-                  {/* Label mes */}
-                  <span className={`text-[10px] font-extrabold mt-2 ${
-                    isSelected ? 'text-red-600 dark:text-red-400 font-black' : 'text-slate-500 dark:text-zinc-400'
-                  }`}>
-                    {item.short}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
 
           <div className="flex items-center justify-between pt-3 text-[11px] text-slate-500 dark:text-zinc-400">
             <div className="flex items-center gap-2">
@@ -175,7 +178,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
       </div>
 
       {/* SECCIÓN 2: ESTUDIO DE FACTURAS RECURRENTES */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-xs">

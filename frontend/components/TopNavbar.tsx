@@ -79,31 +79,31 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   };
 
   return (
-    <header className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800/80 px-4 sm:px-7 py-3 flex items-center justify-between sticky top-0 z-30">
+    <header className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800/80 px-3 sm:px-7 py-2.5 sm:py-3 flex items-center justify-between sticky top-0 z-30">
       {/* SECCIÓN IZQUIERDA: IDENTIDAD & TOGGLE MENÚ */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button 
-          className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs flex-shrink-0"
           onClick={onToggleSidebar} 
           title="Contraer / Expandir Menú Lateral"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        <div>
-          <div className="flex items-center gap-2.5 leading-none">
-            <span className="text-base font-black text-slate-900 dark:text-white">Alimentos Enriko</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 leading-none">
+            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">Alimentos Enriko</span>
             <span className="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
-            <span className="text-sm font-bold text-slate-700 dark:text-zinc-200 hidden sm:inline">Control de Facturas & Cotizaciones</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-zinc-200 hidden md:inline">Control de Facturas & Cotizaciones</span>
           </div>
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 mt-1">
+          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-zinc-500 mt-0.5 sm:mt-1 truncate hidden xs:block">
             Alimentos Enriko S.A.S. — Sistema Corporativo
           </p>
         </div>
       </div>
 
       {/* SECCIÓN DERECHA: SELECTOR CALENDARIO, TEMA, ALERTAS Y PERFIL */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
         {/* SELECTOR CALENDARIO UNIFICADO (MES Y AÑO) */}
         <MonthCalendarPicker 
           selectedMonth={selectedMonth}
@@ -115,24 +115,24 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         {/* TOGGLE MODO OSCURO */}
         <button 
           onClick={onToggleDarkMode} 
-          className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs cursor-pointer group"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs cursor-pointer group flex-shrink-0"
           title={darkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
         >
           {darkMode ? (
-            <Sun className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+            <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 group-hover:scale-110 transition-transform" />
           ) : (
-            <Moon className="w-5 h-5 text-slate-600 dark:text-zinc-300 group-hover:text-red-600 group-hover:scale-110 transition-all" />
+            <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-zinc-300 group-hover:text-red-600 group-hover:scale-110 transition-all" />
           )}
         </button>
 
         {/* BOTÓN ALERTAS */}
         <button 
-          className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs relative cursor-pointer group"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all shadow-2xs relative cursor-pointer group flex-shrink-0"
           title="Alertas del sistema"
         >
-          <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <Bell className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
           {alertCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-zinc-900 shadow-sm animate-pulse">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] sm:min-w-[20px] h-4 sm:h-5 px-1 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-full text-[9px] sm:text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-zinc-900 shadow-sm animate-pulse">
               {alertCount}
             </span>
           )}
@@ -142,10 +142,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         <div className="relative" ref={userMenuRef}>
           <button 
             onClick={() => setIsUserMenuOpen(prev => !prev)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 cursor-pointer hover:border-red-400 hover:shadow-sm transition-all"
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 cursor-pointer hover:border-red-400 hover:shadow-sm transition-all"
             title="Cambiar de usuario o ver perfil"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white font-black text-xs flex items-center justify-center shadow-xs ring-1 ring-red-200 dark:ring-red-900">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white font-black text-[11px] sm:text-xs flex items-center justify-center shadow-xs ring-1 ring-red-200 dark:ring-red-900 flex-shrink-0">
               {getInitials(currentUser?.name)}
             </div>
             <div className="hidden lg:flex flex-col text-left mr-1">
@@ -161,7 +161,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
           {/* MENÚ FLOTANTE DE CAMBIO DE USUARIO */}
           {isUserMenuOpen && (
-            <div className="absolute right-0 top-12 z-50 w-72 bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-3 animate-in fade-in duration-150 text-xs">
+            <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-12 z-50 w-[calc(100vw-1rem)] sm:w-72 max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-3 animate-in fade-in duration-150 text-xs">
               <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                   Usuario en Sesión (Simulador de Accesos)
@@ -174,7 +174,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                 </span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 max-h-60 overflow-y-auto">
                 <span className="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider">
                   Cambiar usuario para probar permisos:
                 </span>
@@ -211,3 +211,4 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
     </header>
   );
 };
+
