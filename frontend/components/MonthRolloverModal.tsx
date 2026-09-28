@@ -9,7 +9,8 @@ import {
   Layers, 
   AlertTriangle,
   Clock,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 
 interface MonthRolloverModalProps {
@@ -52,20 +53,29 @@ export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
         className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
-        {/* ENCABEZADO MODAL */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center gap-3 sm:gap-3.5 shadow-sm flex-shrink-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        {/* ENCABEZADO MODAL CON BOTÓN DE CIERRE (X) */}
+        <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white flex items-center justify-between gap-3 sm:gap-3.5 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 flex-wrap">
+                <span>Inicio de Mes: {targetMonth} {targetYear}</span>
+                <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0" />
+              </h2>
+              <p className="text-[10px] sm:text-[11px] text-white/90 font-medium truncate">
+                Verificación oficial con fecha del servidor: {serverDateInfo?.serverDate ? serverDateInfo.serverDate.split(' ')[0] : 'Sincronizada'}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 flex-wrap">
-              <span>Inicio de Mes: {targetMonth} {targetYear}</span>
-              <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0" />
-            </h2>
-            <p className="text-[10px] sm:text-[11px] text-white/90 font-medium truncate">
-              Verificación oficial con fecha del servidor: {serverDateInfo?.serverDate ? serverDateInfo.serverDate.split(' ')[0] : 'Sincronizada'}
-            </p>
-          </div>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-all cursor-pointer flex-shrink-0"
+            title="Cerrar ventana"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
         </div>
 
         {/* CONTENIDO EXPLICATIVO */}

@@ -14,8 +14,7 @@ import {
   Laptop,
   Building2,
   Tag,
-  Shield,
-  Trash2
+  Shield
 } from 'lucide-react';
 import { User } from '../app/types';
 
@@ -28,7 +27,6 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   currentUser?: User;
-  onCleanDatabase?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -39,8 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
-  currentUser,
-  onCleanDatabase
+  currentUser
 }) => {
   const isSuperAdmin = currentUser?.role === 'superadmin';
 
@@ -157,8 +154,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* PIE DE SIDEBAR: USUARIO ACTIVO Y VACIAR BASE DE DATOS */}
-        <div className="p-3 border-t border-slate-200 dark:border-zinc-800 space-y-2">
+        {/* PIE DE SIDEBAR: USUARIO ACTIVO */}
+        <div className="p-3 border-t border-slate-200 dark:border-zinc-800">
           {!isCollapsed && (
             <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-100 dark:border-zinc-800 flex items-center gap-2.5 text-xs">
               <div className="w-8 h-8 rounded-xl bg-red-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0">
@@ -173,20 +170,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </div>
             </div>
-          )}
-
-          {/* BOTÓN VACIAR FACTURAS (SOLO SUPERADMIN) */}
-          {isSuperAdmin && onCleanDatabase && (
-            <button
-              onClick={onCleanDatabase}
-              className={`w-full py-2 px-3 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                isCollapsed ? 'justify-center px-0' : ''
-              }`}
-              title="Vaciar Facturas de Base de Datos"
-            >
-              <Trash2 className="w-4 h-4 flex-shrink-0" />
-              {!isCollapsed && <span>Vaciar Base de Datos</span>}
-            </button>
           )}
         </div>
       </aside>

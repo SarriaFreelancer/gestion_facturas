@@ -31,6 +31,7 @@ interface TopNavbarProps {
   currentUser?: User;
   users?: User[];
   onSwitchUser?: (user: User) => void;
+  onLogout?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -46,7 +47,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onToggleSidebar,
   currentUser,
   users = [],
-  onSwitchUser
+  onSwitchUser,
+  onLogout
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN DERECHA: SELECTOR CALENDARIO, TEMA, ALERTAS Y PERFIL */}
+      {/* SECCIÓN DERECHA: SELECTOR CALENDARIO, TEMA, ALERTAS, PERFIL Y CERRAR SESIÓN */}
       <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
         {/* SELECTOR CALENDARIO UNIFICADO (MES Y AÑO) */}
         <MonthCalendarPicker 
@@ -207,6 +209,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
             </div>
           )}
         </div>
+
+        {/* BOTÓN CERRAR SESIÓN */}
+        {onLogout && (
+          <button 
+            onClick={onLogout}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-red-50 to-red-100/70 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-600 flex items-center justify-center hover:bg-gradient-to-r hover:from-red-600 hover:to-red-700 hover:text-white hover:border-red-600 transition-all shadow-2xs cursor-pointer group flex-shrink-0"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-4 h-4 text-red-600 group-hover:text-white transition-colors group-hover:scale-110" />
+          </button>
+        )}
       </div>
     </header>
   );

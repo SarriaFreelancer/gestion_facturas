@@ -523,20 +523,17 @@ export default function Home() {
     }
   };
 
-  // Limpiar base de datos
-  const handleCleanDatabase = async () => {
-    const confirmed = await confirmDelete(
-      '¿Vaciar Base de Datos?',
-      '¡Atención! Esta acción borrará todas las facturas y conceptos cargados para comenzar en limpio.',
-      'Sí, vaciar facturas'
+  // Manejador de Cerrar Sesión
+  const handleLogout = async () => {
+    const confirmed = await confirmAction(
+      '¿Deseas cerrar la sesión activa del sistema?',
+      'Se cerrará la sesión de trabajo actual.',
+      'Sí, cerrar sesión'
     );
-    if (!confirmed) return;
-    try {
-      await api.cleanDatabase();
-      notifySuccess('Base de datos vaciada', 'Se eliminaron los registros de facturas.');
-      loadData();
-    } catch (err: any) {
-      notifyError('Error al limpiar base de datos', err.message);
+    if (confirmed) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('current_user');
+      notifySuccess('Sesión Cerrada', 'Has cerrado tu sesión de forma segura.');
     }
   };
 
@@ -551,7 +548,6 @@ export default function Home() {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         currentUser={currentUser}
-        onCleanDatabase={handleCleanDatabase}
       />
 
       {/* CONTENIDO PRINCIPAL CON AJUSTE COMPLETO Y SCROLL SUAVE */}
@@ -572,6 +568,7 @@ export default function Home() {
             setCurrentUser(u);
             notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : `Permisos restringidos a: ${u.area}`);
           }}
+          onLogout={handleLogout}
         />
 
         <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
