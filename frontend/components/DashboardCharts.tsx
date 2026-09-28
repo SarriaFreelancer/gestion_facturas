@@ -61,29 +61,45 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
             </span>
           </div>
 
-          {/* BARRAS DE MES A MES CON CONTENEDOR RESPONSIVE */}
-          <div className="overflow-x-auto pb-1">
-            <div className="min-w-[340px] grid grid-cols-12 gap-1.5 sm:gap-2 items-end h-48 pt-6 pb-2 border-b border-slate-100 dark:border-zinc-800">
+          {/* BARRAS DE MES A MES CON CONTENEDOR RESPONSIVE Y SUFICIENTE HEADROOM PARA EL TOOLTIP */}
+          <div className="overflow-x-auto pt-2 pb-2">
+            <div className="min-w-[420px] grid grid-cols-12 gap-2 sm:gap-3 items-end h-56 pt-14 pb-2 border-b border-slate-100 dark:border-zinc-800 relative">
               {monthlyStats.map((item, idx) => {
                 const heightPercent = Math.round((item.totalAmount / maxMonthlyAmount) * 100);
                 const isSelected = selectedMonth !== 'Todos' && item.month.toLowerCase() === selectedMonth.toLowerCase();
 
                 return (
-                  <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
-                    {/* Tooltip flotante */}
-                    <div className="absolute -top-12 z-20 hidden group-hover:flex flex-col items-center bg-slate-900 text-white text-[10px] rounded-lg px-2 py-1 shadow-lg pointer-events-none whitespace-nowrap">
-                      <span className="font-bold">{item.month}: $ {item.totalAmount.toLocaleString('es-CO')}</span>
-                      <span className="text-[9px] text-slate-400">{item.count} documentos</span>
+                  <div key={idx} className="flex flex-col items-center h-full justify-end group relative cursor-pointer">
+                    {/* Tooltip flotante estilizado con flecha y sin cortes */}
+                    <div className="absolute -top-14 z-30 hidden group-hover:flex flex-col items-center bg-slate-900/95 dark:bg-black/95 text-white text-[10px] rounded-xl px-3 py-1.5 shadow-2xl border border-slate-700/60 pointer-events-none whitespace-nowrap -translate-x-1/2 left-1/2 animate-in fade-in zoom-in-95 duration-100">
+                      <span className="font-black text-red-400 uppercase tracking-wider text-[9px]">
+                        {item.month} {selectedYear}
+                      </span>
+                      <span className="font-extrabold text-[11px] text-white mt-0.5">
+                        ${item.totalAmount.toLocaleString('es-CO')}
+                      </span>
+                      <span className="text-[9.5px] text-slate-300 font-medium">
+                        {item.count} documento{item.count === 1 ? '' : 's'} emitido{item.count === 1 ? '' : 's'}
+                      </span>
+                      {/* Flecha indicadora hacia la barra */}
+                      <div className="w-2 h-2 bg-slate-900/95 dark:bg-black/95 rotate-45 border-r border-b border-slate-700/60 absolute -bottom-1 left-1/2 -translate-x-1/2" />
                     </div>
 
+                    {/* Conteo superior si tiene datos */}
+                    {item.count > 0 && (
+                      <span className="text-[8.5px] font-bold text-slate-400 dark:text-zinc-500 mb-1 group-hover:text-red-600 transition-colors">
+                        {item.count} doc{item.count === 1 ? '' : 's'}
+                      </span>
+                    )}
+
                     {/* Barra visual */}
-                    <div className="w-full max-w-[28px] bg-slate-100 dark:bg-zinc-800 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
+                    <div className="w-full max-w-[32px] bg-slate-100 dark:bg-zinc-800 rounded-t-xl overflow-hidden flex flex-col justify-end h-full group-hover:bg-slate-200 dark:group-hover:bg-zinc-700/70 transition-colors">
                       <div 
-                        className={`w-full rounded-t-lg transition-all duration-500 ${
+                        className={`w-full rounded-t-xl transition-all duration-500 ${
                           isSelected 
                             ? 'bg-gradient-to-t from-red-600 to-red-500 shadow-md ring-2 ring-red-400' 
                             : item.totalAmount > 0
-                              ? 'bg-gradient-to-t from-red-600/80 to-rose-500/80 group-hover:from-red-600 group-hover:to-red-500'
+                              ? 'bg-gradient-to-t from-red-600/85 to-rose-500/85 group-hover:from-red-600 group-hover:to-red-500 shadow-xs'
                               : 'bg-transparent'
                         }`}
                         style={{ height: `${Math.max(heightPercent, item.count > 0 ? 8 : 0)}%` }}
@@ -91,8 +107,8 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
                     </div>
 
                     {/* Label mes */}
-                    <span className={`text-[9px] sm:text-[10px] font-extrabold mt-2 ${
-                      isSelected ? 'text-red-600 dark:text-red-400 font-black' : 'text-slate-500 dark:text-zinc-400'
+                    <span className={`text-[9px] sm:text-[10px] font-black mt-2 transition-colors ${
+                      isSelected ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-zinc-400 group-hover:text-slate-800 dark:group-hover:text-zinc-200'
                     }`}>
                       {item.short}
                     </span>
@@ -102,13 +118,12 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
             </div>
           </div>
 
-
-          <div className="flex items-center justify-between pt-3 text-[11px] text-slate-500 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between pt-3 text-[11px] text-slate-500 dark:text-zinc-400 gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-red-600"></span>
-              <span className="font-bold">Monto Facturado ($)</span>
+              <span className="w-3 h-3 rounded-md bg-gradient-to-r from-red-600 to-rose-500"></span>
+              <span className="font-bold">Monto Facturado ($ COP)</span>
             </div>
-            <span>Base de datos en tiempo real</span>
+            <span className="text-[10px] italic">Pasa el cursor sobre cada mes para ver el monto exacto y desglose</span>
           </div>
         </div>
 
