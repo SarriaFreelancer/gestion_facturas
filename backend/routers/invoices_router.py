@@ -430,7 +430,9 @@ def register(payload: RegisterPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- EMAIL SETTINGS & DELIVERED INVOICES REPORTING (OUTLOOK INTEGRATION) ---
+from backend.services.email_service import EmailNotificationService
+
+# --- EMAIL SETTINGS & DELIVERED INVOICES REPORTING (AUTOMATIC SMTP & OUTLOOK) ---
 class EmailSettingsPayload(BaseModel):
     recipientEmail: Optional[str] = "contabilidad@alimentosenriko.com"
     senderName: Optional[str] = "Alimentos Enriko S.A.S. — Control de Facturas"
@@ -468,6 +470,141 @@ def mark_invoices_email_sent(payload: MarkEmailSentPayload):
         return {"success": success, "count": len(payload.invoiceIds)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class SendDirectEmailPayload(BaseModel):
+    invoiceIds: List[str]
+    recipientEmail: Optional[str] = None
+    subject: Optional[str] = None
+    introMessage: Optional[str] = None
+
+@router.post("/invoices/send-email-direct")
+def send_invoices_email_direct(payload: SendDirectEmailPayload):
+    try:
+        if not payload.invoiceIds:
+            raise HTTPException(status_code=400, detail="Debe seleccionar al menos una factura para enviar.")
+
+        # 1. Obtener todas las facturas y filtrar las seleccionadas
+        all_invoices = repo.fetch_all_invoices()
+        selected_invoices = [inv for inv in all_invoices if inv.get("id") in payload.invoiceIds]
+        
+        if not selected_invoices:
+            raise HTTPException(status_code=404, detail="No se encontraron las facturas seleccionadas.")
+
+        # 2. Obtener configuración SMTP
+        settings = repo.fetch_email_settings()
+        smtp_host = settings.get("smtpHost") or "smtp.office365.com"
+        smtp_port = int(settings.get("smtpPort") or 587)
+        smtp_user = settings.get("smtpUser") or ""
+        smtp_password = settings.get("smtpPassword") or ""
+        sender_name = settings.get("senderName") or "Alimentos Enriko S.A.S."
+
+        if not smtp_user or not smtp_password:
+            raise HTTPException(
+                status_code=400,
+                detail="No se han configurado las credenciales SMTP (Usuario/Correo y Contraseña). Ve al módulo de Configuración para ingresarlas."
+            )
+
+        recipient = payload.recipientEmail or settings.get("recipientEmail") or "contabilidad@alimentosenriko.com"
+        subject = payload.subject or settings.get("emailSubject") or "Reporte de Facturas Entregadas — Alimentos Enriko S.A.S."
+        intro = payload.introMessage or settings.get("emailTemplate") or ""
+
+        # 3. Generar HTML estilizado
+        html_content = EmailNotificationService.generate_delivered_invoices_html(
+            invoices=selected_invoices,
+            intro_text=intro
+        )
+
+        # 4. Enviar mediante SMTP
+        EmailNotificationService.send_html_email(
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            sender_name=sender_name,
+            recipient_emails=recipient,
+            subject=subject,
+            html_body=html_content
+        )
+
+        # 5. Marcar facturas como enviadas en base de datos para no duplicar
+        repo.mark_invoices_email_sent(payload.invoiceIds)
+
+        return {
+            "success": True,
+            "message": f"Correo enviado exitosamente a {recipient} con {len(selected_invoices)} facturas.",
+            "count": len(selected_invoices),
+            "recipient": recipient
+        }
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar correo SMTP: {str(e)}")
+
+class TestEmailPayload(BaseModel):
+    recipientEmail: Optional[str] = None
+
+@router.post("/settings/test-email")
+def test_email_connection(payload: TestEmailPayload):
+    try:
+        settings = repo.fetch_email_settings()
+        smtp_host = settings.get("smtpHost") or "smtp.office365.com"
+        smtp_port = int(settings.get("smtpPort") or 587)
+        smtp_user = settings.get("smtpUser") or ""
+        smtp_password = settings.get("smtpPassword") or ""
+        sender_name = settings.get("senderName") or "Alimentos Enriko S.A.S."
+
+        if not smtp_user or not smtp_password:
+            raise HTTPException(
+                status_code=400,
+                detail="Por favor ingresa primero el Correo Remitente y la Contraseña SMTP antes de realizar la prueba."
+            )
+
+        recipient = payload.recipientEmail or settings.get("recipientEmail") or smtp_user
+        subject = "Prueba de Conexión SMTP — Alimentos Enriko S.A.S."
+
+        test_html = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 600px;">
+            <div style="background: #dc2626; padding: 15px; border-radius: 8px; color: #ffffff; text-align: center;">
+                <h2 style="margin: 0;">Alimentos Enriko S.A.S.</h2>
+                <span style="font-size: 11px;">Verificación Exitosa del Servidor SMTP</span>
+            </div>
+            <div style="padding: 20px 10px; font-size: 13px; color: #334155;">
+                <p>¡Hola! Este es un correo de prueba generado automáticamente desde el Sistema Corporativo de Alimentos Enriko S.A.S.</p>
+                <p>Tu servidor SMTP <strong>{smtp_host}:{smtp_port}</strong> con el usuario <strong>{smtp_user}</strong> está conectado y funcionando correctamente.</p>
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; color: #166534; font-size: 11px;">
+                    ✓ Los reportes automáticos de facturas entregadas se enviarán directamente a través de este canal sin necesidad de abrir aplicaciones externas.
+                </div>
+            </div>
+            <div style="text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                Alimentos Enriko S.A.S. • Conexión Segura TLS
+            </div>
+        </div>
+        """
+
+        EmailNotificationService.send_html_email(
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            sender_name=sender_name,
+            recipient_emails=recipient,
+            subject=subject,
+            html_body=test_html
+        )
+
+        return {
+            "success": True,
+            "message": f"Correo de prueba enviado con éxito a {recipient}."
+        }
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fallo en la prueba de correo: {str(e)}")
+
 
 
 

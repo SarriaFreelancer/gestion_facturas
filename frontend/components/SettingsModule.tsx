@@ -31,8 +31,13 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   );
   const [frequency, setFrequency] = useState('manual');
   const [outlookEnabled, setOutlookEnabled] = useState(true);
+  const [smtpHost, setSmtpHost] = useState('smtp.office365.com');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -48,6 +53,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         if (data.emailSubject) setEmailSubject(data.emailSubject);
         if (data.emailTemplate) setEmailTemplate(data.emailTemplate);
         if (data.frequency) setFrequency(data.frequency);
+        if (data.smtpHost) setSmtpHost(data.smtpHost);
+        if (data.smtpPort) setSmtpPort(String(data.smtpPort));
+        if (data.smtpUser) setSmtpUser(data.smtpUser);
+        if (data.smtpPassword) setSmtpPassword(data.smtpPassword);
         if (data.outlookIntegrationEnabled !== undefined) {
           setOutlookEnabled(Boolean(data.outlookIntegrationEnabled));
         }
@@ -74,14 +83,48 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         emailSubject: emailSubject.trim(),
         emailTemplate: emailTemplate.trim(),
         frequency,
-        outlookIntegrationEnabled: outlookEnabled ? 1 : 0
+        outlookIntegrationEnabled: outlookEnabled ? 1 : 0,
+        smtpHost: smtpHost.trim(),
+        smtpPort: parseInt(smtpPort) || 587,
+        smtpUser: smtpUser.trim(),
+        smtpPassword: smtpPassword.trim()
       });
-      notifySuccess('Configuración Guardada', 'Los ajustes de correo y Outlook se actualizaron correctamente.');
+      notifySuccess('Configuración Guardada', 'Los ajustes de correo y servidor SMTP se actualizaron correctamente.');
       if (onSettingsUpdated) onSettingsUpdated();
     } catch (err: any) {
       notifyError('Error al guardar', err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!smtpUser.trim() || !smtpPassword.trim()) {
+      notifyError('Credenciales faltantes', 'Por favor ingresa el Usuario SMTP y Contraseña antes de realizar la prueba.');
+      return;
+    }
+    try {
+      setTesting(true);
+      // Primero guardar por si hubo cambios
+      await api.saveEmailSettings({
+        recipientEmail: recipientEmail.trim(),
+        senderName: senderName.trim(),
+        emailSubject: emailSubject.trim(),
+        emailTemplate: emailTemplate.trim(),
+        frequency,
+        outlookIntegrationEnabled: outlookEnabled ? 1 : 0,
+        smtpHost: smtpHost.trim(),
+        smtpPort: parseInt(smtpPort) || 587,
+        smtpUser: smtpUser.trim(),
+        smtpPassword: smtpPassword.trim()
+      });
+
+      const res = await api.testEmailConnection(recipientEmail.trim());
+      notifySuccess('¡Prueba Exitosa!', res.message || 'Se envió el correo de prueba satisfactoriamente.');
+    } catch (err: any) {
+      notifyError('Fallo en la prueba SMTP', err.message);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -187,45 +230,92 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
             />
           </div>
 
-          {/* FRECUENCIA */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
-                Modo / Frecuencia de Despacho
-              </label>
-              <select
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold outline-none text-xs cursor-pointer"
-              >
-                <option value="manual">Manual al seleccionar facturas</option>
-                <option value="each_delivery">Al marcar cada factura como entregada</option>
-                <option value="daily">Consolidado Diario de Entregas</option>
-              </select>
+          {/* CONFIGURACIÓN DEL SERVIDOR SMTP (ENVÍO AUTOMÁTICO SIN ABRIR OUTLOOK) */}
+          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-xs">
+                <Send className="w-4 h-4 text-red-600" />
+                <span>Servidor SMTP (Envío Automático Directo)</span>
+              </div>
+              <span className="text-[10px] text-slate-400">
+                Permite enviar sin tener que abrir la aplicación de Outlook
+              </span>
             </div>
 
-            <div className="flex flex-col justify-end">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-between">
-                <div>
-                  <span className="font-extrabold text-slate-800 dark:text-zinc-200 block text-xs">
-                    Habilitar Enlace Outlook
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    Apertura rápida en Outlook Web & Desktop
-                  </span>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+                  Servidor SMTP Host
+                </label>
                 <input
-                  type="checkbox"
-                  checked={outlookEnabled}
-                  onChange={(e) => setOutlookEnabled(e.target.checked)}
-                  className="w-4 h-4 text-red-600 rounded accent-red-600 cursor-pointer"
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="smtp.office365.com / smtp.gmail.com"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+                  Puerto SMTP
+                </label>
+                <input
+                  type="number"
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(e.target.value)}
+                  placeholder="587"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-red-500 outline-none"
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+                  Usuario / Correo Remitente SMTP
+                </label>
+                <input
+                  type="text"
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="facturas@alimentosenriko.com"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+                  Contraseña / Contraseña de Aplicación
+                </label>
+                <input
+                  type="password"
+                  value={smtpPassword}
+                  onChange={(e) => setSmtpPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-[10.5px] text-slate-500 dark:text-zinc-400">
+              💡 <strong>Nota Outlook / Office 365:</strong> Si tu cuenta tiene 2FA (verificación en 2 pasos), genera una <em>Contraseña de Aplicación</em> en tu cuenta de Microsoft para conectarte sin inconvenientes.
+            </div>
           </div>
 
-          {/* BOTÓN GUARDAR */}
-          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex justify-end">
+          {/* BOTONES GUARDAR Y PROBAR */}
+          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleTestEmail}
+              disabled={testing || !smtpUser || !smtpPassword}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
+              title="Enviar un correo de prueba para verificar la conexión SMTP"
+            >
+              <Send className={`w-4 h-4 text-red-600 ${testing ? 'animate-pulse' : ''}`} />
+              <span>{testing ? 'Probando conexión...' : 'Probar Envío de Correo'}</span>
+            </button>
+
             <button
               type="submit"
               disabled={saving}

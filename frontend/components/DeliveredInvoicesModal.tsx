@@ -49,6 +49,34 @@ export const DeliveredInvoicesModal: React.FC<DeliveredInvoicesModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCopying, setIsCopying] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isDirectSending, setIsDirectSending] = useState(false);
+
+  // Envío Directo Automático por Servidor SMTP (Sin abrir ninguna aplicación)
+  const handleSendDirectEmail = async () => {
+    const targetInvoices = filteredInvoices.filter(inv => selectedIds.includes(inv.id));
+    if (targetInvoices.length === 0) {
+      notifyInfo('Selección requerida', 'Por favor selecciona las facturas que deseas enviar.');
+      return;
+    }
+
+    try {
+      setIsDirectSending(true);
+      const res = await api.sendInvoicesEmailDirect({
+        invoiceIds: targetInvoices.map(i => i.id),
+        recipientEmail: emailSettings?.recipientEmail,
+        subject: emailSettings?.emailSubject,
+        introMessage: emailSettings?.emailTemplate
+      });
+
+      notifySuccess('¡Correo Enviado!', res.message || `${targetInvoices.length} facturas enviadas directamente por correo.`);
+      setSelectedIds([]);
+      if (onRefreshData) onRefreshData();
+    } catch (err: any) {
+      notifyError('No se pudo enviar el correo', err.message);
+    } finally {
+      setIsDirectSending(false);
+    }
+  };
 
   // Obtener solo las facturas entregadas
   const deliveredInvoices = useMemo(() => {
@@ -543,22 +571,33 @@ export const DeliveredInvoicesModal: React.FC<DeliveredInvoicesModalProps> = ({
             <button
               onClick={handleCopyToClipboard}
               disabled={selectedIds.length === 0 || isCopying}
-              className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
               title="Copiar tabla en formato enriquecido para pegar en Outlook o Excel"
             >
               <Copy className="w-4 h-4 text-slate-500" />
-              <span>Copiar Tabla (Excel/HTML)</span>
+              <span>Copiar Tabla</span>
             </button>
 
-            {/* BOTÓN ENVIAR POR OUTLOOK */}
+            {/* BOTÓN ABRIR EN OUTLOOK MANUAL */}
             <button
               onClick={handleSendToOutlook}
               disabled={selectedIds.length === 0 || isSending}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-black text-xs shadow-md shadow-red-600/30 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
-              title="Abrir Outlook con el reporte formateado y marcar como enviadas"
+              className="px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-700 dark:text-red-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
+              title="Abrir la aplicación Outlook en tu equipo"
             >
-              <Mail className="w-4 h-4 text-white" />
-              <span>Enviar por Outlook ({selectedIds.length})</span>
+              <Mail className="w-4 h-4 text-red-600" />
+              <span>Abrir en Outlook</span>
+            </button>
+
+            {/* BOTÓN PRINCIPAL: ENVIAR DIRECTO POR CORREO (AUTOMÁTICO SIN ABRIR APPS) */}
+            <button
+              onClick={handleSendDirectEmail}
+              disabled={selectedIds.length === 0 || isDirectSending}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-black text-xs shadow-md shadow-red-600/30 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
+              title="Enviar automáticamente por correo electrónico al destinatario configurado"
+            >
+              <Send className={`w-4 h-4 text-white ${isDirectSending ? 'animate-spin' : ''}`} />
+              <span>{isDirectSending ? 'Enviando...' : `Enviar Correo Directo (${selectedIds.length})`}</span>
             </button>
           </div>
         </div>

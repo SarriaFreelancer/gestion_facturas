@@ -297,7 +297,34 @@ export const api = {
     });
     if (!res.ok) throw new Error('Error al marcar facturas enviadas');
     return res.json();
+  },
+
+  async sendInvoicesEmailDirect(payload: { invoiceIds: string[]; recipientEmail?: string; subject?: string; introMessage?: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/send-email-direct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al enviar correo automático');
+    }
+    return res.json();
+  },
+
+  async testEmailConnection(recipientEmail?: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/settings/test-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientEmail })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error en la prueba de conexión SMTP');
+    }
+    return res.json();
   }
 };
+
 
 
