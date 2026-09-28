@@ -21,6 +21,14 @@ interface MonthRolloverModalProps {
   previousMonth: string;
   undeliveredCount: number;
   quotationsToRollCount: number;
+  serverDateInfo?: {
+    serverDate: string;
+    currentDay: number;
+    currentMonth: string;
+    currentYear: string;
+    canGenerateZeroTemplate: boolean;
+    policyMessage: string;
+  };
 }
 
 export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
@@ -31,9 +39,12 @@ export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
   targetYear,
   previousMonth,
   undeliveredCount,
-  quotationsToRollCount
+  quotationsToRollCount,
+  serverDateInfo
 }) => {
   if (!isOpen) return null;
+
+  const canGenerate = serverDateInfo ? serverDateInfo.canGenerateZeroTemplate : true;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -46,19 +57,30 @@ export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white flex-shrink-0">
             <Calendar className="w-6 h-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
               <span>Inicio de Mes: {targetMonth} {targetYear}</span>
               <Sparkles className="w-4 h-4 text-amber-300" />
             </h2>
             <p className="text-[11px] text-white/90 font-medium">
-              Preparación de plantilla recurrente y control de pendientes
+              Verificación oficial con fecha del servidor: {serverDateInfo?.serverDate ? serverDateInfo.serverDate.split(' ')[0] : 'Sincronizada'}
             </p>
           </div>
         </div>
 
         {/* CONTENIDO EXPLICATIVO */}
         <div className="p-6 space-y-4 text-xs">
+          {/* BANNER REGLA DEL DÍA 1 */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 space-y-1">
+            <div className="flex items-center gap-2 font-black text-xs text-red-600 dark:text-red-400">
+              <Calendar className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span>Regla de Habilitación a partir del 1° del Mes</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+              {serverDateInfo?.policyMessage || `A partir del 1° de ${targetMonth} se generan las facturas en $0.00 con switches en NO esperando recibir, y se mantienen las facturas/cotizaciones no entregadas ya que se reciben hasta el día 1.`}
+            </p>
+          </div>
+
           <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 space-y-2">
             <div className="flex items-center gap-2 font-black text-xs text-amber-900 dark:text-amber-100">
               <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />

@@ -72,21 +72,28 @@ export default function Home() {
   const [isRolloverModalOpen, setIsRolloverModalOpen] = useState(false);
   const [rolloverTargetMonth, setRolloverTargetMonth] = useState('Octubre');
   const [rolloverTargetYear, setRolloverTargetYear] = useState('2026');
+  const [rolloverPreviousMonth, setRolloverPreviousMonth] = useState('Septiembre');
+  const [serverDateInfo, setServerDateInfo] = useState<any>(null);
 
   // Cargar datos desde FastAPI backend con soporte a filtros de mes y año
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invs, sups, mets, invt] = await Promise.all([
+      const [invs, sups, mets, invt, srvDate] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
         api.getMetrics(selectedMonth, selectedYear).catch(() => null),
-        api.getInventory().catch(() => [])
+        api.getInventory().catch(() => []),
+        api.getSystemDateStatus(selectedMonth !== 'Todos' ? selectedMonth : undefined, selectedYear).catch(() => null)
       ]);
       setInvoices(invs);
       setSuppliers(sups);
       setMetrics(mets);
       setInventory(invt);
+      if (srvDate) {
+        setServerDateInfo(srvDate);
+        setRolloverPreviousMonth(srvDate.previousMonth || 'Septiembre');
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -111,7 +118,7 @@ export default function Home() {
   }, [invoices]);
 
   // Detección cuando el usuario cambia a un mes nuevo específico (ej: Octubre)
-  const handleSelectMonth = (newMonth: string) => {
+  const handleSelectMonth = async (newMonth: string) => {
     setSelectedMonth(newMonth);
     // Si cambia de 'Todos' a un mes específico o entre meses, y aún no tiene registros en ese mes
     if (newMonth !== 'Todos') {
@@ -126,6 +133,17 @@ export default function Home() {
         const m = parseInt(d.split(/[-/]/)[1], 10);
         return m === targetNum;
       });
+
+      // Consultar verificación de fecha al servidor para el mes destino
+      try {
+        const dateCheck = await api.getSystemDateStatus(newMonth, selectedYear);
+        setServerDateInfo(dateCheck);
+        if (dateCheck?.previousMonth) {
+          setRolloverPreviousMonth(dateCheck.previousMonth);
+        }
+      } catch (e) {
+        // Fallback local
+      }
 
       // Si el mes no tiene facturas aún, preguntar para inicializar
       if (!existsInMonth) {
@@ -143,7 +161,7 @@ export default function Home() {
         rolloverTargetYear,
         rolloverTargetMonth,
         selectedYear,
-        'Septiembre', // mes previo o contexto
+        rolloverPreviousMonth,
         keepUndelivered
       );
       setIsRolloverModalOpen(false);
@@ -447,9 +465,10 @@ export default function Home() {
         onConfirm={handleConfirmRollover}
         targetMonth={rolloverTargetMonth}
         targetYear={rolloverTargetYear}
-        previousMonth="Septiembre"
+        previousMonth={rolloverPreviousMonth}
         undeliveredCount={undeliveredCount}
         quotationsToRollCount={quotationsToRollCount}
+        serverDateInfo={serverDateInfo}
       />
     </div>
   );

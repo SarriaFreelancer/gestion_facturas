@@ -88,6 +88,15 @@ export const api = {
   },
 
   // Inicio de Mes & Rollover
+  async getSystemDateStatus(month?: string, year?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    if (year) params.append('year', year);
+    const res = await fetch(`${API_BASE_URL}/system/date-status?${params.toString()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al consultar fecha del servidor');
+    return res.json();
+  },
+
   async handleMonthTransition(targetYear: string, targetMonth: string, fromYear?: string, fromMonth?: string, keepUndelivered: boolean = true): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/month-transition`, {
       method: 'POST',

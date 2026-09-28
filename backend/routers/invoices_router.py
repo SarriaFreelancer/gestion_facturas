@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 from backend.repositories.mysql_repository import MySQLRepository
 from backend.services.dashboard_service import DashboardAnalyticsService
 from pydantic import BaseModel
@@ -127,7 +128,56 @@ def clean_database():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- INICIO DE MES & RECURRENCIA ---
+# --- INICIO DE MES, FECHA DEL SERVIDOR & RECURRENCIA ---
+MONTH_NAMES = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+]
+
+@router.get("/system/date-status")
+def get_system_date_status(month: Optional[str] = None, year: Optional[str] = None):
+    """
+    Verifica la fecha actual oficial desde el servidor.
+    Las facturas en 0 (plantilla recurrente del nuevo mes) se habilitan
+    a partir del día 1° del siguiente mes.
+    """
+    now = datetime.now()
+    cur_year = now.year
+    cur_month_idx = now.month # 1-12
+    cur_day = now.day
+    cur_month_name = MONTH_NAMES[cur_month_idx - 1]
+
+    # Mes y año anterior
+    if cur_month_idx == 1:
+        prev_month_name = MONTH_NAMES[11]
+        prev_year = cur_year - 1
+    else:
+        prev_month_name = MONTH_NAMES[cur_month_idx - 2]
+        prev_year = cur_year
+
+    # Verificar si el mes consultado puede inicializarse (a partir del día 1)
+    target_month_name = (month or cur_month_name).lower()
+    target_year_val = int(year) if year and year.isdigit() else cur_year
+
+    # Determinar si ya es primero del mes o si el mes consultado ya pasó / es el actual
+    target_month_idx = MONTH_NAMES.index(target_month_name) + 1 if target_month_name in MONTH_NAMES else cur_month_idx
+    is_same_or_past_month = (target_year_val < cur_year) or (target_year_val == cur_year and target_month_idx <= cur_month_idx)
+    # A partir del día 1 del mes destino es apto para inicializar en 0
+    can_generate_zero_template = is_same_or_past_month and (cur_day >= 1)
+
+    return {
+        "serverDate": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "currentDay": cur_day,
+        "currentMonth": cur_month_name.capitalize(),
+        "currentMonthIndex": cur_month_idx,
+        "currentYear": str(cur_year),
+        "previousMonth": prev_month_name.capitalize(),
+        "previousYear": str(prev_year),
+        "isFirstDayOrLater": cur_day >= 1,
+        "canGenerateZeroTemplate": can_generate_zero_template,
+        "policyMessage": f"A partir del 1° de {target_month_name.capitalize()} se habilitan las facturas en 0 y migración de pendientes."
+    }
+
 class MonthTransitionPayload(BaseModel):
     targetYear: str
     targetMonth: str
@@ -156,7 +206,7 @@ def handle_month_transition(payload: MonthTransitionPayload):
             "success": True,
             "createdRecurrent": template_res.get("createdConcepts", 0),
             "keptUndelivered": rollover_count,
-            "message": f"Mes {payload.targetMonth} {payload.targetYear} inicializado exitosamente."
+            "message": f"Mes {payload.targetMonth} {payload.targetYear} inicializado exitosamente a partir del día 1."
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
