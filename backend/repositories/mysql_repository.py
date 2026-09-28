@@ -1,5 +1,6 @@
 import pymysql
 import json
+import time
 from typing import List, Dict, Any, Optional
 from backend.config.settings import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 
@@ -183,7 +184,7 @@ class MySQLRepository:
                 return cursor.fetchall()
 
     def save_inventory_item(self, data: Dict[str, Any]) -> str:
-        item_id = data.get("id") or f"ti-{int(pymysql.time.time() * 1000)}"
+        item_id = data.get("id") or f"ti-{int(time.time() * 1000)}"
         qty = int(data.get("quantity") or 0)
         status = data.get("status") or ("Disponible" if qty > 0 else "Agotado")
         with self.get_connection() as conn:
@@ -205,15 +206,15 @@ class MySQLRepository:
                 """
                 cursor.execute(sql, (
                     item_id,
-                    data.get("category", "Periféricos"),
-                    data.get("name", ""),
-                    data.get("brandModel", ""),
-                    data.get("serialCode", ""),
+                    data.get("category") or "Periféricos",
+                    data.get("name") or "",
+                    data.get("brandModel") or "",
+                    data.get("serialCode") or "",
                     qty,
-                    data.get("unit", "Unidades"),
-                    data.get("areaAssigned", "Tecnología (TI)"),
+                    data.get("unit") or "Unidades",
+                    data.get("areaAssigned") or "Tecnología (TI)",
                     status,
-                    data.get("notes", "")
+                    data.get("notes") or ""
                 ))
                 return item_id
 
@@ -231,7 +232,7 @@ class MySQLRepository:
 
                 new_qty = current_qty - quantity_to_loan
                 new_status = "Disponible" if new_qty > 0 else "Agotado"
-                date_str = pymysql.time.strftime('%Y-%m-%d')
+                date_str = time.strftime('%Y-%m-%d')
                 log_entry = f"\n[{action_type.upper()} {date_str}]: {quantity_to_loan} {row.get('unit', 'uds')} entregados a {recipient} ({area})."
                 updated_notes = (row.get("notes") or "") + log_entry
 

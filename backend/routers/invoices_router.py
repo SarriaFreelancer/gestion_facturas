@@ -164,20 +164,20 @@ def handle_month_transition(payload: MonthTransitionPayload):
 # --- TECH INVENTORY ENDPOINTS ---
 class InventoryItemPayload(BaseModel):
     id: Optional[str] = None
-    category: str
+    category: Optional[str] = "Periféricos"
     name: str
-    brandModel: Optional[str] = ""
-    serialCode: Optional[str] = ""
-    quantity: int = 1
+    brandModel: Optional[str] = None
+    serialCode: Optional[str] = None
+    quantity: Optional[int] = 1
     unit: Optional[str] = "Unidades"
     areaAssigned: Optional[str] = "Tecnología (TI)"
     status: Optional[str] = "Disponible"
-    notes: Optional[str] = ""
+    notes: Optional[str] = None
 
 class LoanPayload(BaseModel):
-    quantity: int = 1
+    quantity: Optional[int] = 1
     recipient: str
-    area: str
+    area: Optional[str] = "General"
     actionType: Optional[str] = "Préstamo"
 
 @router.get("/inventory")

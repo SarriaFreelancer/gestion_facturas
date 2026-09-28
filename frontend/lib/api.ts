@@ -111,7 +111,10 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     });
-    if (!res.ok) throw new Error('Error al guardar artículo en inventario');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar artículo en inventario');
+    }
     return res.json();
   },
 
