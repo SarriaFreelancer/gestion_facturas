@@ -14,6 +14,7 @@ import { UsersModule } from '../components/UsersModule';
 import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
 import { MonthRolloverModal } from '../components/MonthRolloverModal';
+import { LoginScreen } from '../components/LoginScreen';
 import { api } from '../lib/api';
 import { 
   notifySuccess, 
@@ -40,6 +41,9 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
+  // Estado de autenticación
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
   // Modo claro como predeterminado (false) tanto en servidor como cliente
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
@@ -53,6 +57,20 @@ export default function Home() {
     } else {
       setDarkMode(false);
       document.documentElement.classList.remove('dark');
+    }
+
+    // Verificar sesión previa guardada
+    const savedUser = localStorage.getItem('ae_auth_user');
+    if (savedUser) {
+      try {
+        const userObj = JSON.parse(savedUser);
+        setCurrentUser(userObj);
+        setIsAuthenticated(true);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    } else {
+      setIsAuthenticated(false);
     }
   }, []);
 
@@ -523,19 +541,46 @@ export default function Home() {
     }
   };
 
+  // Manejador de Login Exitoso
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    localStorage.setItem('ae_auth_user', JSON.stringify(user));
+    loadData();
+  };
+
   // Manejador de Cerrar Sesión
   const handleLogout = async () => {
     const confirmed = await confirmAction(
       '¿Deseas cerrar la sesión activa del sistema?',
-      'Se cerrará la sesión de trabajo actual.',
+      'Se cerrará la sesión de trabajo actual y regresarás a la pantalla de login.',
       'Sí, cerrar sesión'
     );
     if (confirmed) {
+      localStorage.removeItem('ae_auth_user');
       localStorage.removeItem('token');
       localStorage.removeItem('current_user');
+      setIsAuthenticated(false);
       notifySuccess('Sesión Cerrada', 'Has cerrado tu sesión de forma segura.');
     }
   };
+
+  // Pantalla de Carga Inicial
+  if (!mounted || isAuthenticated === null) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center bg-slate-100 dark:bg-zinc-950 ${darkMode ? 'dark' : ''}`}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-600 dark:text-zinc-400 tracking-wider uppercase">Cargando Alimentos Enriko...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de Autenticación / Login Oficial
+  if (isAuthenticated === false) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} darkMode={darkMode} />;
+  }
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 flex flex-col ${darkMode ? 'dark' : ''}`}>
@@ -566,6 +611,7 @@ export default function Home() {
           users={users}
           onSwitchUser={(u) => {
             setCurrentUser(u);
+            localStorage.setItem('ae_auth_user', JSON.stringify(u));
             notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : `Permisos restringidos a: ${u.area}`);
           }}
           onLogout={handleLogout}
