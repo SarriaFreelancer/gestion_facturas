@@ -18,6 +18,7 @@ import { LoginScreen } from '../components/LoginScreen';
 import { DeliveredInvoicesModal } from '../components/DeliveredInvoicesModal';
 import { EmailSettingsModal } from '../components/EmailSettingsModal';
 import { SettingsModule } from '../components/SettingsModule';
+import { FactureModule } from '../components/FactureModule';
 import { api } from '../lib/api';
 import { 
   notifySuccess, 
@@ -41,7 +42,7 @@ import {
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'facture' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
@@ -749,6 +750,11 @@ export default function Home() {
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
             />
+          )}
+
+          {/* VISTA BANDEJA FACTURE.CO & TRAZABILIDAD */}
+          {currentView === 'facture' && (
+            <FactureModule onInvoicesUpdated={loadData} />
           )}
 
           {/* VISTA PROVEEDORES */}

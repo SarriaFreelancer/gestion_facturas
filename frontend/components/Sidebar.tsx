@@ -15,7 +15,8 @@ import {
   Building2,
   Tag,
   Shield,
-  Settings
+  Settings,
+  Inbox
 } from 'lucide-react';
 import { User } from '../app/types';
 
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
+    { id: 'facture', label: 'Bandeja Facture.co', icon: Inbox },
     { id: 'suppliers', label: 'Proveedores', icon: Users },
     { id: 'inventory', label: 'Inventario TI', icon: Laptop },
     { id: 'areas', label: 'Áreas Enriko', icon: Building2 },

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers.invoices_router import router as invoices_router
+from backend.routers.facture_router import router as facture_router
 
 app = FastAPI(
     title="Alimentos Enriko - Facturas & Cotizaciones API",
@@ -17,6 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(invoices_router, prefix="/api")
+app.include_router(facture_router, prefix="/api")
 
 @app.get("/")
 def root():

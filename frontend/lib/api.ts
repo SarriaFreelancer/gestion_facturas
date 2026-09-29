@@ -323,6 +323,64 @@ export const api = {
       throw new Error(err.detail || 'Error en la prueba de conexión SMTP');
     }
     return res.json();
+  },
+
+  // --- FACTURE.CO INTEGRATION & TRACEABILITY ---
+  async getFactureStatus(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/status`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al consultar estado de Facture.co');
+    return res.json();
+  },
+
+  async updateFactureCredentials(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al actualizar credenciales de Facture.co');
+    }
+    return res.json();
+  },
+
+  async syncFactureInbox(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/sync`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al sincronizar bandeja de Facture.co');
+    }
+    return res.json();
+  },
+
+  async getFactureInbox(folder: string = 'Todos', search?: string): Promise<any[]> {
+    let url = `${API_BASE_URL}/facture/inbox?folder=${encodeURIComponent(folder)}`;
+    if (search && search.trim()) {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al obtener documentos de Facture.co');
+    return res.json();
+  },
+
+  async getFactureLogs(): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/facture/logs`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar logs de auditoría de Facture.co');
+    return res.json();
+  },
+
+  async importFactureDocToMain(factureDocId: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/import-to-invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ factureDocId })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al importar factura');
+    }
+    return res.json();
   }
 };
 
