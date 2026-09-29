@@ -40,6 +40,17 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
+  // Facture.co State
+  const [factureUsername, setFactureUsername] = useState('TicsEnriko');
+  const [facturePassword, setFacturePassword] = useState('');
+  const [factureNit, setFactureNit] = useState('890330035');
+  const [factureCompany, setFactureCompany] = useState('ALIMENTOS ENRIKO S.A.S');
+  const [responsibleName, setResponsibleName] = useState('DAVID');
+  const [responsibleLastName, setResponsibleLastName] = useState('SARRIA');
+  const [responsibleIdNumber, setResponsibleIdNumber] = useState('1144078413');
+  const [factureLastSync, setFactureLastSync] = useState<string | null>(null);
+  const [savingFacture, setSavingFacture] = useState(false);
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -47,26 +58,63 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await api.getEmailSettings();
-      if (data) {
-        if (data.recipientEmail) setRecipientEmail(data.recipientEmail);
-        if (data.ccEmails) setCcEmails(data.ccEmails);
-        if (data.senderName) setSenderName(data.senderName);
-        if (data.emailSubject) setEmailSubject(data.emailSubject);
-        if (data.emailTemplate) setEmailTemplate(data.emailTemplate);
-        if (data.frequency) setFrequency(data.frequency);
-        if (data.smtpHost) setSmtpHost(data.smtpHost);
-        if (data.smtpPort) setSmtpPort(String(data.smtpPort));
-        if (data.smtpUser) setSmtpUser(data.smtpUser);
-        if (data.smtpPassword) setSmtpPassword(data.smtpPassword);
-        if (data.outlookIntegrationEnabled !== undefined) {
-          setOutlookEnabled(Boolean(data.outlookIntegrationEnabled));
+      const [emailData, factureData] = await Promise.all([
+        api.getEmailSettings().catch(() => null),
+        api.getFactureStatus().catch(() => null)
+      ]);
+
+      if (emailData) {
+        if (emailData.recipientEmail) setRecipientEmail(emailData.recipientEmail);
+        if (emailData.ccEmails) setCcEmails(emailData.ccEmails);
+        if (emailData.senderName) setSenderName(emailData.senderName);
+        if (emailData.emailSubject) setEmailSubject(emailData.emailSubject);
+        if (emailData.emailTemplate) setEmailTemplate(emailData.emailTemplate);
+        if (emailData.frequency) setFrequency(emailData.frequency);
+        if (emailData.smtpHost) setSmtpHost(emailData.smtpHost);
+        if (emailData.smtpPort) setSmtpPort(String(emailData.smtpPort));
+        if (emailData.smtpUser) setSmtpUser(emailData.smtpUser);
+        if (emailData.smtpPassword) setSmtpPassword(emailData.smtpPassword);
+        if (emailData.outlookIntegrationEnabled !== undefined) {
+          setOutlookEnabled(Boolean(emailData.outlookIntegrationEnabled));
         }
+      }
+
+      if (factureData) {
+        if (factureData.username) setFactureUsername(factureData.username);
+        if (factureData.nit) setFactureNit(factureData.nit);
+        if (factureData.companyName) setFactureCompany(factureData.companyName);
+        if (factureData.responsibleName) setResponsibleName(factureData.responsibleName);
+        if (factureData.responsibleLastName) setResponsibleLastName(factureData.responsibleLastName);
+        if (factureData.responsibleIdNumber) setResponsibleIdNumber(factureData.responsibleIdNumber);
+        if (factureData.lastSyncAt) setFactureLastSync(factureData.lastSyncAt);
       }
     } catch (err: any) {
       console.error('Error loading settings:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveFacture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSavingFacture(true);
+      await api.updateFactureCredentials({
+        username: factureUsername.trim(),
+        password: facturePassword.trim() || 'Septiembre2026*',
+        nit: factureNit.trim(),
+        companyName: factureCompany.trim(),
+        responsibleName: responsibleName.trim(),
+        responsibleLastName: responsibleLastName.trim(),
+        responsibleIdNumber: responsibleIdNumber.trim(),
+        autoSync: 0
+      });
+      notifySuccess('Configuración Facture.co', 'Parámetros de acceso y datos de responsable para eventos guardados correctamente.');
+      if (onSettingsUpdated) onSettingsUpdated();
+    } catch (err: any) {
+      notifyError('Error al guardar Facture.co', err.message);
+    } finally {
+      setSavingFacture(false);
     }
   };
 
@@ -350,6 +398,113 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
 
         {/* PANEL LATERAL INFORMATIVO */}
         <div className="lg:col-span-4 space-y-4">
+          {/* PANEL FACTURE.CO CREDENCIALES & EVENTOS */}
+          <form onSubmit={handleSaveFacture} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="border-b border-slate-100 dark:border-zinc-800 pb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-xs">
+                <Database className="w-4 h-4 text-red-600" />
+                <span>Integración Facture.co</span>
+              </div>
+              <span className="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                Conectado
+              </span>
+            </div>
+
+            <p className="text-[10.5px] text-slate-500 dark:text-zinc-400">
+              Credenciales de acceso a la plataforma <a href="https://plataforma.facture.co/plataforma/login" target="_blank" rel="noreferrer" className="text-red-600 underline font-semibold">facture.co</a> y datos del responsable para eventos de aceptación.
+            </p>
+
+            <div className="space-y-2.5 text-xs">
+              <div>
+                <label className="block text-[10.5px] font-black text-slate-700 dark:text-zinc-300 uppercase mb-1">
+                  NIT de Empresa
+                </label>
+                <input
+                  type="text"
+                  value={factureNit}
+                  onChange={(e) => setFactureNit(e.target.value)}
+                  placeholder="890330035"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-black text-slate-700 dark:text-zinc-300 uppercase mb-1">
+                  Usuario Facture.co
+                </label>
+                <input
+                  type="text"
+                  value={factureUsername}
+                  onChange={(e) => setFactureUsername(e.target.value)}
+                  placeholder="TicsEnriko"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-black text-slate-700 dark:text-zinc-300 uppercase mb-1">
+                  Contraseña Facture.co
+                </label>
+                <input
+                  type="password"
+                  value={facturePassword}
+                  onChange={(e) => setFacturePassword(e.target.value)}
+                  placeholder="Septiembre2026*"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <span className="text-[10.5px] font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wide block mb-2">
+                  👤 Responsable para Aceptación (3 campos)
+                </span>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label className="block text-[10px] text-slate-500 uppercase font-bold mb-0.5">Nombre</label>
+                    <input
+                      type="text"
+                      value={responsibleName}
+                      onChange={(e) => setResponsibleName(e.target.value)}
+                      placeholder="DAVID"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 uppercase font-bold mb-0.5">Apellido</label>
+                    <input
+                      type="text"
+                      value={responsibleLastName}
+                      onChange={(e) => setResponsibleLastName(e.target.value)}
+                      placeholder="SARRIA"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase font-bold mb-0.5">Cédula / Documento</label>
+                  <input
+                    type="text"
+                    value={responsibleIdNumber}
+                    onChange={(e) => setResponsibleIdNumber(e.target.value)}
+                    placeholder="1144078413"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs font-mono outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingFacture}
+              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{savingFacture ? 'Guardando...' : 'Guardar Facture.co'}</span>
+            </button>
+          </form>
+
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3">
             <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-xs">
               <Shield className="w-4 h-4 text-red-600" />

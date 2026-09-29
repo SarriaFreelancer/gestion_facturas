@@ -11,6 +11,9 @@ class CredentialsPayload(BaseModel):
     password: str
     nit: str
     companyName: Optional[str] = "ALIMENTOS ENRIKO S.A.S"
+    responsibleName: Optional[str] = "DAVID"
+    responsibleLastName: Optional[str] = "SARRIA"
+    responsibleIdNumber: Optional[str] = "1144078413"
     autoSync: Optional[int] = 0
 
 class ImportPayload(BaseModel):

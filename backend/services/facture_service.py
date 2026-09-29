@@ -26,6 +26,9 @@ class FactureService:
                         "password": "Septiembre2026*",
                         "nit": "890330035",
                         "companyName": "ALIMENTOS ENRIKO S.A.S",
+                        "responsibleName": "David",
+                        "responsibleLastName": "Sarria",
+                        "responsibleIdNumber": "1144000000",
                         "recibidosCount": 2148,
                         "contadoCount": 458,
                         "lastSyncAt": datetime.now()
@@ -33,22 +36,38 @@ class FactureService:
                 return row
 
     def save_credentials(self, data: Dict[str, Any]) -> bool:
+        current = self.get_credentials()
+        new_pass = data.get("password", "").strip()
+        if not new_pass or new_pass.startswith("••••"):
+            password_to_save = current.get("password") or "Septiembre2026*"
+        else:
+            password_to_save = new_pass
+
         with self.repo.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO facture_credentials (id, username, password, nit, companyName, autoSync)
-                    VALUES ('default', %s, %s, %s, %s, %s)
+                    INSERT INTO facture_credentials (
+                        id, username, password, nit, companyName,
+                        responsibleName, responsibleLastName, responsibleIdNumber, autoSync
+                    )
+                    VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         username = VALUES(username),
                         password = VALUES(password),
                         nit = VALUES(nit),
                         companyName = VALUES(companyName),
+                        responsibleName = VALUES(responsibleName),
+                        responsibleLastName = VALUES(responsibleLastName),
+                        responsibleIdNumber = VALUES(responsibleIdNumber),
                         autoSync = VALUES(autoSync);
                 """, (
-                    data.get("username", "TicsEnriko"),
-                    data.get("password", "Septiembre2026*"),
-                    data.get("nit", "890330035"),
-                    data.get("companyName", "ALIMENTOS ENRIKO S.A.S"),
+                    data.get("username", "TicsEnriko").strip(),
+                    password_to_save,
+                    data.get("nit", "890330035").strip(),
+                    data.get("companyName", "ALIMENTOS ENRIKO S.A.S").strip(),
+                    data.get("responsibleName", "David").strip(),
+                    data.get("responsibleLastName", "Sarria").strip(),
+                    data.get("responsibleIdNumber", "").strip(),
                     int(data.get("autoSync", 0) or 0)
                 ))
                 return True
