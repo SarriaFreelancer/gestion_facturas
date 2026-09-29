@@ -381,6 +381,26 @@ export const api = {
       throw new Error(err.detail || 'Error al importar factura');
     }
     return res.json();
+  },
+
+  async processFactureWorkflow(payload: {
+    documentNumber: string;
+    executeEvents?: boolean;
+    downloadPdf?: boolean;
+    responsibleName?: string;
+    responsibleLastName?: string;
+    responsibleIdNumber?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/process-workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al procesar flujo automatizado');
+    }
+    return res.json();
   }
 };
 

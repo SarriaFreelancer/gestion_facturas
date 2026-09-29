@@ -21,7 +21,11 @@ import {
   FileCheck,
   Check,
   Database,
-  Lock
+  Lock,
+  Play,
+  ArrowLeft,
+  X,
+  FileDown
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { notifySuccess, notifyError, notifyInfo } from '../lib/alerts';
@@ -47,6 +51,14 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [importingId, setImportingId] = useState<string | null>(null);
+
+  // Estados del Asistente de Fases de Automatización
+  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+  const [targetDocNumber, setTargetDocNumber] = useState('');
+  const [executeEventsOption, setExecuteEventsOption] = useState(false);
+  const [downloadPdfOption, setDownloadPdfOption] = useState(true);
+  const [runningWorkflow, setRunningWorkflow] = useState(false);
+  const [workflowResult, setWorkflowResult] = useState<any | null>(null);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -89,6 +101,48 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
     } finally {
       setSyncing(false);
     }
+  };
+
+  // Ejecutar Flujo de Fases Automatizado
+  const handleRunWorkflow = async () => {
+    if (!targetDocNumber.trim()) {
+      notifyError('Documento requerido', 'Por favor ingresa o selecciona el número de factura a procesar.');
+      return;
+    }
+
+    try {
+      setRunningWorkflow(true);
+      setWorkflowResult(null);
+      notifyInfo('Iniciando Automatización', `Ejecutando flujo para documento ${targetDocNumber.trim()}...`);
+      
+      const res = await api.processFactureWorkflow({
+        documentNumber: targetDocNumber.trim(),
+        executeEvents: executeEventsOption,
+        downloadPdf: downloadPdfOption
+      });
+
+      setWorkflowResult(res);
+
+      if (res.success) {
+        notifySuccess('¡Flujo Completado!', `El documento ${targetDocNumber} fue procesado a través de las fases satisfactoriamente.`);
+      } else {
+        notifyError('Aviso en el flujo', res.error || 'Ocurrió un inconveniente durante el procesamiento.');
+      }
+
+      await loadAllData();
+      if (onInvoicesUpdated) onInvoicesUpdated();
+    } catch (err: any) {
+      notifyError('Error en automatización', err.message);
+      setWorkflowResult({ success: false, error: err.message });
+    } finally {
+      setRunningWorkflow(false);
+    }
+  };
+
+  const openWorkflowForDoc = (docNum: string) => {
+    setTargetDocNumber(docNum);
+    setWorkflowResult(null);
+    setWorkflowModalOpen(true);
   };
 
   // Importar documento a la tabla principal de facturas del sistema
@@ -152,8 +206,21 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
           </div>
         </div>
 
-        {/* BOTÓN DE ACCIÓN SINCRONIZAR */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        {/* BOTONES DE ACCIÓN */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              setTargetDocNumber('');
+              setWorkflowResult(null);
+              setWorkflowModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-zinc-100 hover:bg-slate-800 dark:hover:bg-white dark:text-zinc-900 text-white font-extrabold text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+            title="Abrir el asistente automatizado de procesamiento por fases"
+          >
+            <Play className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600 fill-amber-400 dark:fill-amber-600" />
+            <span>Asistente de Fases</span>
+          </button>
+
           <button
             onClick={handleLiveSync}
             disabled={syncing}
@@ -394,19 +461,30 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                           )}
                         </td>
                         <td className="p-3 text-center">
-                          {!isSynced ? (
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
-                              onClick={() => handleImportDocument(doc.id, doc.documentNumber)}
-                              disabled={importingId === doc.id}
-                              className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-[10.5px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
-                              title="Importar al módulo de facturas generales"
+                              onClick={() => openWorkflowForDoc(doc.documentNumber)}
+                              className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white font-bold text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              title="Abrir asistente de fases para este documento"
                             >
-                              <FileCheck className="w-3.5 h-3.5" />
-                              <span>{importingId === doc.id ? 'Importando...' : 'Importar'}</span>
+                              <Play className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                              <span>Fases</span>
                             </button>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 font-medium">Vinculada</span>
-                          )}
+
+                            {!isSynced ? (
+                              <button
+                                onClick={() => handleImportDocument(doc.id, doc.documentNumber)}
+                                disabled={importingId === doc.id}
+                                className="px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-[10px] transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                title="Importar al módulo de facturas generales"
+                              >
+                                <FileCheck className="w-3 h-3" />
+                                <span>{importingId === doc.id ? '...' : 'Importar'}</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-medium px-1">Vinculada</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -547,6 +625,227 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-[11px] text-slate-500 dark:text-zinc-400 space-y-1">
               <span className="font-bold text-slate-700 dark:text-zinc-200 block">🔒 Seguridad Garantizada:</span>
               <p>Las contraseñas se almacenan de forma segura y cifrada en el servidor local de base de datos MySQL.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL / ASISTENTE DE FASES DE AUTOMATIZACIÓN */}
+      {workflowModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+            {/* MODAL HEADER */}
+            <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-black">
+                  <Play className="w-5 h-5 fill-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-900 dark:text-white leading-tight">
+                    Flujo Automatizado por Fases Facture.co
+                  </h2>
+                  <p className="text-[11px] text-slate-400">
+                    Ejecución paso a paso: Login, Paginación, Eventos DIAN, Descarga y Retorno.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setWorkflowModalOpen(false)}
+                className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* MODAL BODY */}
+            <div className="p-6 space-y-5 flex-1">
+              {/* CAMPO NÚMERO DE FACTURA */}
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
+                  Número de Factura o Documento a Procesar <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={targetDocNumber}
+                  onChange={(e) => setTargetDocNumber(e.target.value)}
+                  placeholder="Ej: FE-10928, FP-4501, FACT-892"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono font-bold text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <p className="text-[10.5px] text-slate-400 mt-1">
+                  Si no está en la primera página de Recibidos, el robot avanzará automáticamente por el paginador hasta encontrarla.
+                </p>
+              </div>
+
+              {/* OPCIONES DE EJECUCIÓN */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 space-y-3">
+                <span className="text-[11px] font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider block">
+                  Opciones del Flujo
+                </span>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={executeEventsOption}
+                    onChange={(e) => setExecuteEventsOption(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Ejecutar Eventos RADIAN / DIAN en Barra Superior
+                    </span>
+                    <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 block">
+                      Acuse (030) ➔ Recibo de Bien/Servicio (032) ➔ Aceptación Expresa (033) con Nombre ({statusInfo.responsibleName || 'DAVID'}), Apellido ({statusInfo.responsibleLastName || 'SARRIA'}) y Cédula ({statusInfo.responsibleIdNumber || '1144078413'}).
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={downloadPdfOption}
+                    onChange={(e) => setDownloadPdfOption(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Descargar Factura en PDF Automáticamente
+                    </span>
+                    <span className="text-[10.5px] text-slate-500 dark:text-zinc-400 block">
+                      Guarda el archivo en el servidor y lo deja listo para consulta inmediata.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* DIAGRAMA VISUAL DE LAS 6 FASES */}
+              <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 bg-white dark:bg-zinc-900 space-y-3">
+                <span className="text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider block">
+                  Secuencia de Fases en Ejecución
+                </span>
+
+                <div className="space-y-2 text-xs">
+                  {[
+                    { num: 1, title: 'Fase 1: Login & NIT 890330035', desc: 'Ingreso a Facture.co y selección de contrato ALIMENTOS ENRIKO S.A.S.' },
+                    { num: 2, title: 'Fase 2: Navegación Inbox ➔ Recibidos', desc: 'Apertura de bandeja de facturas a crédito pendientes.' },
+                    { num: 3, title: 'Fase 3: Búsqueda & Paginación Automática', desc: 'Si no está en la página actual, avanza por las páginas de la tabla.' },
+                    { num: 4, title: 'Fase 4: Barra Superior de Eventos', desc: 'Acuse, Recibo y Aceptación con los 3 campos de responsable.' },
+                    { num: 5, title: 'Fase 5: Descarga de Factura PDF', desc: 'Clic en botón de descarga y almacenamiento local.' },
+                    { num: 6, title: 'Fase 6: Retorno Seguro a Recibidos', desc: 'Clic en flecha atrás para volver a la bandeja y registrar trazabilidad.' },
+                  ].map((phase) => {
+                    const stepResult = workflowResult?.steps?.find((s: any) => s.phase === phase.num);
+                    const isSuccess = stepResult?.status === 'SUCCESS' || stepResult?.status === 'SUCCESS_VIA_HISTORY';
+                    const isRunning = stepResult?.status === 'RUNNING';
+                    const isSkipped = stepResult?.status === 'SKIPPED_READONLY';
+                    const isError = stepResult?.status && !isSuccess && !isRunning && !isSkipped;
+
+                    return (
+                      <div
+                        key={phase.num}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                          isSuccess
+                            ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/50'
+                            : isError
+                            ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800/50'
+                            : isRunning
+                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50 animate-pulse'
+                            : 'bg-slate-50/60 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                            isSuccess
+                              ? 'bg-emerald-600 text-white'
+                              : isError
+                              ? 'bg-red-600 text-white'
+                              : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+                          }`}>
+                            {phase.num}
+                          </span>
+                          <div>
+                            <span className="font-extrabold text-slate-900 dark:text-white block text-xs">
+                              {phase.title}
+                            </span>
+                            <span className="text-[10px] text-slate-500 dark:text-zinc-400 block">
+                              {phase.desc}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          {isSuccess && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+                              ✓ Completado
+                            </span>
+                          )}
+                          {isSkipped && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                              Solo Lectura
+                            </span>
+                          )}
+                          {isError && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400">
+                              Error
+                            </span>
+                          )}
+                          {!stepResult && (
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              En espera
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* RESULTADO Y LOG */}
+              {workflowResult && (
+                <div className={`p-4 rounded-xl border text-xs space-y-2 ${
+                  workflowResult.success
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-900 dark:text-emerald-200'
+                    : 'bg-red-50 dark:bg-red-950/40 border-red-200 text-red-900 dark:text-red-200'
+                }`}>
+                  <div className="flex items-center gap-2 font-black">
+                    {workflowResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                    )}
+                    <span>{workflowResult.success ? 'Flujo ejecutado con éxito' : 'Detalle del inconveniente'}</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {workflowResult.error || `Procesamiento finalizado para ${workflowResult.documentNumber} a las ${workflowResult.completedAt}.`}
+                  </p>
+                  {workflowResult.downloadedPdf && (
+                    <div className="pt-2">
+                      <span className="font-bold block text-[10.5px]">📄 Archivo PDF descargado:</span>
+                      <code className="text-[10px] font-mono break-all opacity-80">{workflowResult.downloadedPdf}</code>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* MODAL FOOTER */}
+            <div className="p-5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-zinc-900/50">
+              <button
+                type="button"
+                onClick={() => setWorkflowModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRunWorkflow}
+                disabled={runningWorkflow || !targetDocNumber.trim()}
+                className="px-6 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-xs shadow-md shadow-red-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Play className={`w-3.5 h-3.5 fill-white ${runningWorkflow ? 'animate-spin' : ''}`} />
+                <span>{runningWorkflow ? 'Ejecutando Fases...' : 'Iniciar Automatización'}</span>
+              </button>
             </div>
           </div>
         </div>

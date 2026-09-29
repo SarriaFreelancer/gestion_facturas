@@ -69,3 +69,32 @@ def import_to_main_invoices(payload: ImportPayload):
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class WorkflowPayload(BaseModel):
+    documentNumber: str
+    executeEvents: Optional[bool] = False
+    downloadPdf: Optional[bool] = True
+    responsibleName: Optional[str] = None
+    responsibleLastName: Optional[str] = None
+    responsibleIdNumber: Optional[str] = None
+
+@router.post("/process-workflow")
+async def process_invoice_workflow(payload: WorkflowPayload):
+    try:
+        override = {}
+        if payload.responsibleName:
+            override["name"] = payload.responsibleName
+        if payload.responsibleLastName:
+            override["lastName"] = payload.responsibleLastName
+        if payload.responsibleIdNumber:
+            override["idNumber"] = payload.responsibleIdNumber
+
+        res = await service.process_single_invoice_workflow(
+            target_doc_number=payload.documentNumber,
+            execute_events=bool(payload.executeEvents),
+            download_pdf=bool(payload.downloadPdf),
+            override_responsible=override if override else None
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
