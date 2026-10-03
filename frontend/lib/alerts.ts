@@ -55,6 +55,15 @@ export const notifyInfo = (title: string, text?: string) => {
   });
 };
 
+export const notifyWarning = (title: string, text?: string) => {
+  return EnrikoAlert.fire({
+    icon: 'warning',
+    title: title,
+    text: text,
+    confirmButtonText: 'Aceptar'
+  });
+};
+
 export const confirmDelete = async (title: string, text?: string, confirmText: string = 'Sí, eliminar'): Promise<boolean> => {
   const result = await EnrikoAlert.fire({
     title: title,

@@ -494,8 +494,90 @@ export const api = {
       throw new Error(err.detail || 'Error al procesar flujo automatizado');
     }
     return res.json();
+  },
+
+  async testAiConnection(apiKey?: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/settings/test-ai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al verificar API Key de Gemini AI');
+    }
+    return res.json();
+  },
+
+  // Facturas Internas / Portal Proveedores
+  async getInternalInvoices(folder: string = 'Todos', search?: string): Promise<any[]> {
+    let url = `${API_BASE_URL}/internal-invoices?folder=${encodeURIComponent(folder)}`;
+    if (search && search.trim()) {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al obtener facturas internas');
+    return res.json();
+  },
+
+  async getInternalInvoice(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/internal-invoices/${id}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al obtener detalle de la factura interna');
+    return res.json();
+  },
+
+  async saveInternalInvoice(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/internal-invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar factura interna');
+    }
+    return res.json();
+  },
+
+  async uploadAndAnalyzeInvoicePdf(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE_URL}/internal-invoices/upload-and-analyze`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al analizar PDF con IA');
+    }
+    return res.json();
+  },
+
+  async importInternalInvoiceToMain(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/internal-invoices/import-to-invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al vincular factura');
+    }
+    return res.json();
+  },
+
+  async deleteInternalInvoice(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/internal-invoices/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al eliminar factura');
+    }
+    return res.json();
   }
 };
+
 
 
 

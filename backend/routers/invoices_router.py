@@ -569,6 +569,10 @@ class EmailSettingsPayload(BaseModel):
     smtpPort: Optional[int] = 587
     smtpUser: Optional[str] = ""
     smtpPassword: Optional[str] = ""
+    portalEnabled: Optional[int] = 1
+    defaultClientName: Optional[str] = "ALIMENTOS ENRIKO SAS"
+    defaultClientNit: Optional[str] = "890330035"
+    geminiApiKey: Optional[str] = ""
 
 @router.get("/settings/email")
 def get_email_settings():
@@ -584,6 +588,36 @@ def save_email_settings(payload: EmailSettingsPayload):
         return {"success": success}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class TestAiPayload(BaseModel):
+    apiKey: Optional[str] = None
+
+@router.post("/settings/test-ai")
+def test_ai_connection(payload: Optional[TestAiPayload] = None):
+    try:
+        settings = repo.fetch_email_settings()
+        api_key = (payload.apiKey if payload and payload.apiKey else None) or settings.get("geminiApiKey") or os.getenv("GEMINI_API_KEY")
+        if not api_key or not api_key.strip():
+            raise HTTPException(status_code=400, detail="Por favor ingresa una API Key de Google Gemini válida.")
+
+        from google import genai
+        client = genai.Client(api_key=api_key.strip())
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents="Verifica conexión: responde en 1 frase corta confirmando que el servicio de Inteligencia Artificial para Facturas de Alimentos Enriko está activo."
+        )
+
+        return {
+            "success": True,
+            "message": "Conexión con Gemini AI exitosa.",
+            "response": response.text.strip() if response and response.text else "Conexión activa",
+            "model": "gemini-2.5-flash-lite"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al verificar Gemini API Key: {str(e)}")
 
 class MarkEmailSentPayload(BaseModel):
     invoiceIds: List[str]

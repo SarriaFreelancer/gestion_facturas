@@ -16,7 +16,8 @@ import {
   Tag,
   Shield,
   Settings,
-  Inbox
+  Inbox,
+  FileCheck2
 } from 'lucide-react';
 import { User } from '../app/types';
 
@@ -29,6 +30,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   currentUser?: User;
+  portalEnabled?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -39,7 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
-  currentUser
+  currentUser,
+  portalEnabled = true
 }) => {
   const isSuperAdmin = currentUser?.role === 'superadmin';
 
@@ -47,6 +50,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
     { id: 'facture', label: 'Bandeja Facture.co', icon: Inbox },
+    ...(portalEnabled ? [
+      { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
+    ] : []),
     { id: 'suppliers', label: 'Proveedores', icon: Users },
     { id: 'inventory', label: 'Inventario TI', icon: Laptop },
     { id: 'areas', label: 'Áreas Enriko', icon: Building2 },

@@ -52,6 +52,59 @@ export interface EmailSettings {
   smtpPort?: number;
   smtpUser?: string;
   smtpPassword?: string;
+  portalEnabled?: boolean | number;
+  defaultClientName?: string;
+  defaultClientNit?: string;
+  geminiApiKey?: string;
+  updatedAt?: string;
+}
+
+export interface InternalInvoiceItem {
+  code?: string;
+  name?: string;
+  description: string;
+  unit?: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal?: number;
+  taxRate: number;
+  taxAmount: number;
+  totalPrice: number;
+}
+
+export interface InternalInvoice {
+  id: string;
+  documentNumber: string;
+  docType?: 'FACTURA DE VENTA' | 'NOTA CRÉDITO' | string;
+  paymentType?: 'Crédito' | 'Contado' | string;
+  referenceNumber?: string;
+  issuerName: string;
+  issuerNit: string;
+  clientName?: string;
+  clientNit?: string;
+  emissionDate?: string;
+  dueDate?: string;
+  paymentCondition?: string;
+  paymentMethod?: string;
+  subtotalAmount: number;
+  ivaAmount: number;
+  totalAmount: number;
+  retentionAmount?: number;
+  netPayableAmount?: number;
+  hasIva: number | boolean;
+  itemsCount: number;
+  itemsWithIvaCount: number;
+  itemsWithoutIvaCount: number;
+  rawDetail?: string;
+  itemsJson?: InternalInvoiceItem[] | string;
+  pdfPath?: string | null;
+  pdfOriginalName?: string | null;
+  status?: string;
+  folderType?: string;
+  importedToMain?: number;
+  mainInvoiceId?: string | null;
+  uploadedBy?: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 

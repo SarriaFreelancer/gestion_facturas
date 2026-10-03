@@ -74,6 +74,16 @@ class InvoiceAIService:
 
         # 1. Intentar análisis multimodal con Google Gemini AI
         gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not gemini_api_key:
+            try:
+                from backend.repositories.mysql_repository import MySQLRepository
+                db_settings = MySQLRepository().fetch_email_settings()
+                gemini_api_key = db_settings.get("geminiApiKey")
+                if gemini_api_key:
+                    os.environ["GEMINI_API_KEY"] = gemini_api_key
+            except Exception:
+                pass
+
         if gemini_api_key and (pdf_bytes or text.strip()):
             try:
                 from google import genai

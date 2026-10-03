@@ -1,3 +1,4 @@
+import os
 import pymysql
 import json
 import time
@@ -151,20 +152,37 @@ class MySQLRepository:
                         "smtpHost": "smtp.office365.com",
                         "smtpPort": 587,
                         "smtpUser": "",
-                        "smtpPassword": ""
+                        "smtpPassword": "",
+                        "portalEnabled": 1,
+                        "defaultClientName": "ALIMENTOS ENRIKO SAS",
+                        "defaultClientNit": "890330035",
+                        "geminiApiKey": os.getenv("GEMINI_API_KEY", "")
                     }
                 if row.get("ccEmails") is None:
                     row["ccEmails"] = ""
+                if row.get("portalEnabled") is None:
+                    row["portalEnabled"] = 1
+                if not row.get("defaultClientName"):
+                    row["defaultClientName"] = "ALIMENTOS ENRIKO SAS"
+                if not row.get("defaultClientNit"):
+                    row["defaultClientNit"] = "890330035"
+                if not row.get("geminiApiKey"):
+                    row["geminiApiKey"] = os.getenv("GEMINI_API_KEY", "")
                 return row
 
     def save_email_settings(self, data: Dict[str, Any]) -> bool:
+        gemini_key = data.get("geminiApiKey")
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key.strip()
+
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO email_settings (
                         id, recipientEmail, ccEmails, senderName, emailSubject, emailTemplate,
-                        frequency, outlookIntegrationEnabled, smtpHost, smtpPort, smtpUser, smtpPassword
-                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        frequency, outlookIntegrationEnabled, smtpHost, smtpPort, smtpUser, smtpPassword,
+                        portalEnabled, defaultClientName, defaultClientNit, geminiApiKey
+                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         recipientEmail = VALUES(recipientEmail),
                         ccEmails = VALUES(ccEmails),
@@ -176,7 +194,11 @@ class MySQLRepository:
                         smtpHost = VALUES(smtpHost),
                         smtpPort = VALUES(smtpPort),
                         smtpUser = VALUES(smtpUser),
-                        smtpPassword = VALUES(smtpPassword)
+                        smtpPassword = VALUES(smtpPassword),
+                        portalEnabled = VALUES(portalEnabled),
+                        defaultClientName = VALUES(defaultClientName),
+                        defaultClientNit = VALUES(defaultClientNit),
+                        geminiApiKey = VALUES(geminiApiKey)
                 """, (
                     data.get("recipientEmail", "contabilidad@alimentosenriko.com"),
                     data.get("ccEmails", ""),
@@ -188,7 +210,11 @@ class MySQLRepository:
                     data.get("smtpHost", "smtp.office365.com"),
                     int(data.get("smtpPort", 587) or 587),
                     data.get("smtpUser", ""),
-                    data.get("smtpPassword", "")
+                    data.get("smtpPassword", ""),
+                    int(data.get("portalEnabled", 1) if data.get("portalEnabled") is not None else 1),
+                    data.get("defaultClientName", "ALIMENTOS ENRIKO SAS"),
+                    data.get("defaultClientNit", "890330035"),
+                    gemini_key or None
                 ))
                 return True
 
@@ -913,4 +939,204 @@ class MySQLRepository:
                         ORDER BY createdAt DESC LIMIT %s
                     """, (limit,))
                 return cursor.fetchall()
+
+    # --- FACTURAS INTERNAS / RADICACIÓN LOCAL DE PROVEEDORES ---
+    def fetch_internal_invoices(self, folder: Optional[str] = None, folder_type: Optional[str] = None, search: Optional[str] = None, limit: Optional[int] = 1000) -> List[Dict[str, Any]]:
+        target_folder = folder or folder_type
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                query = "SELECT * FROM internal_uploaded_invoices WHERE 1=1"
+                params = []
+
+                if target_folder and target_folder != "Todos":
+                    if target_folder == "Recibidos" or target_folder == "Recibidos Crédito":
+                        query += " AND (folderType = 'Recibidos' OR paymentType = 'Crédito') AND docType != 'NOTA CRÉDITO'"
+                    elif target_folder == "Recibidos (contado)" or target_folder == "Recibidos Contado":
+                        query += " AND (folderType = 'Recibidos (contado)' OR paymentType = 'Contado') AND docType != 'NOTA CRÉDITO'"
+                    elif target_folder == "Notas Crédito":
+                        query += " AND docType = 'NOTA CRÉDITO'"
+                    elif target_folder == "Procesados":
+                        query += " AND (folderType = 'Procesados' OR status IN ('Procesada', 'Vinculada', 'Aprobada') OR importedToMain = 1)"
+                    else:
+                        query += " AND folderType = %s"
+                        params.append(target_folder)
+
+                if search and search.strip():
+                    term = f"%{search.strip().lower()}%"
+                    query += " AND (LOWER(documentNumber) LIKE %s OR LOWER(issuerName) LIKE %s OR LOWER(issuerNit) LIKE %s OR LOWER(referenceNumber) LIKE %s OR LOWER(rawDetail) LIKE %s)"
+                    params.extend([term, term, term, term, term])
+
+                query += " ORDER BY createdAt DESC LIMIT %s"
+                params.append(limit or 1000)
+                cursor.execute(query, tuple(params))
+                return cursor.fetchall()
+
+    def fetch_internal_invoice_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM internal_uploaded_invoices WHERE id = %s OR documentNumber = %s", (doc_id, doc_id))
+                return cursor.fetchone()
+
+    def save_internal_invoice(self, data: Dict[str, Any]) -> str:
+        doc_num = data.get("documentNumber", "").strip()
+        doc_id = data.get("id") or f"int-{doc_num.replace(' ', '-').replace('/', '-')}"
+        
+        items_json = data.get("itemsJson")
+        if isinstance(items_json, (list, dict)):
+            items_json_str = json.dumps(items_json)
+        else:
+            items_json_str = items_json or "[]"
+
+        subtotal = float(data.get("subtotalAmount") or 0.0)
+        iva = float(data.get("ivaAmount") or 0.0)
+        total = float(data.get("totalAmount") or (subtotal + iva))
+        neto = float(data.get("netPayableAmount") or total)
+
+        doc_type = data.get("docType") or "FACTURA DE VENTA"
+        payment_type = data.get("paymentType") or "Crédito"
+        folder_type = "Notas Crédito" if doc_type == "NOTA CRÉDITO" else ("Recibidos (contado)" if payment_type == "Contado" else "Recibidos")
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = """
+                    INSERT INTO internal_uploaded_invoices (
+                        id, documentNumber, docType, paymentType, referenceNumber,
+                        issuerName, issuerNit, clientName, clientNit, emissionDate, dueDate,
+                        paymentCondition, paymentMethod, subtotalAmount, ivaAmount, totalAmount,
+                        retentionAmount, netPayableAmount, hasIva, itemsCount, itemsWithIvaCount,
+                        itemsWithoutIvaCount, rawDetail, itemsJson, pdfPath, pdfOriginalName,
+                        status, folderType, uploadedBy
+                    ) VALUES (
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s
+                    )
+                    ON DUPLICATE KEY UPDATE
+                        docType = VALUES(docType),
+                        paymentType = VALUES(paymentType),
+                        referenceNumber = VALUES(referenceNumber),
+                        issuerName = VALUES(issuerName),
+                        issuerNit = VALUES(issuerNit),
+                        clientName = VALUES(clientName),
+                        clientNit = VALUES(clientNit),
+                        emissionDate = VALUES(emissionDate),
+                        dueDate = VALUES(dueDate),
+                        paymentCondition = VALUES(paymentCondition),
+                        paymentMethod = VALUES(paymentMethod),
+                        subtotalAmount = VALUES(subtotalAmount),
+                        ivaAmount = VALUES(ivaAmount),
+                        totalAmount = VALUES(totalAmount),
+                        retentionAmount = VALUES(retentionAmount),
+                        netPayableAmount = VALUES(netPayableAmount),
+                        hasIva = VALUES(hasIva),
+                        itemsCount = VALUES(itemsCount),
+                        itemsWithIvaCount = VALUES(itemsWithIvaCount),
+                        itemsWithoutIvaCount = VALUES(itemsWithoutIvaCount),
+                        rawDetail = VALUES(rawDetail),
+                        itemsJson = VALUES(itemsJson),
+                        pdfPath = VALUES(pdfPath),
+                        pdfOriginalName = VALUES(pdfOriginalName),
+                        status = VALUES(status),
+                        folderType = VALUES(folderType),
+                        uploadedBy = VALUES(uploadedBy)
+                """
+                cursor.execute(sql, (
+                    doc_id,
+                    doc_num,
+                    doc_type,
+                    payment_type,
+                    data.get("referenceNumber", ""),
+                    data.get("issuerName", "").strip(),
+                    data.get("issuerNit", "").strip(),
+                    data.get("clientName", "ALIMENTOS ENRIKO SAS"),
+                    data.get("clientNit", "890330035"),
+                    data.get("emissionDate", ""),
+                    data.get("dueDate", ""),
+                    data.get("paymentCondition", "CREDITO 30 DIAS"),
+                    data.get("paymentMethod", "TRANSFERENCIA"),
+                    subtotal,
+                    iva,
+                    total,
+                    float(data.get("retentionAmount") or 0.0),
+                    neto,
+                    1 if iva > 0 else 0,
+                    int(data.get("itemsCount") or 1),
+                    int(data.get("itemsWithIvaCount") or (1 if iva > 0 else 0)),
+                    int(data.get("itemsWithoutIvaCount") or (0 if iva > 0 else 1)),
+                    data.get("rawDetail", ""),
+                    items_json_str,
+                    data.get("pdfPath"),
+                    data.get("pdfOriginalName"),
+                    data.get("status", "Radicada"),
+                    folder_type,
+                    data.get("uploadedBy", "Proveedor")
+                ))
+                return doc_id
+
+    def delete_internal_invoice(self, doc_id: str) -> bool:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM internal_uploaded_invoices WHERE id = %s", (doc_id,))
+                return cursor.rowcount > 0
+
+    def import_internal_to_main(self, doc_id: str) -> Dict[str, Any]:
+        doc = self.fetch_internal_invoice_by_id(doc_id)
+        if not doc:
+            raise ValueError(f"Documento {doc_id} no encontrado")
+
+        # 1. Asegurar proveedor
+        issuer_name = doc.get("issuerName", "Proveedor").strip()
+        issuer_nit = doc.get("issuerNit", "").strip()
+        
+        # Buscar o crear proveedor
+        sup_id = None
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM suppliers WHERE nit = %s OR LOWER(name) = LOWER(%s)", (issuer_nit, issuer_name))
+                existing_sup = cur.fetchone()
+                if existing_sup:
+                    sup_id = existing_sup["id"]
+                else:
+                    sup_id = f"sup-{int(time.time() * 1000)}"
+                    cur.execute("""
+                        INSERT INTO suppliers (id, nit, name, contact, phone, area, monthlyCount)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (sup_id, issuer_nit, issuer_name, "Contacto Directo", "", "General", 1))
+
+        # 2. Guardar en invoices principal
+        inv_id = f"inv-{int(time.time() * 1000)}"
+        emission_dt = doc.get("emissionDate") or datetime.now().strftime("%Y-%m-%d")
+        
+        main_inv = {
+            "id": inv_id,
+            "supplier": issuer_name,
+            "service": doc.get("rawDetail") or f"Suministro {doc.get('documentNumber')}",
+            "invoiceNumber": doc.get("documentNumber"),
+            "emissionDate": emission_dt,
+            "deliveryDate": None,
+            "value": float(doc.get("totalAmount") or 0.0),
+            "signed": "NO",
+            "orderStd": "SÍ" if doc.get("referenceNumber") else "NO",
+            "oc": doc.get("referenceNumber") or "",
+            "enFacture": "SÍ",
+            "delivered": "NO",
+            "pdfPath": doc.get("pdfPath"),
+            "pdfOriginalName": doc.get("pdfOriginalName")
+        }
+        self.save_invoice(main_inv)
+
+        # 3. Marcar documento interno como importado
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE internal_uploaded_invoices 
+                    SET importedToMain = 1, mainInvoiceId = %s, status = 'Vinculada', folderType = 'Procesados'
+                    WHERE id = %s
+                """, (inv_id, doc_id))
+
+        return {"success": True, "mainInvoiceId": inv_id, "supplierId": sup_id}
+
 

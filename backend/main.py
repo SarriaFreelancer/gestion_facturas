@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.routers.invoices_router import router as invoices_router
 from backend.routers.facture_router import router as facture_router
+from backend.routers.internal_invoices_router import router as internal_invoices_router
 
 app = FastAPI(
     title="Alimentos Enriko - Facturas & Cotizaciones API",
@@ -34,6 +35,7 @@ app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 app.include_router(invoices_router, prefix="/api")
 app.include_router(facture_router, prefix="/api")
+app.include_router(internal_invoices_router, prefix="/api")
 
 @app.get("/")
 def root():

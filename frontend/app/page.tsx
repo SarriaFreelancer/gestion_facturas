@@ -20,6 +20,7 @@ import { DeliveredInvoicesModal } from '../components/DeliveredInvoicesModal';
 import { EmailSettingsModal } from '../components/EmailSettingsModal';
 import { SettingsModule } from '../components/SettingsModule';
 import { FactureModule } from '../components/FactureModule';
+import { InternalInvoicesModule } from '../components/InternalInvoicesModule';
 import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { api } from '../lib/api';
 import { 
@@ -44,13 +45,13 @@ import {
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'facture' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'facture' | 'internal_invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Sincronizador de vistas con la URL del navegador
   const setCurrentView = useCallback((view: string) => {
-    const validViews = ['dashboard', 'invoices', 'facture', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
+    const validViews = ['dashboard', 'invoices', 'facture', 'internal_invoices', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
     const target = (validViews.includes(view) ? view : 'dashboard') as any;
     setCurrentViewState(target);
     if (typeof window !== 'undefined') {
@@ -726,6 +727,7 @@ export default function Home() {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         currentUser={currentUser}
+        portalEnabled={emailSettings?.portalEnabled !== undefined ? Boolean(emailSettings.portalEnabled) : true}
       />
 
       {/* CONTENIDO PRINCIPAL CON AJUSTE COMPLETO Y SCROLL SUAVE */}
@@ -852,6 +854,11 @@ export default function Home() {
           {/* VISTA BANDEJA FACTURE.CO & TRAZABILIDAD */}
           {currentView === 'facture' && (
             <FactureModule onInvoicesUpdated={loadData} />
+          )}
+
+          {/* VISTA BANDEJA DE FACTURACIÓN INTERNA / PROVEEDORES */}
+          {currentView === 'internal_invoices' && (
+            <InternalInvoicesModule onImportSuccess={loadData} />
           )}
 
           {/* VISTA PROVEEDORES */}
