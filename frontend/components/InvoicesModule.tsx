@@ -243,7 +243,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
       {/* TABLA PRINCIPAL DE FACTURAS CON FECHA EMISIÓN EDITABLE Y FECHA ENTREGA AUTOMÁTICA */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[980px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
                 <th className="px-3.5 py-3.5 text-white">Proveedor</th>

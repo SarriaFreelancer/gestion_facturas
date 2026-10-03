@@ -626,7 +626,7 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
               </div>
             ) : (
               <div className="overflow-x-auto border border-slate-200 dark:border-zinc-800 rounded-2xl">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[650px] text-left text-xs">
                   <thead className="bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 font-black border-b border-slate-200 dark:border-zinc-800 text-[11px] uppercase tracking-wider">
                     <tr>
                       <th className="p-3">Código</th>

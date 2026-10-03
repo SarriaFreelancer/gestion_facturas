@@ -446,7 +446,7 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
 
           {/* TABLA DE DOCUMENTOS FACTURE */}
           <div className="overflow-x-auto border border-slate-200 dark:border-zinc-800 rounded-xl">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[850px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-300 font-extrabold border-b border-slate-200 dark:border-zinc-700">
                   <th className="p-3">Documento</th>
@@ -968,7 +968,7 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                   </div>
 
                   {/* VISOR DE PDF EMBEBIDO */}
-                  <div className="w-full h-[580px] rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden bg-slate-900 shadow-inner relative flex flex-col items-center justify-center">
+                  <div className="w-full h-[380px] sm:h-[500px] lg:h-[580px] rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden bg-slate-900 shadow-inner relative flex flex-col items-center justify-center">
                     <iframe
                       src={`http://127.0.0.1:8000/api/facture/pdf/${encodeURIComponent(targetDocNumber)}#toolbar=1&navpanes=0`}
                       className="w-full h-full rounded-2xl border-0"

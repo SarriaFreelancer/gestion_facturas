@@ -218,7 +218,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
 
         {/* TABLA DE AUDITORÍA DE RECURRENCIA */}
         <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-800">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[750px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-[10px] font-black uppercase tracking-wider">
                 <th className="px-4 py-3">Proveedor / NIT</th>

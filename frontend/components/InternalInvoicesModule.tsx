@@ -270,7 +270,7 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({ 
       {/* TABLA PRINCIPAL DE FACTURAS RADICADAS */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[850px] text-left text-xs border-collapse">
             <thead className="bg-slate-50 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 font-black border-b border-slate-200 dark:border-zinc-800 text-[11px] uppercase tracking-wider">
               <tr>
                 <th className="p-3.5">Documento</th>
@@ -496,10 +496,10 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({ 
             </div>
 
             {/* MODAL BODY (PDF + DETALLES IA) */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-0 overflow-y-auto lg:overflow-hidden">
               
               {/* VISOR DE PDF */}
-              <div className="lg:col-span-7 bg-slate-100 dark:bg-zinc-950 p-2 sm:p-4 flex flex-col h-full border-r border-slate-200 dark:border-zinc-800">
+              <div className="lg:col-span-7 bg-slate-100 dark:bg-zinc-950 p-2 sm:p-4 flex flex-col h-[380px] sm:h-[480px] lg:h-full border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-zinc-800 flex-shrink-0">
                 <iframe
                   src={`/api/internal-invoices/pdf/${encodeURIComponent(selectedInvoice.documentNumber)}`}
                   className="w-full h-full rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-inner bg-white"
@@ -508,7 +508,7 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({ 
               </div>
 
               {/* DETALLES EXTRAÍDOS CON IA */}
-              <div className="lg:col-span-5 bg-white dark:bg-zinc-900 p-5 overflow-y-auto space-y-5">
+              <div className="lg:col-span-5 bg-white dark:bg-zinc-900 p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
                 
                 {/* TARJETAS DE FECHAS & REFERENCIA */}
                 <div className="grid grid-cols-2 gap-3">

@@ -167,7 +167,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
       {/* TABLA DE USUARIOS */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[750px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/75 dark:bg-zinc-800/50 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                 <th className="px-4 py-3.5">Nombre & Usuario</th>
