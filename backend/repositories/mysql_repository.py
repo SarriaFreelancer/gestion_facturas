@@ -732,6 +732,12 @@ class MySQLRepository:
                 cursor.execute("SELECT id, username, name, email, role, area, status, createdAt FROM users ORDER BY role ASC, name ASC")
                 return cursor.fetchall()
 
+    def fetch_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT id, username, name, email, role, area, status, createdAt FROM users WHERE id = %s", (user_id,))
+                return cursor.fetchone()
+
     def save_user(self, data: Dict[str, Any]) -> str:
         user_id = data.get("id") or f"usr-{int(time.time() * 1000)}"
         plain_pwd = data.get("password")

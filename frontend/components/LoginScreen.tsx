@@ -24,9 +24,10 @@ import { User } from '../app/types';
 interface LoginScreenProps {
   onLoginSuccess: (user: User) => void;
   darkMode?: boolean;
+  sessionExpiredReason?: string | null;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMode }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMode, sessionExpiredReason }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -165,6 +166,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
                 Ingresa tus credenciales para acceder al panel de control.
               </p>
             </div>
+
+            {/* AVISO DE SESIÓN EXPIRADA / INACTIVIDAD */}
+            {sessionExpiredReason && !errorMsg && (
+              <div className="mb-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 animate-ping" />
+                <span>{sessionExpiredReason}</span>
+              </div>
+            )}
 
             {/* AVISO DE ERROR */}
             {errorMsg && (

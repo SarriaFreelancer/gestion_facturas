@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react';
 import { MonthCalendarPicker } from './MonthCalendarPicker';
+import { SessionTimerBadge } from './SessionTimerBadge';
 import { User } from '../app/types';
 
 interface TopNavbarProps {
@@ -32,6 +33,9 @@ interface TopNavbarProps {
   users?: User[];
   onSwitchUser?: (user: User) => void;
   onLogout?: () => void;
+  sessionRemainingSeconds?: number;
+  sessionTotalSeconds?: number;
+  onExtendSession?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -48,7 +52,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   currentUser,
   users = [],
   onSwitchUser,
-  onLogout
+  onLogout,
+  sessionRemainingSeconds,
+  sessionTotalSeconds,
+  onExtendSession
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -139,6 +146,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
             </span>
           )}
         </button>
+
+        {/* CHIP CRONOMETRO DE SEGURIDAD / CONTROL DE SESIÓN */}
+        {sessionRemainingSeconds !== undefined && onExtendSession && onLogout && (
+          <SessionTimerBadge 
+            remainingSeconds={sessionRemainingSeconds}
+            totalTimeoutSeconds={sessionTotalSeconds || 1200}
+            onExtend={onExtendSession}
+            onLogout={onLogout}
+            currentUser={currentUser}
+          />
+        )}
 
         {/* SELECTOR / CHIP DE USUARIO ACTIVO (CON CONMUTADOR DE ROL) */}
         <div className="relative" ref={userMenuRef}>

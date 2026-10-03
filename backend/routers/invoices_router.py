@@ -479,6 +479,74 @@ def register(payload: RegisterPayload, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class VerifyTokenPayload(BaseModel):
+    token: Optional[str] = None
+
+@router.post("/auth/verify")
+def verify_session(payload: Optional[VerifyTokenPayload] = None, request: Request = None):
+    try:
+        token = payload.token if (payload and payload.token) else None
+        if not token and request and "Authorization" in request.headers:
+            auth_hdr = request.headers.get("Authorization", "")
+            if auth_hdr.startswith("Bearer "):
+                token = auth_hdr.replace("Bearer ", "").strip()
+        
+        if not token:
+            raise HTTPException(status_code=401, detail="Token no proporcionado.")
+
+        decoded = decode_access_token(token)
+        if not decoded:
+            raise HTTPException(status_code=401, detail="Sesión expirada o token inválido.")
+
+        user_id = decoded.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token no contiene información de usuario.")
+
+        user = repo.fetch_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado en el sistema.")
+
+        if user.get("status") != "Activo":
+            raise HTTPException(status_code=403, detail="El usuario se encuentra inactivo.")
+
+        user.pop("password", None)
+        return {
+            "valid": True,
+            "user": user,
+            "expiresAt": decoded.get("exp")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class LogoutPayload(BaseModel):
+    userId: Optional[str] = None
+    username: Optional[str] = None
+    reason: Optional[str] = "Cierre de sesión manual"
+
+@router.post("/auth/logout")
+def logout(payload: Optional[LogoutPayload] = None, request: Request = None):
+    try:
+        client_ip = request.client.host if request and request.client else "127.0.0.1"
+        user_id = payload.userId if payload else None
+        username = payload.username if payload else None
+        reason = payload.reason if payload else "Cierre de sesión"
+
+        repo.log_system_action(
+            action="LOGOUT",
+            entity_type="USER",
+            entity_id=user_id or "ANONYMOUS",
+            username=username or "ANONYMOUS",
+            user_id=user_id,
+            details=f"Cierre de sesión: {reason}",
+            ip_address=client_ip
+        )
+        return {"success": True, "message": "Sesión cerrada correctamente"}
+    except Exception as e:
+        return {"success": True, "message": f"Sesión cerrada con advertencia: {str(e)}"}
+
+
 @router.get("/system/audit-logs")
 def get_system_audit_logs(limit: Optional[int] = 100, entityType: Optional[str] = None):
     try:

@@ -245,8 +245,8 @@ export const api = {
     return res.json();
   },
 
-  // Autenticación
-  async login(username: string, password: string): Promise<{ success: boolean; user: any }> {
+  // Autenticación & Control de Sesión
+  async login(username: string, password: string): Promise<{ success: boolean; user: any; token: string }> {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -256,10 +256,72 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Error al iniciar sesión');
     }
-    return res.json();
+    const data = await res.json();
+    if (typeof window !== 'undefined' && data.token) {
+      localStorage.setItem('ae_token', data.token);
+      localStorage.setItem('ae_auth_user', JSON.stringify(data.user));
+      localStorage.setItem('ae_last_activity', Date.now().toString());
+      if (data.expiresAt) {
+        localStorage.setItem('ae_session_expires_at', (data.expiresAt * 1000).toString());
+      }
+    }
+    return data;
   },
 
-  async register(data: { username: string; name?: string; email?: string; password: string; role?: string; area?: string }): Promise<{ success: boolean; user: any }> {
+  async verifySession(tokenOverride?: string): Promise<{ valid: boolean; user: any; expiresAt?: number }> {
+    const token = tokenOverride || (typeof window !== 'undefined' ? localStorage.getItem('ae_token') : null);
+    if (!token) {
+      throw new Error('No hay token de sesión activo');
+    }
+    const res = await fetch(`${API_BASE_URL}/auth/verify`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ token })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Sesión inválida o expirada');
+    }
+    const data = await res.json();
+    if (typeof window !== 'undefined' && data.user) {
+      localStorage.setItem('ae_auth_user', JSON.stringify(data.user));
+      localStorage.setItem('ae_last_activity', Date.now().toString());
+      if (data.expiresAt) {
+        localStorage.setItem('ae_session_expires_at', (data.expiresAt * 1000).toString());
+      }
+    }
+    return data;
+  },
+
+  async logoutUser(userId?: string, username?: string, reason?: string): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ae_token') : null;
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ userId, username, reason: reason || 'Cierre de sesión de usuario' })
+      });
+    } catch (e) {
+      // Ignorar error de red en logout
+    } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ae_token');
+        localStorage.removeItem('ae_auth_user');
+        localStorage.removeItem('ae_last_activity');
+        localStorage.removeItem('ae_session_expires_at');
+        localStorage.removeItem('token');
+        localStorage.removeItem('current_user');
+      }
+    }
+  },
+
+  async register(data: { username: string; name?: string; email?: string; password: string; role?: string; area?: string }): Promise<{ success: boolean; user: any; token: string }> {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -269,7 +331,13 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Error al registrar usuario');
     }
-    return res.json();
+    const resData = await res.json();
+    if (typeof window !== 'undefined' && resData.token) {
+      localStorage.setItem('ae_token', resData.token);
+      localStorage.setItem('ae_auth_user', JSON.stringify(resData.user));
+      localStorage.setItem('ae_last_activity', Date.now().toString());
+    }
+    return resData;
   },
 
   // Configuración de Correo & Reportes Outlook

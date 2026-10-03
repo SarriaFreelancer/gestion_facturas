@@ -15,10 +15,12 @@ import { SupplierModal } from '../components/SupplierModal';
 import { InvoiceModal } from '../components/InvoiceModal';
 import { MonthRolloverModal } from '../components/MonthRolloverModal';
 import { LoginScreen } from '../components/LoginScreen';
+import { SessionTimeoutModal } from '../components/SessionTimeoutModal';
 import { DeliveredInvoicesModal } from '../components/DeliveredInvoicesModal';
 import { EmailSettingsModal } from '../components/EmailSettingsModal';
 import { SettingsModule } from '../components/SettingsModule';
 import { FactureModule } from '../components/FactureModule';
+import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { api } from '../lib/api';
 import { 
   notifySuccess, 
@@ -57,8 +59,9 @@ export default function Home() {
     }
   }, []);
 
-  // Estado de autenticación
+  // Estado de autenticación y control de expiración
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [sessionExpiredReason, setSessionExpiredReason] = useState<string | null>(null);
 
   // Modo claro como predeterminado (false) tanto en servidor como cliente
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -96,19 +99,47 @@ export default function Home() {
       document.documentElement.classList.remove('dark');
     }
 
-    // Verificar sesión previa guardada
-    const savedUser = localStorage.getItem('ae_auth_user');
-    if (savedUser) {
+    // Verificación estricta de sesión activa con Token JWT y comprobación de inactividad
+    const checkActiveSession = async () => {
+      const token = localStorage.getItem('ae_token');
+      const savedUser = localStorage.getItem('ae_auth_user');
+      const lastActivity = localStorage.getItem('ae_last_activity');
+
+      // Si no existe token o usuario, solicitar inicio de sesión inmediatamente
+      if (!token || !savedUser) {
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // Validar si la sesión superó los 20 minutos de inactividad (1,200,000 ms)
+      if (lastActivity) {
+        const elapsedMs = Date.now() - parseInt(lastActivity, 10);
+        if (elapsedMs > 20 * 60 * 1000) {
+          api.logoutUser(undefined, undefined, 'Sesión expirada por inactividad antes de abrir').catch(() => {});
+          setSessionExpiredReason('Tu sesión anterior expiró por inactividad (más de 20 minutos). Por seguridad, ingresa tus credenciales.');
+          setIsAuthenticated(false);
+          return;
+        }
+      }
+
       try {
-        const userObj = JSON.parse(savedUser);
-        setCurrentUser(userObj);
-        setIsAuthenticated(true);
-      } catch {
+        const verifyRes = await api.verifySession(token);
+        if (verifyRes && verifyRes.valid && verifyRes.user) {
+          setCurrentUser(verifyRes.user);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (err: any) {
+        console.warn('Verificación de sesión rechazada por servidor:', err.message);
+        localStorage.removeItem('ae_token');
+        localStorage.removeItem('ae_auth_user');
+        setSessionExpiredReason('La sesión ha caducado. Por favor ingresa nuevamente con tus credenciales.');
         setIsAuthenticated(false);
       }
-    } else {
-      setIsAuthenticated(false);
-    }
+    };
+
+    checkActiveSession();
 
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -614,28 +645,51 @@ export default function Home() {
     }
   };
 
+  // Manejador de Cerrar Sesión con Auditoría y soporte a inactividad
+  const handleLogout = useCallback(async (reason: string = 'Cierre de sesión manual', askConfirm: boolean = true) => {
+    if (askConfirm) {
+      const confirmed = await confirmAction(
+        '¿Deseas cerrar la sesión activa del sistema?',
+        'Se cerrará la sesión de trabajo actual y regresarás a la pantalla de login.',
+        'Sí, cerrar sesión'
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      await api.logoutUser(currentUser?.id, currentUser?.username, reason);
+    } catch (e) {}
+
+    setIsAuthenticated(false);
+    if (reason.toLowerCase().includes('inactividad') || reason.toLowerCase().includes('expirad')) {
+      setSessionExpiredReason('Tu sesión ha finalizado automáticamente por inactividad (20 minutos) para proteger la información.');
+    } else {
+      setSessionExpiredReason(null);
+      notifySuccess('Sesión Cerrada', 'Has cerrado tu sesión de forma segura.');
+    }
+  }, [currentUser]);
+
+  // Hook de Control de Tiempos e Inactividad (20 min límite, advertencia a 2 min restantes)
+  const {
+    remainingSeconds: sessionRemainingSeconds,
+    showWarning: showSessionWarning,
+    extendSession,
+    totalTimeoutSeconds
+  } = useSessionTimeout({
+    isAuthenticated: Boolean(isAuthenticated),
+    currentUser,
+    onLogout: (reason) => handleLogout(reason || 'Sesión expirada por inactividad', false),
+    timeoutSeconds: 20 * 60,
+    warningThresholdSeconds: 2 * 60
+  });
+
   // Manejador de Login Exitoso
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
+    setSessionExpiredReason(null);
     setIsAuthenticated(true);
-    localStorage.setItem('ae_auth_user', JSON.stringify(user));
+    extendSession();
     loadData();
-  };
-
-  // Manejador de Cerrar Sesión
-  const handleLogout = async () => {
-    const confirmed = await confirmAction(
-      '¿Deseas cerrar la sesión activa del sistema?',
-      'Se cerrará la sesión de trabajo actual y regresarás a la pantalla de login.',
-      'Sí, cerrar sesión'
-    );
-    if (confirmed) {
-      localStorage.removeItem('ae_auth_user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('current_user');
-      setIsAuthenticated(false);
-      notifySuccess('Sesión Cerrada', 'Has cerrado tu sesión de forma segura.');
-    }
   };
 
   // Pantalla de Carga Inicial
@@ -652,7 +706,13 @@ export default function Home() {
 
   // Pantalla de Autenticación / Login Oficial
   if (isAuthenticated === false) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} darkMode={darkMode} />;
+    return (
+      <LoginScreen 
+        onLoginSuccess={handleLoginSuccess} 
+        darkMode={darkMode} 
+        sessionExpiredReason={sessionExpiredReason}
+      />
+    );
   }
 
   return (
@@ -687,7 +747,10 @@ export default function Home() {
             localStorage.setItem('ae_auth_user', JSON.stringify(u));
             notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : `Permisos restringidos a: ${u.area}`);
           }}
-          onLogout={handleLogout}
+          onLogout={() => handleLogout('Cierre de sesión manual', true)}
+          sessionRemainingSeconds={sessionRemainingSeconds}
+          sessionTotalSeconds={totalTimeoutSeconds}
+          onExtendSession={extendSession}
         />
 
         <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
@@ -912,6 +975,15 @@ export default function Home() {
         isOpen={isEmailSettingsModalOpen}
         onClose={() => setIsEmailSettingsModalOpen(false)}
         onSaved={loadData}
+      />
+
+      {/* MODAL DE SEGURIDAD / ADVERTENCIA DE INACTIVIDAD */}
+      <SessionTimeoutModal 
+        isOpen={showSessionWarning}
+        remainingSeconds={sessionRemainingSeconds}
+        onExtend={extendSession}
+        onLogout={() => handleLogout('Cierre de sesión desde advertencia de inactividad', false)}
+        userName={currentUser?.name}
       />
     </div>
   );
