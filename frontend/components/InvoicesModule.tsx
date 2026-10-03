@@ -30,6 +30,72 @@ interface InvoicesModuleProps {
   selectedYear: string;
 }
 
+const ValueInputCell: React.FC<{
+  initialValue: number;
+  onSave: (val: number) => void;
+}> = ({ initialValue, onSave }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [rawText, setRawText] = useState(String(initialValue ?? 0));
+
+  React.useEffect(() => {
+    setRawText(String(initialValue ?? 0));
+  }, [initialValue]);
+
+  const formatWithTwoDecimals = (val: number) => {
+    return Number(val || 0).toLocaleString('es-CO', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    let clean = rawText.replace(/\$/g, '').trim();
+    if (clean.includes(',') && clean.includes('.')) {
+      clean = clean.replace(/\./g, '').replace(',', '.');
+    } else if (clean.includes(',')) {
+      clean = clean.replace(',', '.');
+    }
+    const num = parseFloat(clean) || 0;
+    onSave(num);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <div className="inline-flex items-center justify-end w-full">
+      <span className="text-slate-400 text-[10px] font-mono mr-1">$</span>
+      {isEditing ? (
+        <input
+          type="text"
+          autoFocus
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="bg-white dark:bg-zinc-900 border border-red-500 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-900 dark:text-zinc-100 outline-none w-28 sm:w-32 ring-1 ring-red-500 shadow-2xs"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setRawText(initialValue !== undefined && initialValue !== null ? String(initialValue) : '0');
+            setIsEditing(true);
+          }}
+          className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-red-400 hover:bg-white dark:hover:bg-zinc-900 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-right text-slate-900 dark:text-zinc-100 outline-none w-28 sm:w-32 transition-all shadow-2xs cursor-text"
+          title="Clic para editar valor"
+        >
+          {formatWithTwoDecimals(initialValue)}
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   invoices,
   onUpdateField,
@@ -266,20 +332,12 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                         </div>
                       </td>
 
-                      {/* VALOR (CON 2 DECIMALES Y ANCHO COMPLETO) */}
+                      {/* VALOR (CON 2 DECIMALES Y FORMATO ,00) */}
                       <td className="px-3.5 py-3 text-right">
-                        <div className="inline-flex items-center justify-end">
-                          <span className="text-slate-400 text-[10px] font-mono mr-1">$</span>
-                          <input 
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={inv.value !== undefined && inv.value !== null ? inv.value : 0}
-                            onChange={(e) => onUpdateField(inv.id, 'value', parseFloat(e.target.value) || 0)}
-                            className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-900 rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold text-right text-slate-900 dark:text-zinc-100 outline-none w-28 sm:w-32 focus:ring-1 focus:ring-red-500 transition-all shadow-2xs"
-                            title="Valor monetario con 2 decimales"
-                          />
-                        </div>
+                        <ValueInputCell 
+                          initialValue={inv.value !== undefined && inv.value !== null ? inv.value : 0}
+                          onSave={(newVal) => onUpdateField(inv.id, 'value', newVal)}
+                        />
                       </td>
 
                       {/* SWITCH FIRMADO */}

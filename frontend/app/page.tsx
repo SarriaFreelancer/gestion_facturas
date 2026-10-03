@@ -42,10 +42,21 @@ import {
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoices' | 'facture' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'facture' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
+  // Sincronizador de vistas con la URL del navegador
+  const setCurrentView = useCallback((view: string) => {
+    const validViews = ['dashboard', 'invoices', 'facture', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
+    const target = (validViews.includes(view) ? view : 'dashboard') as any;
+    setCurrentViewState(target);
+    if (typeof window !== 'undefined') {
+      const newUrl = target === 'dashboard' ? window.location.pathname : `?view=${target}`;
+      window.history.pushState({ view: target }, '', newUrl);
+    }
+  }, []);
+
   // Estado de autenticación
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -55,6 +66,27 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Leer vista desde la URL si viene en la query (?view=invoices o ?tab=suppliers o #facture)
+    const validViews = ['dashboard', 'invoices', 'facture', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') || params.get('tab') || window.location.hash.replace('#', '');
+    if (viewParam && validViews.includes(viewParam)) {
+      setCurrentViewState(viewParam as any);
+    }
+
+    // Escuchar botones de Atrás / Adelante del navegador
+    const handlePopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      const v = p.get('view') || p.get('tab') || window.location.hash.replace('#', '');
+      if (v && validViews.includes(v)) {
+        setCurrentViewState(v as any);
+      } else {
+        setCurrentViewState('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
     const saved = localStorage.getItem('ae_dark_mode');
     if (saved === 'true') {
       setDarkMode(true);
@@ -77,6 +109,8 @@ export default function Home() {
     } else {
       setIsAuthenticated(false);
     }
+
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleToggleDarkMode = useCallback(() => {

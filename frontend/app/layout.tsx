@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SecurityShield from "@/components/SecurityShield";
 
 export const metadata: Metadata = {
   title: "Alimentos Enriko — Control de Facturas & Cotizaciones",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col select-none">
+        <SecurityShield />
+        {children}
+      </body>
     </html>
   );
 }

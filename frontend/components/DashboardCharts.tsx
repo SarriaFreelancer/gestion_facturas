@@ -76,7 +76,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
                         {item.month} {selectedYear}
                       </span>
                       <span className="font-extrabold text-[11px] text-white mt-0.5">
-                        ${item.totalAmount.toLocaleString('es-CO')}
+                        ${item.totalAmount.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-[9.5px] text-slate-300 font-medium">
                         {item.count} documento{item.count === 1 ? '' : 's'} emitido{item.count === 1 ? '' : 's'}
@@ -266,7 +266,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
                       </td>
 
                       <td className="px-4 py-3 text-right font-mono font-black text-slate-800 dark:text-zinc-100">
-                        $ {item.totalSpent.toLocaleString('es-CO')}
+                        $ {item.totalSpent.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
 
                       <td className="px-4 py-3 text-center">

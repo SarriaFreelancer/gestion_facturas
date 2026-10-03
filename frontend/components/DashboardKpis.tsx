@@ -60,7 +60,7 @@ export const DashboardKpis: React.FC<DashboardKpisProps> = ({ metrics, loading }
     },
     {
       title: 'Monto Total Facturado',
-      value: `$ ${(metrics?.totalAmount ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+      value: `$ ${(metrics?.totalAmount ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: 'Valor consolidado mensual',
       icon: DollarSign,
       color: 'from-red-600 to-rose-700',

@@ -1,10 +1,33 @@
+import sys
+import asyncio
+import concurrent.futures
+import os
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from backend.services.facture_service import FactureService
+from backend.services.facture_service import FactureService, UPLOADS_DIR
 
 router = APIRouter(prefix="/facture", tags=["Facture.co"])
 service = FactureService()
+
+def run_in_proactor_thread(coro_fn, *args, **kwargs):
+    def target():
+        if sys.platform == 'win32':
+            try:
+                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+            except Exception:
+                pass
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro_fn(*args, **kwargs))
+        finally:
+            loop.close()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(target)
+        return future.result()
 
 class CredentialsPayload(BaseModel):
     username: str
@@ -40,17 +63,17 @@ def update_facture_credentials(payload: CredentialsPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/sync")
-async def trigger_inbox_sync():
+def trigger_inbox_sync():
     try:
-        res = await service.live_sync_inbox()
+        res = run_in_proactor_thread(service.live_sync_inbox)
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante la sincronización: {str(e)}")
 
 @router.get("/inbox")
-def get_inbox_documents(folder: Optional[str] = "Todos", search: Optional[str] = None, limit: Optional[int] = 100):
+def get_inbox_documents(folder: Optional[str] = "Todos", search: Optional[str] = None, limit: Optional[int] = 10000):
     try:
-        return service.get_inbox_documents(folder=folder, search=search, limit=limit or 100)
+        return service.get_inbox_documents(folder=folder, search=search, limit=limit or 10000)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -70,6 +93,34 @@ def import_to_main_invoices(payload: ImportPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class InspectPayload(BaseModel):
+    documentNumber: str
+    forceDownload: Optional[bool] = False
+
+@router.post("/inspect-and-read")
+def inspect_and_read_invoice(payload: InspectPayload):
+    try:
+        res = run_in_proactor_thread(
+            service.inspect_and_analyze_invoice,
+            target_doc_number=payload.documentNumber,
+            force_download=bool(payload.forceDownload)
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/match-supplier")
+def match_supplier_concept(issuerName: str, issuerNit: str, amount: float, rawDetail: Optional[str] = ""):
+    try:
+        return service.match_supplier_and_concept(
+            issuer_name=issuerName,
+            issuer_nit=issuerNit,
+            amount=amount,
+            raw_detail=rawDetail or ""
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 class WorkflowPayload(BaseModel):
     documentNumber: str
     executeEvents: Optional[bool] = False
@@ -79,7 +130,7 @@ class WorkflowPayload(BaseModel):
     responsibleIdNumber: Optional[str] = None
 
 @router.post("/process-workflow")
-async def process_invoice_workflow(payload: WorkflowPayload):
+def process_invoice_workflow(payload: WorkflowPayload):
     try:
         override = {}
         if payload.responsibleName:
@@ -89,7 +140,8 @@ async def process_invoice_workflow(payload: WorkflowPayload):
         if payload.responsibleIdNumber:
             override["idNumber"] = payload.responsibleIdNumber
 
-        res = await service.process_single_invoice_workflow(
+        res = run_in_proactor_thread(
+            service.process_single_invoice_workflow,
             target_doc_number=payload.documentNumber,
             execute_events=bool(payload.executeEvents),
             download_pdf=bool(payload.downloadPdf),
@@ -98,3 +150,33 @@ async def process_invoice_workflow(payload: WorkflowPayload):
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+from backend.utils.security import is_safe_path
+from backend.services.facture_service import ensure_extracted_pdf
+
+@router.get("/pdf/{document_number}")
+def get_invoice_pdf(document_number: str):
+    clean_doc = os.path.basename(document_number.strip())
+    clean_fname = f"Factura_{clean_doc.replace(' ', '_').replace('/', '_')}.pdf"
+    file_path = os.path.join(UPLOADS_DIR, clean_fname)
+
+    if not os.path.exists(file_path):
+        # Intentar buscar por coincidencia segura en carpeta
+        for fname in os.listdir(UPLOADS_DIR):
+            if clean_doc.lower() in fname.lower() and fname.endswith(".pdf"):
+                file_path = os.path.join(UPLOADS_DIR, fname)
+                break
+
+    if not os.path.exists(file_path) or not is_safe_path(UPLOADS_DIR, file_path):
+        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado o acceso no autorizado.")
+
+    # Asegurar que si el archivo es un ZIP contenedor, se sirva el PDF real
+    ensure_extracted_pdf(file_path)
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=os.path.basename(file_path),
+        headers={"Content-Disposition": f"inline; filename={os.path.basename(file_path)}"}
+    )
+

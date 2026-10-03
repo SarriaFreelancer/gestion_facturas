@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from backend.repositories.mysql_repository import MySQLRepository
 from backend.services.dashboard_service import DashboardAnalyticsService
+from backend.utils.security import create_access_token, decode_access_token, is_safe_path
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -407,12 +408,37 @@ class RegisterPayload(BaseModel):
     area: Optional[str] = "Tecnología (TI)"
 
 @router.post("/auth/login")
-def login(payload: LoginPayload):
+def login(payload: LoginPayload, request: Request):
     try:
         user = repo.authenticate_user(payload.username, payload.password)
         if not user:
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos.")
-        return {"success": True, "user": user}
+        
+        # Generar token JWT firmado
+        token = create_access_token({
+            "sub": user["id"],
+            "username": user["username"],
+            "role": user.get("role", "admin"),
+            "area": user.get("area", "General")
+        })
+
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        repo.log_system_action(
+            action="LOGIN_SUCCESS",
+            entity_type="USER",
+            entity_id=user["id"],
+            username=user["username"],
+            user_id=user["id"],
+            details=f"Inicio de sesión exitoso desde {client_ip}",
+            ip_address=client_ip
+        )
+
+        return {
+            "success": True, 
+            "user": user,
+            "token": token,
+            "tokenType": "Bearer"
+        }
     except ValueError as ve:
         raise HTTPException(status_code=403, detail=str(ve))
     except HTTPException:
@@ -421,12 +447,42 @@ def login(payload: LoginPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/auth/register")
-def register(payload: RegisterPayload):
+def register(payload: RegisterPayload, request: Request):
     try:
         user = repo.register_user(payload.model_dump())
-        return {"success": True, "user": user}
+        token = create_access_token({
+            "sub": user["id"],
+            "username": user["username"],
+            "role": user.get("role", "admin"),
+            "area": user.get("area", "General")
+        })
+
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        repo.log_system_action(
+            action="USER_REGISTERED",
+            entity_type="USER",
+            entity_id=user["id"],
+            username=user["username"],
+            user_id=user["id"],
+            details=f"Usuario registrado con rol {user.get('role')}",
+            ip_address=client_ip
+        )
+
+        return {
+            "success": True, 
+            "user": user,
+            "token": token,
+            "tokenType": "Bearer"
+        }
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/system/audit-logs")
+def get_system_audit_logs(limit: Optional[int] = 100, entityType: Optional[str] = None):
+    try:
+        return repo.fetch_system_audit_logs(limit=limit or 100, entity_type=entityType)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

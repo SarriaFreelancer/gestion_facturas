@@ -383,6 +383,31 @@ export const api = {
     return res.json();
   },
 
+  async inspectAndReadFactureDoc(documentNumber: string, forceDownload: boolean = false): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/inspect-and-read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentNumber, forceDownload })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al inspeccionar y leer la factura con IA');
+    }
+    return res.json();
+  },
+
+  async matchSupplierConcept(issuerName: string, issuerNit: string, amount: number, rawDetail?: string): Promise<any> {
+    const params = new URLSearchParams({
+      issuerName,
+      issuerNit,
+      amount: String(amount),
+      rawDetail: rawDetail || ''
+    });
+    const res = await fetch(`${API_BASE_URL}/facture/match-supplier?${params.toString()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al validar proveedor y concepto');
+    return res.json();
+  },
+
   async processFactureWorkflow(payload: {
     documentNumber: string;
     executeEvents?: boolean;
