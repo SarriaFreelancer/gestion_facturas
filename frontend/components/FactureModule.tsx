@@ -1032,6 +1032,61 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                     </div>
                   ) : inspectionData?.analysis ? (
                     <>
+                      {/* INFORMACIÓN DE ENCABEZADO: FECHAS, REFERENCIA Y EMISOR */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div>
+                          <span className="text-[9.5px] font-bold text-slate-400 block uppercase">Factura & Referencia</span>
+                          <span className="font-extrabold text-slate-900 dark:text-white block mt-0.5 font-mono">
+                            {inspectionData.analysis.numeroFactura || 'N/A'}
+                          </span>
+                          {inspectionData.analysis.numeroReferencia && (
+                            <span className="text-[10px] font-bold text-red-600 dark:text-red-400 block font-mono">
+                              Ref/OC: {inspectionData.analysis.numeroReferencia}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-[9.5px] font-bold text-slate-400 block uppercase">Fecha Emisión</span>
+                          <span className="font-extrabold text-slate-900 dark:text-white block mt-0.5">
+                            {inspectionData.analysis.fechaEmision || 'N/A'}
+                          </span>
+                          {inspectionData.analysis.horaEmision && (
+                            <span className="text-[10px] text-slate-400 block">
+                              Hora: {inspectionData.analysis.horaEmision}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-[9.5px] font-bold text-slate-400 block uppercase">Fecha Vencimiento</span>
+                          <span className="font-extrabold text-amber-600 dark:text-amber-400 block mt-0.5">
+                            {inspectionData.analysis.fechaVencimiento || 'N/A'}
+                          </span>
+                          {inspectionData.analysis.condicionPago && (
+                            <span className="text-[10px] text-slate-500 block truncate" title={inspectionData.analysis.condicionPago}>
+                              {inspectionData.analysis.condicionPago}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-[9.5px] font-bold text-slate-400 block uppercase">Desglose de IVA</span>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${
+                              inspectionData.analysis.tieneIva 
+                                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200' 
+                                : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200'
+                            }`}>
+                              {inspectionData.analysis.tieneIva ? 'Tiene IVA' : 'Exenta IVA'}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold">
+                              ({inspectionData.analysis.itemsConIvaCount || 0} gravados / {inspectionData.analysis.itemsSinIvaCount || 0} exentos)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* TARJETAS FINANCIERAS RESUMEN */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                         <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700">
@@ -1097,7 +1152,7 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                           </div>
                           <div className="flex items-center gap-2 font-mono text-[11px] font-bold">
                             <span className="px-2.5 py-1 rounded-lg bg-white/80 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700">
-                              {inspectionData.analysis.validation.totalItemsCount} {inspectionData.analysis.validation.totalItemsCount === 1 ? 'Ítem' : 'Ítems'}
+                              {inspectionData.analysis.validation.totalItemsCount || inspectionData.analysis.items?.length || 0} Ítems ({inspectionData.analysis.itemsConIvaCount || 0} con IVA)
                             </span>
                             <span className="px-2.5 py-1 rounded-lg bg-white/80 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700">
                               Detalle Facture: ${formatCurrency(inspectionData.analysis.validation.expectedHeaderAmount)}
@@ -1108,7 +1163,7 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
 
                       {/* DETALLE DE ÍTEMS Y SERVICIOS COBRADOS */}
                       <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-                        <div className="bg-slate-100 dark:bg-zinc-800/80 px-4 py-2 border-b border-slate-200 dark:border-zinc-700 flex items-center justify-between">
+                        <div className="bg-slate-100 dark:bg-zinc-800/80 px-4 py-2.5 border-b border-slate-200 dark:border-zinc-700 flex items-center justify-between">
                           <span className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5 text-red-600" />
                             <span>Servicios & Productos Cobrados ({inspectionData.analysis.items?.length || 0})</span>
@@ -1118,33 +1173,45 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                           </span>
                         </div>
 
-                        <div className="max-h-48 overflow-y-auto">
+                        <div className="max-h-60 overflow-y-auto">
                           <table className="w-full text-left text-[11px] border-collapse">
                             <thead>
                               <tr className="bg-slate-50 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 font-bold border-b border-slate-200 dark:border-zinc-800">
-                                <th className="p-2.5">Descripción / Concepto</th>
-                                <th className="p-2.5 text-center">Cant.</th>
-                                <th className="p-2.5 text-right">Precio Unitario</th>
-                                <th className="p-2.5 text-right">IVA</th>
-                                <th className="p-2.5 text-right">Total Ítem</th>
+                                <th className="p-2 text-center w-8">#</th>
+                                <th className="p-2 w-24">Código</th>
+                                <th className="p-2">Descripción / Concepto</th>
+                                <th className="p-2 text-center">Cant / UM</th>
+                                <th className="p-2 text-right">Vr. Unitario</th>
+                                <th className="p-2 text-right">% IVA</th>
+                                <th className="p-2 text-right">Vr. IVA</th>
+                                <th className="p-2 text-right">Total Ítem</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-medium">
                               {(inspectionData.analysis.items || []).map((it: any, idx: number) => (
                                 <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                                  <td className="p-2.5 font-bold text-slate-800 dark:text-zinc-200 max-w-xs truncate" title={it.descripcion}>
+                                  <td className="p-2 text-center font-mono text-slate-400 text-[10px]">
+                                    {it.numeroItem || idx + 1}
+                                  </td>
+                                  <td className="p-2 font-mono text-slate-500 text-[10px] truncate max-w-[100px]">
+                                    {it.codigo || '-'}
+                                  </td>
+                                  <td className="p-2 font-bold text-slate-800 dark:text-zinc-200 max-w-xs truncate" title={it.descripcion}>
                                     {it.descripcion}
                                   </td>
-                                  <td className="p-2.5 text-center font-mono text-slate-500">
+                                  <td className="p-2 text-center font-mono text-slate-600 dark:text-zinc-300 text-[10px]">
                                     {it.cantidad} {it.unidadMedida || 'UND'}
                                   </td>
-                                  <td className="p-2.5 text-right font-mono text-slate-700 dark:text-zinc-300">
+                                  <td className="p-2 text-right font-mono text-slate-700 dark:text-zinc-300">
                                     ${formatCurrency(it.precioUnitario)}
                                   </td>
-                                  <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">
+                                  <td className="p-2 text-right font-mono text-slate-500">
+                                    {it.porcentajeIva ? `${it.porcentajeIva}%` : '0%'}
+                                  </td>
+                                  <td className="p-2 text-right font-mono text-blue-600 dark:text-blue-400">
                                     ${formatCurrency(it.valorIva)}
                                   </td>
-                                  <td className="p-2.5 text-right font-mono font-black text-slate-900 dark:text-white">
+                                  <td className="p-2 text-right font-mono font-black text-slate-900 dark:text-white">
                                     ${formatCurrency(it.total || it.subtotal)}
                                   </td>
                                 </tr>

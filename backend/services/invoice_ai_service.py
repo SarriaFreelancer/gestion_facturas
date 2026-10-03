@@ -8,6 +8,23 @@ from pypdf import PdfReader
 
 class InvoiceAIService:
     @staticmethod
+    def get_pdf_bytes(pdf_path: str) -> Optional[bytes]:
+        """Obtiene los bytes binarios del PDF, extrayéndolo si es un paquete ZIP de Facture/DIAN."""
+        if not os.path.exists(pdf_path):
+            return None
+        try:
+            if zipfile.is_zipfile(pdf_path):
+                with zipfile.ZipFile(pdf_path) as z:
+                    pdf_names = [n for n in z.namelist() if n.lower().endswith('.pdf')]
+                    if pdf_names:
+                        return z.read(pdf_names[0])
+            with open(pdf_path, 'rb') as f:
+                return f.read()
+        except Exception as e:
+            print(f"Error leyendo bytes del PDF {pdf_path}: {e}")
+            return None
+
+    @staticmethod
     def extract_text_from_pdf(pdf_path: str) -> str:
         """Extrae el texto plano de todas las páginas de un PDF (o dentro de un ZIP de Facture.co)."""
         if not os.path.exists(pdf_path):
@@ -41,88 +58,136 @@ class InvoiceAIService:
     @classmethod
     def analyze_invoice_pdf(cls, pdf_path: str, basic_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Analiza el PDF de la factura electrónica (DIAN / Facture / Proveedores)
-        e identifica:
-        - Ítems y servicios cobrados (Nombre, Cantidad, Precio Unitario, IVA, Subtotal, Total)
-        - Costo sin IVA (Subtotal)
-        - Costo con IVA (Total)
-        - IVA discriminado (% y monto)
-        - Retenciones (ReteIVA, ReteICA, ReteFuente)
-        - Fechas y términos de pago
-        - Concepto sugerido para el módulo de Proveedores
+        Analiza el PDF completo de la factura electrónica (todas sus páginas) con IA Multimodal (Gemini Vision)
+        o parser determinístico avanzado:
+        - Listado exhaustivo de todos los ítems y productos cobrados (Código, Nombre/Descripción, Unidad, Cantidad, Precio Unitario)
+        - Discriminación de IVA ítem por ítem (% IVA, Valor IVA, Subtotal, Total)
+        - Conteo de ítems con IVA vs exentos de IVA
+        - Subtotal sin IVA, Total con IVA y Total neto a pagar
+        - Fechas exactas: Emisión/Expedición y Fecha de Vencimiento
+        - Condiciones de pago, Medio de pago y Número de referencia / Orden
+        - Datos completos de Emisor y Receptor
         """
+        pdf_bytes = cls.get_pdf_bytes(pdf_path)
         text = cls.extract_text_from_pdf(pdf_path)
         basic = basic_info or {}
 
-        # 1. Intentar análisis con Gemini AI si hay API KEY disponible
+        # 1. Intentar análisis multimodal con Google Gemini AI
         gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if gemini_api_key and text.strip():
+        if gemini_api_key and (pdf_bytes or text.strip()):
             try:
                 from google import genai
+                from google.genai import types
                 client = genai.Client(api_key=gemini_api_key)
-                prompt = f"""
-                Eres un experto en Facturación Electrónica DIAN de Colombia. Analiza el siguiente texto extraído de una factura comercial/electrónica y extrae un JSON con la siguiente estructura exacta:
-                {{
-                    "emisor": {{
-                        "razonSocial": "string",
-                        "nit": "string",
-                        "telefono": "string",
-                        "ciudad": "string"
-                    }},
-                    "receptor": {{
-                        "razonSocial": "string",
-                        "nit": "string"
-                    }},
-                    "numeroFactura": "string",
+
+                prompt = """
+                Eres un auditor contable experto en Facturación Electrónica DIAN de Colombia.
+                Analiza exhaustivamente TODAS las páginas de este documento PDF de Factura Electrónica y extrae un objeto JSON EXACTO con la siguiente estructura:
+
+                {
+                    "emisor": {
+                        "razonSocial": "Nombre o Razón Social del emisor/proveedor",
+                        "nit": "NIT con o sin dígito de verificación (ej: 890935900-6)",
+                        "telefono": "Teléfono de contacto",
+                        "direccion": "Dirección fiscal",
+                        "ciudad": "Ciudad / Departamento"
+                    },
+                    "receptor": {
+                        "razonSocial": "Nombre o Razón Social del comprador (ej: ALIMENTOS ENRIKO SAS)",
+                        "nit": "NIT del comprador (ej: 890330035-2)",
+                        "direccion": "Dirección fiscal o de entrega",
+                        "ciudad": "Ciudad"
+                    },
+                    "numeroFactura": "Número o código de la factura (ej: FS-284740, FE-1092)",
+                    "numeroReferencia": "Número de referencia, orden de compra o pedido (ej: 7509)",
                     "fechaEmision": "YYYY-MM-DD",
+                    "horaEmision": "HH:MM",
                     "fechaVencimiento": "YYYY-MM-DD",
                     "formaPago": "Contado o Crédito",
-                    "plazoDias": 0,
+                    "condicionPago": "Términos de pago (ej: CREDITO 30 DIAS)",
+                    "medioPago": "Medio de pago (ej: TRANSFERENCIA, EFECTIVO, CHEQUE)",
                     "moneda": "COP",
                     "subtotalSinIva": 0.0,
                     "totalIva": 0.0,
+                    "tieneIva": true,
                     "porcentajeIvaPrincipal": 19.0,
+                    "totalItems": 0,
+                    "itemsConIvaCount": 0,
+                    "itemsSinIvaCount": 0,
                     "totalConIva": 0.0,
-                    "retenciones": {{
+                    "retenciones": {
                         "reteFuente": 0.0,
                         "reteIva": 0.0,
                         "reteIca": 0.0,
                         "totalRetenciones": 0.0
-                    }},
+                    },
                     "totalPagarNeto": 0.0,
                     "items": [
-                        {{
-                            "descripcion": "Nombre del servicio o producto",
+                        {
+                            "numeroItem": 1,
+                            "codigo": "Código del producto o servicio (ej: 30006030)",
+                            "descripcion": "Descripción detallada del ítem (ej: CROUTONS CAESAR SUSANITA X 360G (24 PAQUETES))",
+                            "unidadMedida": "UND, KG, PAQ, etc.",
                             "cantidad": 1.0,
-                            "unidadMedida": "UND",
                             "precioUnitario": 0.0,
-                            "porcentajeIva": 19.0,
+                            "porcentajeIva": 0.0,
                             "valorIva": 0.0,
+                            "porcentajeDescuento": 0.0,
+                            "valorDescuento": 0.0,
                             "subtotal": 0.0,
-                            "total": 0.0
-                        }}
+                            "total": 0.0,
+                            "tieneIva": false
+                        }
                     ],
-                    "conceptoPrincipalSugerido": "Nombre corto y representativo del servicio para el catálogo de proveedores (ej: Harina de Trigo, Empaques Flexibles, Arrendamiento, Mantenimiento)",
-                    "resumenEjecutivo": "Breve resumen en 1 línea del cobro y conceptos"
-                }}
+                    "conceptoPrincipalSugerido": "Nombre corto y representativo para el catálogo de proveedores de Alimentos Enriko",
+                    "resumenEjecutivo": "Resumen en una frase del contenido, emisor, ítems y montos totales"
+                }
 
-                TEXTO DE LA FACTURA:
-                {text[:12000]}
-
-                Devuelve ÚNICAMENTE el bloque JSON válido sin comentarios adicionales.
+                REGLAS CRÍTICAS:
+                1. Extrae CADA UNO de los ítems de la tabla de detalle sin omitir ninguno.
+                2. Extrae con precisión el % IVA de cada ítem (0% si es exento o excluido, 19%, 5%, etc.) y el valor monetario del IVA de cada ítem.
+                3. Cuenta cuántos ítems tienen IVA mayor a 0 (itemsConIvaCount) y cuántos son exentos/sin IVA (itemsSinIvaCount).
+                4. Extrae las fechas en formato ISO (YYYY-MM-DD).
+                5. Devuelve ÚNICAMENTE el bloque JSON válido, sin bloques de markdown extraños ni comentarios.
                 """
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=prompt
-                )
-                raw_resp = response.text.strip()
-                # Limpiar markdown si viene ```json ... ```
-                json_match = re.search(r"\{[\s\S]*\}", raw_resp)
-                if json_match:
-                    parsed_json = json.loads(json_match.group(0))
-                    return cls._normalize_analysis_result(parsed_json, basic)
+
+                contents = []
+                if pdf_bytes:
+                    contents.append(types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"))
+                if text.strip():
+                    contents.append(f"\n--- TEXTO EXTRAÍDO DEL DOCUMENTO ---\n{text[:15000]}")
+                contents.append(prompt)
+
+                # Intentar con modelos de alta disponibilidad de Google Gemini
+                candidate_models = [
+                    "gemini-3.8-flash", 
+                    "gemini-flash-latest", 
+                    "gemini-3.7-flash", 
+                    "gemini-3.5-flash", 
+                    "gemini-2.5-flash-lite", 
+                    "gemini-flash-lite-latest"
+                ]
+                raw_resp = None
+                for model_name in candidate_models:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=contents
+                        )
+                        if response and response.text:
+                            raw_resp = response.text.strip()
+                            break
+                    except Exception as model_err:
+                        print(f"Aviso: Modelo {model_name} no disponible: {model_err}")
+                        continue
+
+                if raw_resp:
+                    json_match = re.search(r"\{[\s\S]*\}", raw_resp)
+                    if json_match:
+                        parsed_json = json.loads(json_match.group(0))
+                        return cls._normalize_analysis_result(parsed_json, basic)
             except Exception as e:
-                print(f"Fallo en Gemini AI analysis, aplicando parser determinístico: {e}")
+                print(f"Fallo en Gemini AI multimodal analysis, aplicando parser determinístico: {e}")
 
         # 2. Parser Determinístico / Heurístico de Facturación Electrónica DIAN
         return cls._deterministic_invoice_parser(text, basic)
@@ -284,9 +349,14 @@ class InvoiceAIService:
         for it in items:
             it["cantidad"] = float(it.get("cantidad") or 1.0)
             it["precioUnitario"] = float(it.get("precioUnitario") or 0.0)
-            it["subtotal"] = float(it.get("subtotal") or (it["cantidad"] * it["precioUnitario"]))
+            it["subtotal"] = float(it.get("subtotal") or round(it["cantidad"] * it["precioUnitario"], 2))
             it["valorIva"] = float(it.get("valorIva") or 0.0)
-            it["total"] = float(it.get("total") or (it["subtotal"] + it["valorIva"]))
+            it["porcentajeIva"] = float(it.get("porcentajeIva") or (19.0 if it["valorIva"] > 0 else 0.0))
+            it["total"] = float(it.get("total") or round(it["subtotal"] + it["valorIva"], 2))
+            it["tieneIva"] = it["valorIva"] > 0 or it["porcentajeIva"] > 0
+
+        items_con_iva = sum(1 for it in items if it.get("tieneIva"))
+        items_sin_iva = len(items) - items_con_iva
 
         expected_header = float(basic.get("detailAmount") or total_con_iva or 0.0)
         diff = abs(total_con_iva - expected_header) if expected_header > 0 else 0.0
@@ -294,6 +364,8 @@ class InvoiceAIService:
 
         validation_result = {
             "totalItemsCount": len(items),
+            "itemsConIvaCount": items_con_iva,
+            "itemsSinIvaCount": items_sin_iva,
             "calculatedSubtotal": subtotal,
             "calculatedIva": total_iva,
             "calculatedTotal": total_con_iva,
@@ -308,18 +380,29 @@ class InvoiceAIService:
 
         return {
             "emisor": parsed.get("emisor") or {"razonSocial": basic.get("issuerName"), "nit": basic.get("issuerNit")},
+            "receptor": parsed.get("receptor") or {"razonSocial": "ALIMENTOS ENRIKO SAS", "nit": "890330035-2"},
             "numeroFactura": parsed.get("numeroFactura") or basic.get("documentNumber"),
+            "numeroReferencia": parsed.get("numeroReferencia") or basic.get("referenceNumber") or "",
             "fechaEmision": parsed.get("fechaEmision") or basic.get("emissionDate"),
+            "horaEmision": parsed.get("horaEmision") or "",
             "fechaVencimiento": parsed.get("fechaVencimiento") or basic.get("dueDate"),
+            "formaPago": parsed.get("formaPago") or "Crédito",
+            "condicionPago": parsed.get("condicionPago") or "",
+            "medioPago": parsed.get("medioPago") or "Transferencia",
+            "moneda": parsed.get("moneda") or "COP",
             "subtotalSinIva": subtotal,
             "totalIva": total_iva,
+            "tieneIva": total_iva > 0 or items_con_iva > 0,
+            "totalItems": len(items),
+            "itemsConIvaCount": items_con_iva,
+            "itemsSinIvaCount": items_sin_iva,
             "totalConIva": total_con_iva,
             "retenciones": parsed.get("retenciones") or {"totalRetenciones": 0.0},
             "totalPagarNeto": float(parsed.get("totalPagarNeto") or total_con_iva),
             "items": items,
             "conceptoPrincipalSugerido": concept,
             "validation": validation_result,
-            "resumenEjecutivo": parsed.get("resumenEjecutivo") or f"Factura {basic.get('documentNumber')} de {basic.get('issuerName')} ({len(items)} ítems)"
+            "resumenEjecutivo": parsed.get("resumenEjecutivo") or f"Factura {basic.get('documentNumber')} de {basic.get('issuerName')} ({len(items)} ítems, {items_con_iva} con IVA, {items_sin_iva} exentos)"
         }
 
     @staticmethod
