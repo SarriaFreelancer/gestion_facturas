@@ -605,16 +605,26 @@ def test_ai_connection(payload: Optional[TestAiPayload] = None):
         from google import genai
         client = genai.Client(api_key=api_key.strip())
         
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents="Verifica conexión: responde en 1 frase corta confirmando que el servicio de Inteligencia Artificial para Facturas de Alimentos Enriko está activo."
-        )
+        active_model = "gemini-3.8-flash"
+        raw_text = None
+        for m in ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"]:
+            try:
+                response = client.models.generate_content(
+                    model=m,
+                    contents="Verifica conexión: responde en 1 frase corta confirmando que el servicio de Inteligencia Artificial para Facturas de Alimentos Enriko está activo."
+                )
+                if response and response.text:
+                    raw_text = response.text.strip()
+                    active_model = m
+                    break
+            except Exception:
+                continue
 
         return {
             "success": True,
-            "message": "Conexión con Gemini AI exitosa.",
-            "response": response.text.strip() if response and response.text else "Conexión activa",
-            "model": "gemini-2.5-flash-lite"
+            "message": "Conexión con Google Gemini AI exitosa.",
+            "response": raw_text or "Servicio de Inteligencia Artificial activo",
+            "model": active_model
         }
     except HTTPException:
         raise

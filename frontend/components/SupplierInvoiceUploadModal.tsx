@@ -136,42 +136,53 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
           if (a.receptor.razonSocial) setClientName(a.receptor.razonSocial);
           if (a.receptor.nit) setClientNit(a.receptor.nit);
         }
-        if (a.fechas) {
-          if (a.fechas.emision) setEmissionDate(a.fechas.emision);
-          if (a.fechas.vencimiento) setDueDate(a.fechas.vencimiento);
-        }
+        const emision = a.fechas?.emision || a.fechaEmision;
+        if (emision) setEmissionDate(emision);
+
+        const vencimiento = a.fechas?.vencimiento || a.fechaVencimiento;
+        if (vencimiento) setDueDate(vencimiento);
+
         if (a.condicionesPago) {
           if (a.condicionesPago.terminos) setPaymentCondition(a.condicionesPago.terminos);
           if (a.condicionesPago.medioPago) setPaymentMethod(a.condicionesPago.medioPago);
-        }
-        if (a.totales) {
-          setSubtotalAmount(Number(a.totales.subtotalSinIva) || 0);
-          setIvaAmount(Number(a.totales.totalIva) || 0);
-          setTotalAmount(Number(a.totales.totalConIva) || Number(a.totales.totalPagar) || 0);
-          setRetentionAmount(Number(a.totales.totalRetenciones) || 0);
-        }
-        if (a.items && Array.isArray(a.items)) {
-          setItems(a.items.map((it: any) => ({
-            code: it.codigo || '',
-            name: it.descripcion || it.nombre || '',
-            description: it.descripcion || it.nombre || '',
-            unit: it.unidad || 'UND',
-            quantity: Number(it.cantidad) || 1,
-            unitPrice: Number(it.precioUnitario) || 0,
-            subtotal: Number(it.subtotal) || 0,
-            taxRate: Number(it.porcentajeIva) || 0,
-            taxAmount: Number(it.valorIva) || 0,
-            totalPrice: Number(it.total) || 0
-          })));
-        }
-        if (a.resumenIva) {
-          setItemsWithIvaCount(Number(a.resumenIva.itemsConIvaCount) || 0);
-          setItemsWithoutIvaCount(Number(a.resumenIva.itemsSinIvaCount) || 0);
+        } else {
+          if (a.condicionPago) setPaymentCondition(a.condicionPago);
+          if (a.medioPago) setPaymentMethod(a.medioPago);
         }
 
+        const sub = Number(a.totales?.subtotalSinIva || a.subtotalSinIva) || 0;
+        const iva = Number(a.totales?.totalIva || a.totalIva) || 0;
+        const tot = Number(a.totales?.totalConIva || a.totalConIva || a.totalPagarNeto) || (sub + iva);
+        const ret = Number(a.totales?.totalRetenciones || a.retenciones?.totalRetenciones) || 0;
+
+        setSubtotalAmount(sub);
+        setIvaAmount(iva);
+        setTotalAmount(tot);
+        setRetentionAmount(ret);
+
+        if (a.items && Array.isArray(a.items)) {
+          setItems(a.items.map((it: any) => ({
+            code: it.codigo || it.code || '',
+            name: it.descripcion || it.nombre || it.name || '',
+            description: it.descripcion || it.nombre || it.name || '',
+            unit: it.unidad || it.unidadMedida || 'UND',
+            quantity: Number(it.cantidad || it.quantity) || 1,
+            unitPrice: Number(it.precioUnitario || it.unitPrice) || 0,
+            subtotal: Number(it.subtotal) || 0,
+            taxRate: Number(it.porcentajeIva !== undefined ? it.porcentajeIva : it.taxRate) || 0,
+            taxAmount: Number(it.valorIva !== undefined ? it.valorIva : it.taxAmount) || 0,
+            totalPrice: Number(it.total !== undefined ? it.total : it.totalPrice) || 0
+          })));
+        }
+
+        const conIva = Number(a.resumenIva?.itemsConIvaCount !== undefined ? a.resumenIva.itemsConIvaCount : a.itemsConIvaCount) || 0;
+        const sinIva = Number(a.resumenIva?.itemsSinIvaCount !== undefined ? a.resumenIva.itemsSinIvaCount : a.itemsSinIvaCount) || 0;
+        setItemsWithIvaCount(conIva);
+        setItemsWithoutIvaCount(sinIva);
+
         // Generar detalle textual
-        const itemsSummary = (a.items || []).map((it: any) => `${it.cantidad || 1}x ${it.descripcion || it.nombre || ''}`).join(', ');
-        setRawDetail(itemsSummary || a.descripcionGeneral || `Factura ${a.numeroFactura}`);
+        const itemsSummary = (a.items || []).map((it: any) => `${it.cantidad || it.quantity || 1}x ${it.descripcion || it.nombre || it.name || ''}`).join(', ');
+        setRawDetail(itemsSummary || a.conceptoPrincipalSugerido || a.descripcionGeneral || `Factura ${a.numeroFactura}`);
 
         notifySuccess('Lectura con IA Completa', `Se extrajeron ${a.items?.length || 0} ítems y todos los valores del documento.`);
       }
