@@ -49,10 +49,13 @@ class InternalInvoicePayload(BaseModel):
 class ImportInternalPayload(BaseModel):
     id: str
 
+class InternalEventPayload(BaseModel):
+    eventType: str
+
 @router.get("")
-def get_internal_invoices(folder: Optional[str] = "Todos", search: Optional[str] = None, limit: Optional[int] = 1000):
+def get_internal_invoices(folder: Optional[str] = "Todos", search: Optional[str] = None, supplier_nit: Optional[str] = None, limit: Optional[int] = 1000):
     try:
-        return repo.fetch_internal_invoices(folder_type=folder, search=search, limit=limit or 1000)
+        return repo.fetch_internal_invoices(folder_type=folder, search=search, supplier_nit=supplier_nit, limit=limit or 1000)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -75,6 +78,16 @@ def save_internal_invoice(payload: InternalInvoicePayload):
         return {"success": True, "id": saved_id, "message": "Factura radicada exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error guardando factura: {str(e)}")
+
+@router.post("/{invoice_id}/event")
+def execute_internal_invoice_event(invoice_id: str, payload: InternalEventPayload):
+    try:
+        res = repo.update_internal_invoice_event(invoice_id, payload.eventType)
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/upload-and-analyze")
 async def upload_and_analyze_pdf(file: UploadFile = File(...)):
@@ -128,12 +141,25 @@ def delete_internal_invoice(invoice_id: str):
 def get_internal_pdf(document_number: str):
     clean_doc = os.path.basename(document_number.strip())
     
-    # 1. Buscar coincidencia exacta o por subcadena en UPLOADS_DIR
+    # 1. Buscar en BD primero por ID o por documentNumber para obtener el pdfPath exacto
     target_path = None
-    for fname in os.listdir(UPLOADS_DIR):
-        if clean_doc.lower() in fname.lower() and (fname.endswith(".pdf") or fname.endswith(".zip")):
-            target_path = os.path.join(UPLOADS_DIR, fname)
-            break
+    try:
+        inv = repo.fetch_internal_invoice_by_id(clean_doc)
+        if inv and inv.get("pdfPath") and os.path.exists(inv["pdfPath"]):
+            target_path = inv["pdfPath"]
+    except Exception:
+        pass
+
+    # 2. Si no se encontró por BD, buscar en UPLOADS_DIR por nombre exacto o coincidencia
+    if not target_path or not os.path.exists(target_path):
+        direct_path = os.path.join(UPLOADS_DIR, clean_doc)
+        if os.path.exists(direct_path):
+            target_path = direct_path
+        else:
+            for fname in os.listdir(UPLOADS_DIR):
+                if clean_doc.lower() in fname.lower() and (fname.endswith(".pdf") or fname.endswith(".zip")):
+                    target_path = os.path.join(UPLOADS_DIR, fname)
+                    break
 
     if not target_path or not os.path.exists(target_path) or not is_safe_path(UPLOADS_DIR, target_path):
         raise HTTPException(status_code=404, detail="Archivo PDF no encontrado")

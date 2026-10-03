@@ -45,6 +45,17 @@ import {
 import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
 
 export default function Home() {
+  // Usuario Activo (Por defecto SuperAdmin de Alimentos Enriko)
+  const [currentUser, setCurrentUser] = useState<User>({
+    id: 'usr-superadmin',
+    username: 'superadmin',
+    name: 'David Sarria (Superadmin)',
+    email: 'superadmin@alimentosenriko.com',
+    role: 'superadmin',
+    area: 'Dirección General',
+    status: 'Activo'
+  });
+
   const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'facture' | 'internal_invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -52,13 +63,16 @@ export default function Home() {
   // Sincronizador de vistas con la URL del navegador
   const setCurrentView = useCallback((view: string) => {
     const validViews = ['dashboard', 'invoices', 'facture', 'internal_invoices', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
-    const target = (validViews.includes(view) ? view : 'dashboard') as any;
+    let target = (validViews.includes(view) ? view : 'dashboard') as any;
+    if (currentUser?.role === 'supplier') {
+      target = 'internal_invoices';
+    }
     setCurrentViewState(target);
     if (typeof window !== 'undefined') {
       const newUrl = target === 'dashboard' ? window.location.pathname : `?view=${target}`;
       window.history.pushState({ view: target }, '', newUrl);
     }
-  }, []);
+  }, [currentUser?.role]);
 
   // Estado de autenticación y control de expiración
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -128,6 +142,9 @@ export default function Home() {
         if (verifyRes && verifyRes.valid && verifyRes.user) {
           setCurrentUser(verifyRes.user);
           setIsAuthenticated(true);
+          if (verifyRes.user.role === 'supplier') {
+            setCurrentViewState('internal_invoices');
+          }
         } else {
           setIsAuthenticated(false);
         }
@@ -173,17 +190,6 @@ export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Usuario Activo (Por defecto SuperAdmin de Alimentos Enriko)
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 'usr-superadmin',
-    username: 'superadmin',
-    name: 'David Sarria (Superadmin)',
-    email: 'superadmin@alimentosenriko.com',
-    role: 'superadmin',
-    area: 'Dirección General',
-    status: 'Activo'
-  });
 
   // Estados de Modales
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
@@ -690,6 +696,9 @@ export default function Home() {
     setSessionExpiredReason(null);
     setIsAuthenticated(true);
     extendSession();
+    if (user.role === 'supplier') {
+      setCurrentViewState('internal_invoices');
+    }
     loadData();
   };
 
@@ -747,7 +756,10 @@ export default function Home() {
           onSwitchUser={(u) => {
             setCurrentUser(u);
             localStorage.setItem('ae_auth_user', JSON.stringify(u));
-            notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : `Permisos restringidos a: ${u.area}`);
+            if (u.role === 'supplier') {
+              setCurrentViewState('internal_invoices');
+            }
+            notifyInfo(`Sesión cambiada a: ${u.name}`, u.role === 'superadmin' ? 'Acceso global total activo' : u.role === 'supplier' ? 'Portal de Proveedores activo' : `Permisos restringidos a: ${u.area}`);
           }}
           onLogout={() => handleLogout('Cierre de sesión manual', true)}
           sessionRemainingSeconds={sessionRemainingSeconds}
@@ -757,7 +769,7 @@ export default function Home() {
 
         <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
           {/* BANNER AVISO SI ES ADMIN DE ÁREA CON BOTÓN RÁPIDO PARA VOLVER */}
-          {!isSuperAdmin && (
+          {!isSuperAdmin && currentUser?.role !== 'supplier' && (
             <div className="mb-4 sm:mb-6 p-3 sm:p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in duration-150">
               <div className="flex items-center gap-2 min-w-0">
                 <Building2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -793,7 +805,7 @@ export default function Home() {
           )}
 
           {/* VISTA DASHBOARD */}
-          {currentView === 'dashboard' && (
+          {currentView === 'dashboard' && currentUser?.role !== 'supplier' && (
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
                 <div>
@@ -835,7 +847,7 @@ export default function Home() {
           )}
 
           {/* VISTA FACTURAS Y COTIZACIONES */}
-          {currentView === 'invoices' && (
+          {currentView === 'invoices' && currentUser?.role !== 'supplier' && (
             <InvoicesModule 
               invoices={filteredInvoicesByDate}
               onUpdateField={handleUpdateInvoiceField}
@@ -852,13 +864,13 @@ export default function Home() {
           )}
 
           {/* VISTA BANDEJA FACTURE.CO & TRAZABILIDAD */}
-          {currentView === 'facture' && (
+          {currentView === 'facture' && currentUser?.role !== 'supplier' && (
             <FactureModule onInvoicesUpdated={loadData} />
           )}
 
           {/* VISTA BANDEJA DE FACTURACIÓN INTERNA / PROVEEDORES */}
           {currentView === 'internal_invoices' && (
-            <InternalInvoicesModule onImportSuccess={loadData} />
+            <InternalInvoicesModule onImportSuccess={loadData} currentUser={currentUser} />
           )}
 
           {/* VISTA PROVEEDORES */}

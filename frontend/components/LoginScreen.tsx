@@ -253,20 +253,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
           </div>
 
           {/* ACCESOS RÁPIDOS PARA PRUEBAS (DEMO PILLS) */}
-          <div className="pt-5 mt-4 border-t border-slate-100 dark:border-zinc-800">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2 text-center">
+          <div className="pt-4 mt-3 border-t border-slate-100 dark:border-zinc-800 space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block text-center">
               Acceso Rápido para Demostración / Pruebas:
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10.5px]">
+
+            {/* ROLES INTERNOS ALIMENTOS ENRIKO */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
               <button
                 type="button"
-                onClick={() => handleQuickFill('superadmin', 'superadmin123')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
+                onClick={() => handleQuickFill('superadmin', 'admin123')}
+                className="p-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
               >
                 <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
                   Superadmin
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[8.5px] text-slate-400 block truncate">
                   Acceso Total
                 </span>
               </button>
@@ -274,12 +276,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
               <button
                 type="button"
                 onClick={() => handleQuickFill('admin.ti', '123456')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
+                className="p-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
               >
                 <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
                   Admin TI
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[8.5px] text-slate-400 block truncate">
                   Tecnología
                 </span>
               </button>
@@ -287,12 +289,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
               <button
                 type="button"
                 onClick={() => handleQuickFill('admin.finanzas', '123456')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
+                className="p-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
               >
                 <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
                   Admin Finanzas
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[8.5px] text-slate-400 block truncate">
                   Contabilidad
                 </span>
               </button>
@@ -300,44 +302,65 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
               <button
                 type="button"
                 onClick={() => handleQuickFill('admin.compras', '123456')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
+                className="p-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
               >
                 <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
                   Admin Compras
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
-                  Adquisiciones
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin.planta', '123456')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
-              >
-                <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
-                  Admin Planta
-                </span>
-                <span className="text-[9px] text-slate-400 block truncate">
-                  Operaciones
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('JR', 'enriko2026')}
-                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-zinc-700 text-left cursor-pointer transition-all hover:border-red-300 group"
-              >
-                <span className="font-extrabold text-slate-900 dark:text-white block group-hover:text-red-600 truncate">
-                  Juan Rodríguez
-                </span>
-                <span className="text-[9px] text-slate-400 block truncate">
-                  Facturas & Compras
+                <span className="text-[8.5px] text-slate-400 block truncate">
+                  Compras
                 </span>
               </button>
             </div>
 
-            <p className="text-[9.5px] text-center text-slate-400 mt-3">
+            {/* ROLES PROVEEDORES EXTERNOS */}
+            <div className="pt-1.5">
+              <span className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 block mb-1">
+                Portal Proveedores (Acceso Externo):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('proveedor.harinas', '123456')}
+                  className="p-1.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-900/50 text-left cursor-pointer transition-all group"
+                >
+                  <span className="font-extrabold text-blue-900 dark:text-blue-200 block truncate group-hover:text-blue-700">
+                    Harinas del Valle
+                  </span>
+                  <span className="text-[8.5px] text-blue-600/80 dark:text-blue-300 block truncate">
+                    NIT: 900123456-1
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('proveedor.empaques', '123456')}
+                  className="p-1.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-900/50 text-left cursor-pointer transition-all group"
+                >
+                  <span className="font-extrabold text-blue-900 dark:text-blue-200 block truncate group-hover:text-blue-700">
+                    Empaques Colombia
+                  </span>
+                  <span className="text-[8.5px] text-blue-600/80 dark:text-blue-300 block truncate">
+                    NIT: 900987654-2
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('proveedor.lacteos', '123456')}
+                  className="p-1.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-900/50 text-left cursor-pointer transition-all group"
+                >
+                  <span className="font-extrabold text-blue-900 dark:text-blue-200 block truncate group-hover:text-blue-700">
+                    Lácteos del Valle
+                  </span>
+                  <span className="text-[8.5px] text-blue-600/80 dark:text-blue-300 block truncate">
+                    NIT: 890555666-3
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[9.5px] text-center text-slate-400 mt-2">
               Alimentos Enriko S.A.S. • Conexión Segura TLS / AES-256
             </p>
           </div>

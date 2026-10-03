@@ -1,7 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Building2, User, Phone, Mail, MapPin, Hash, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { 
+  X, 
+  Building2, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Hash, 
+  Plus, 
+  Trash2, 
+  CheckCircle2,
+  CreditCard,
+  Briefcase,
+  ShieldCheck
+} from 'lucide-react';
 import { Supplier, SupplierService } from '../app/types';
 
 interface SupplierModalProps {
@@ -19,10 +33,18 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
 }) => {
   const [nit, setNit] = useState('');
   const [name, setName] = useState('');
+  const [tradeName, setTradeName] = useState('');
   const [contact, setContact] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
   const [area, setArea] = useState('General');
+  const [paymentConditions, setPaymentConditions] = useState('Crédito 30 días');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountType, setBankAccountType] = useState('Ahorros');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [status, setStatus] = useState<'Activo' | 'Inactivo'>('Activo');
   const [services, setServices] = useState<SupplierService[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,18 +53,34 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
     if (initialSupplier) {
       setNit(initialSupplier.nit || '');
       setName(initialSupplier.name || '');
+      setTradeName(initialSupplier.tradeName || '');
       setContact(initialSupplier.contact || '');
       setPhone(initialSupplier.phone || '');
       setEmail(initialSupplier.email || '');
+      setAddress(initialSupplier.address || '');
+      setCity(initialSupplier.city || '');
       setArea(initialSupplier.area || 'General');
+      setPaymentConditions(initialSupplier.paymentConditions || 'Crédito 30 días');
+      setBankName(initialSupplier.bankName || '');
+      setBankAccountType(initialSupplier.bankAccountType || 'Ahorros');
+      setBankAccountNumber(initialSupplier.bankAccountNumber || '');
+      setStatus((initialSupplier.status as any) || 'Activo');
       setServices(initialSupplier.services || []);
     } else {
       setNit('');
       setName('');
+      setTradeName('');
       setContact('');
       setPhone('');
       setEmail('');
+      setAddress('');
+      setCity('');
       setArea('General');
+      setPaymentConditions('Crédito 30 días');
+      setBankName('');
+      setBankAccountType('Ahorros');
+      setBankAccountNumber('');
+      setStatus('Activo');
       setServices([
         { serviceName: 'Facturación Mensual Estándar', type: 'factura', enabled: true }
       ]);
@@ -85,10 +123,18 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
         id: initialSupplier?.id,
         nit: nit.trim(),
         name: name.trim(),
+        tradeName: tradeName.trim() || undefined,
         contact: contact.trim() || undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
         area: area.trim() || 'General',
+        paymentConditions: paymentConditions.trim() || 'Crédito 30 días',
+        bankName: bankName.trim() || undefined,
+        bankAccountType: bankAccountType.trim() || 'Ahorros',
+        bankAccountNumber: bankAccountNumber.trim() || undefined,
+        status: status,
         monthlyCount: services.length,
         services: services
       });
@@ -101,9 +147,9 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
       <div 
-        className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150"
         onClick={e => e.stopPropagation()}
       >
         {/* ENCABEZADO CON GRADIENTE ENRIKO */}
@@ -117,7 +163,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
                 {initialSupplier ? 'Editar Proveedor' : 'Registrar Nuevo Proveedor'}
               </h2>
               <p className="text-[10px] sm:text-[11px] text-white/90 font-medium">
-                Alimentos Enriko — Directorio Autorizado
+                Alimentos Enriko — Maestro de Proveedores y Condiciones Comerciales
               </p>
             </div>
           </div>
@@ -131,7 +177,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
           </button>
         </div>
 
-        {/* CUERPO DEL FORMULARIO CON METRICA VISUAL Y PADDINGS AMPLIOS */}
+        {/* CUERPO DEL FORMULARIO */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 text-xs">
 
           {error && (
@@ -141,202 +187,307 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* NIT / RUT */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Hash className="w-3.5 h-3.5 text-red-600" />
-                <span>NIT / RUT *</span>
-              </label>
-              <input
-                type="text"
-                value={nit}
-                onChange={e => setNit(e.target.value)}
-                placeholder="ej: 900.849.201-1"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-                required
-              />
-            </div>
+          {/* DATOS BÁSICOS & FISCALES */}
+          <div className="space-y-3">
+            <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block border-b border-slate-100 dark:border-zinc-800 pb-1">
+              1. Identificación y Razón Social
+            </span>
 
-            {/* RAZÓN SOCIAL */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-red-600" />
-                <span>Razón Social / Proveedor *</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="ej: Distribuidora Alimentos SAS"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* CONTACTO / ASESOR */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-red-600" />
-                <span>Contacto / Asesor</span>
-              </label>
-              <input
-                type="text"
-                value={contact}
-                onChange={e => setContact(e.target.value)}
-                placeholder="ej: Lic. Carlos Gómez"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-              />
-            </div>
-
-            {/* TELÉFONO */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-red-600" />
-                <span>Teléfono / Móvil</span>
-              </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="ej: +57 310 445 9920"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* CORREO ELECTRÓNICO */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-red-600" />
-                <span>Correo Electrónico</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="ej: facturacion@proveedor.com"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-red-500/20 transition-all shadow-inner"
-              />
-            </div>
-
-            {/* ÁREA ASIGNADA */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-red-600" />
-                <span>Área Organizacional</span>
-              </label>
-              <select
-                value={area}
-                onChange={e => setArea(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 dark:text-zinc-100 outline-none focus:border-red-500 transition-all shadow-inner cursor-pointer"
-              >
-                <option value="General">General</option>
-                <option value="Tecnología (TI)">Tecnología (TI)</option>
-                <option value="Adquisiciones & Compras">Adquisiciones & Compras</option>
-                <option value="Contabilidad & Finanzas">Contabilidad & Finanzas</option>
-                <option value="Operaciones & Planta">Operaciones & Planta</option>
-                <option value="Dirección General">Dirección General</option>
-              </select>
-            </div>
-          </div>
-
-          {/* CONCEPTOS / SERVICIOS RECURRENTES */}
-          <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* NIT / RUT */}
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                  Conceptos Recurrentes ({services.length})
-                </span>
-                <p className="text-[10px] text-slate-400">
-                  Define si este proveedor emite Facturas o Cotizaciones de manera recurrente.
-                </p>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Hash className="w-3.5 h-3.5 text-red-600" />
+                  <span>NIT / RUT *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nit}
+                  onChange={e => setNit(e.target.value)}
+                  placeholder="Ej. 900123456-1"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
               </div>
 
+              {/* ESTADO */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
+                  <span>Estado del Proveedor</span>
+                </label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="Activo">Activo (Habilitado para Facturar)</option>
+                  <option value="Inactivo">Inactivo (Suspendido)</option>
+                </select>
+              </div>
+
+              {/* RAZON SOCIAL */}
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-red-600" />
+                  <span>Razón Social Completa *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ej. HARINAS DEL VALLE S.A.S."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              {/* NOMBRE COMERCIAL */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-red-600" />
+                  <span>Nombre Comercial (Opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={tradeName}
+                  onChange={e => setTradeName(e.target.value)}
+                  placeholder="Ej. Harinas El Sol"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              {/* ÁREA ENRIKO RESPONSABLE */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-red-600" />
+                  <span>Área Enriko Responsable</span>
+                </label>
+                <input
+                  type="text"
+                  value={area}
+                  onChange={e => setArea(e.target.value)}
+                  placeholder="Ej. Compras, Producción, TI, Finanzas"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CONTACTO & UBICACIÓN */}
+          <div className="space-y-3">
+            <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block border-b border-slate-100 dark:border-zinc-800 pb-1">
+              2. Contacto y Localización
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Persona de Contacto</span>
+                </label>
+                <input
+                  type="text"
+                  value={contact}
+                  onChange={e => setContact(e.target.value)}
+                  placeholder="Ej. Carlos Mendoza (Ejecutivo)"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Teléfono / Celular</span>
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="Ej. +57 310 987 6543"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Correo Electrónico (Notificaciones)</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="facturacion@proveedor.com"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Ciudad</span>
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  placeholder="Ej. Cali, Valle del Cauca"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Dirección Comercial</span>
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  placeholder="Ej. Carrera 15 # 45-30, Zona Industrial"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CONDICIONES DE PAGO & DATOS BANCARIOS */}
+          <div className="space-y-3">
+            <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block border-b border-slate-100 dark:border-zinc-800 pb-1">
+              3. Condiciones de Pago & Cuenta Bancaria
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5">
+                  Plazo de Pago
+                </label>
+                <select
+                  value={paymentConditions}
+                  onChange={e => setPaymentConditions(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="Contado">Contado</option>
+                  <option value="Crédito 15 días">Crédito 15 días</option>
+                  <option value="Crédito 30 días">Crédito 30 días</option>
+                  <option value="Crédito 45 días">Crédito 45 días</option>
+                  <option value="Crédito 60 días">Crédito 60 días</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5">
+                  Banco
+                </label>
+                <input
+                  type="text"
+                  value={bankName}
+                  onChange={e => setBankName(e.target.value)}
+                  placeholder="Ej. Bancolombia, Davivienda"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5">
+                  Tipo de Cuenta
+                </label>
+                <select
+                  value={bankAccountType}
+                  onChange={e => setBankAccountType(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="Ahorros">Cuenta de Ahorros</option>
+                  <option value="Corriente">Cuenta Corriente</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5">
+                  Número de Cuenta Bancaria
+                </label>
+                <input
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={e => setBankAccountNumber(e.target.value)}
+                  placeholder="Ej. 123-456789-01"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* LISTA DE SERVICIOS / CONCEPTOS FACTURABLES */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-1">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400">
+                4. Conceptos y Servicios Mensuales ({services.length})
+              </span>
               <button
                 type="button"
                 onClick={handleAddService}
-                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                className="text-[11px] font-black text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-red-600" />
-                <span>Agregar Concepto</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Añadir Concepto</span>
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
               {services.map((srv, idx) => (
                 <div 
-                  key={idx} 
-                  className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700"
+                  key={idx}
+                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 flex items-center gap-2"
                 >
                   <input
                     type="text"
                     value={srv.serviceName}
                     onChange={e => handleServiceChange(idx, 'serviceName', e.target.value)}
-                    placeholder="Descripción del concepto"
-                    className="flex-1 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 font-bold text-xs outline-none focus:border-red-500"
+                    placeholder="Nombre del servicio o producto"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-xs font-bold text-slate-900 dark:text-white"
                   />
-
-                  <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 p-0.5 rounded-full border border-slate-200 dark:border-zinc-700">
-                    <button
-                      type="button"
-                      onClick={() => handleServiceChange(idx, 'type', 'factura')}
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-all ${
-                        srv.type === 'factura'
-                          ? 'bg-gradient-to-r from-red-600 to-red-700 text-white'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      Factura
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleServiceChange(idx, 'type', 'cotizacion')}
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-all ${
-                        srv.type === 'cotizacion'
-                          ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      Cotización
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveService(idx)}
-                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center cursor-pointer"
-                    title="Eliminar concepto"
+                  <select
+                    value={srv.type}
+                    onChange={e => handleServiceChange(idx, 'type', e.target.value)}
+                    className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-xs font-bold"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <option value="factura">Factura</option>
+                    <option value="cotizacion">Cotización</option>
+                  </select>
+                  {services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveService(idx)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
           {/* BOTONES DE ACCIÓN */}
-          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 font-bold hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs hover:bg-slate-50 cursor-pointer"
             >
               Cancelar
             </button>
-
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold flex items-center gap-2 shadow-md shadow-red-600/30 transition-all cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-black text-xs shadow-md shadow-red-600/20 cursor-pointer disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4 text-white" />
-              <span>{isSubmitting ? 'Guardando...' : (initialSupplier ? 'Actualizar Proveedor' : 'Crear Proveedor')}</span>
+              {isSubmitting ? 'Guardando...' : initialSupplier ? 'Actualizar Proveedor' : 'Guardar Proveedor'}
             </button>
           </div>
+
         </form>
       </div>
     </div>

@@ -34,12 +34,20 @@ class SupplierPayload(BaseModel):
     id: Optional[str] = None
     nit: str
     name: str
+    tradeName: Optional[str] = None
+    address: Optional[str] = ""
+    city: Optional[str] = "Cali"
     contact: Optional[str] = ""
     phone: Optional[str] = ""
     monthlyCount: Optional[int] = 1
     area: Optional[str] = "General"
     services: Optional[List[Dict[str, Any]]] = []
     email: Optional[str] = None
+    paymentConditions: Optional[str] = "Crédito 30 días"
+    bankName: Optional[str] = ""
+    bankAccountType: Optional[str] = "Corriente"
+    bankAccountNumber: Optional[str] = ""
+    status: Optional[str] = "Activo"
 
 class ServicesUpdatePayload(BaseModel):
     services: List[Dict[str, Any]]
@@ -360,7 +368,7 @@ def delete_company_area(area_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- USERS (SUPERADMIN GESTIONA USUARIOS Y ASIGNA ADMINS POR ÁREA) ---
+# --- USERS (SUPERADMIN GESTIONA USUARIOS Y ASIGNA ADMINS POR ÁREA O PROVEEDORES) ---
 class UserPayload(BaseModel):
     id: Optional[str] = None
     username: str
@@ -369,6 +377,9 @@ class UserPayload(BaseModel):
     password: Optional[str] = ""
     role: Optional[str] = "admin"
     area: Optional[str] = "General"
+    supplierNit: Optional[str] = None
+    supplierId: Optional[str] = None
+    phone: Optional[str] = None
     status: Optional[str] = "Activo"
 
 @router.get("/users")
@@ -404,8 +415,11 @@ class RegisterPayload(BaseModel):
     name: Optional[str] = ""
     email: Optional[str] = ""
     password: str
-    role: Optional[str] = "admin"
-    area: Optional[str] = "Tecnología (TI)"
+    role: Optional[str] = "supplier"
+    area: Optional[str] = "Proveedor Externo"
+    supplierNit: Optional[str] = None
+    supplierId: Optional[str] = None
+    phone: Optional[str] = None
 
 @router.post("/auth/login")
 def login(payload: LoginPayload, request: Request):
@@ -419,7 +433,9 @@ def login(payload: LoginPayload, request: Request):
             "sub": user["id"],
             "username": user["username"],
             "role": user.get("role", "admin"),
-            "area": user.get("area", "General")
+            "area": user.get("area", "General"),
+            "supplierNit": user.get("supplierNit"),
+            "supplierId": user.get("supplierId")
         })
 
         client_ip = request.client.host if request.client else "127.0.0.1"

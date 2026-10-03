@@ -44,25 +44,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   portalEnabled = true
 }) => {
+  const isSupplier = currentUser?.role === 'supplier';
   const isSuperAdmin = currentUser?.role === 'superadmin';
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
-    { id: 'facture', label: 'Bandeja Facture.co', icon: Inbox },
-    ...(portalEnabled ? [
-      { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
-    ] : []),
-    { id: 'suppliers', label: 'Proveedores', icon: Users },
-    { id: 'inventory', label: 'Inventario TI', icon: Laptop },
-    { id: 'areas', label: 'Áreas Enriko', icon: Building2 },
-    // Módulos exclusivos para Superadmin
-    ...(isSuperAdmin ? [
-      { id: 'categories', label: 'Categorías TI', icon: Tag, superadminOnly: true },
-      { id: 'users', label: 'Usuarios & Roles', icon: Shield, superadminOnly: true }
-    ] : []),
-    { id: 'settings', label: 'Configuración', icon: Settings }
-  ];
+  const menuItems = isSupplier
+    ? [
+        { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
+      ]
+    : [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
+        { id: 'facture', label: 'Bandeja Facture.co', icon: Inbox },
+        ...(portalEnabled ? [
+          { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
+        ] : []),
+        { id: 'suppliers', label: 'Proveedores', icon: Users },
+        { id: 'inventory', label: 'Inventario TI', icon: Laptop },
+        { id: 'areas', label: 'Áreas Enriko', icon: Building2 },
+        // Módulos exclusivos para Superadmin
+        ...(isSuperAdmin ? [
+          { id: 'categories', label: 'Categorías TI', icon: Tag, superadminOnly: true },
+          { id: 'users', label: 'Usuarios & Roles', icon: Shield, superadminOnly: true }
+        ] : []),
+        { id: 'settings', label: 'Configuración', icon: Settings }
+      ];
 
   return (
     <>
@@ -84,11 +89,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div 
           className="relative text-white cursor-pointer select-none transition-all"
           style={{
-            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+            background: isSupplier 
+              ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' 
+              : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
             padding: isCollapsed ? '20px 8px' : '22px 18px 20px',
-            boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)'
+            boxShadow: isSupplier ? '0 2px 8px rgba(37, 99, 235, 0.25)' : '0 2px 8px rgba(220, 38, 38, 0.25)'
           }}
-          onClick={() => setCurrentView('dashboard')}
+          onClick={() => setCurrentView(isSupplier ? 'internal_invoices' : 'dashboard')}
         >
           <div className="flex flex-col items-center justify-center text-center w-full">
             {!isCollapsed ? (
@@ -101,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <span className="text-2xl font-black text-white tracking-tight drop-shadow-sm">ENRIKO</span>
                 <span className="text-[8.5px] font-black text-white/90 tracking-widest uppercase italic mt-1.5 bg-black/20 px-2.5 py-0.5 rounded-full">
-                  S.A.S. — Sistema Corporativo
+                  {isSupplier ? 'Portal de Proveedores' : 'S.A.S. — Sistema Corporativo'}
                 </span>
               </div>
             ) : (
@@ -142,7 +149,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`
                   w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer relative
                   ${isActive 
-                    ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md shadow-red-600/25 border-l-4 border-red-800' 
+                    ? isSupplier
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-600/25 border-l-4 border-blue-800'
+                      : 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md shadow-red-600/25 border-l-4 border-red-800' 
                     : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-100'}
                   ${isCollapsed ? 'justify-center px-0' : ''}
                 `}
@@ -168,15 +177,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3 border-t border-slate-200 dark:border-zinc-800">
           {!isCollapsed && (
             <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-100 dark:border-zinc-800 flex items-center gap-2.5 text-xs">
-              <div className="w-8 h-8 rounded-xl bg-red-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0">
-                {isSuperAdmin ? 'SA' : (currentUser?.area ? currentUser.area.substring(0, 2).toUpperCase() : 'AD')}
+              <div className={`w-8 h-8 rounded-xl ${isSupplier ? 'bg-blue-600' : 'bg-red-600'} text-white font-black text-xs flex items-center justify-center flex-shrink-0`}>
+                {isSupplier ? 'PV' : isSuperAdmin ? 'SA' : (currentUser?.area ? currentUser.area.substring(0, 2).toUpperCase() : 'AD')}
               </div>
               <div className="flex-1 min-w-0">
                 <span className="font-extrabold text-slate-900 dark:text-white block truncate text-[11px]">
                   {currentUser?.name || 'Super Admin'}
                 </span>
-                <span className="text-[10px] text-red-600 dark:text-red-400 font-bold block truncate">
-                  {isSuperAdmin ? 'Superadministrador' : `Admin • ${currentUser?.area}`}
+                <span className={`text-[10px] ${isSupplier ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'} font-bold block truncate`}>
+                  {isSupplier ? `Proveedor • ${currentUser?.supplierNit || 'NIT'}` : isSuperAdmin ? 'Superadministrador' : `Admin • ${currentUser?.area}`}
                 </span>
               </div>
             </div>

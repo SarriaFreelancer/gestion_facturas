@@ -13,7 +13,13 @@ import {
   FileText, 
   X,
   Layers,
-  MapPin
+  MapPin,
+  Building2,
+  CreditCard,
+  Briefcase,
+  ShieldCheck,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { Supplier, SupplierService } from '../app/types';
 
@@ -78,17 +84,19 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
       const term = searchTerm.toLowerCase();
       return (
         (s.name || '').toLowerCase().includes(term) ||
+        (s.tradeName || '').toLowerCase().includes(term) ||
         (s.nit || '').toLowerCase().includes(term) ||
         (s.contact || '').toLowerCase().includes(term) ||
+        (s.city || '').toLowerCase().includes(term) ||
         (s.area || '').toLowerCase().includes(term)
       );
     });
   }, [suppliers, searchTerm]);
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-4 sm:space-y-6">
       {/* HEADER DE MÓDULO */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-sm">
         <div className="flex items-center gap-3 sm:gap-3.5">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white flex items-center justify-center shadow-md shadow-red-600/30 flex-shrink-0">
             <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -98,7 +106,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
               Directorio de Proveedores Autorizados
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
-              Configura los servicios mensuales recurrentes indicando si corresponden a Facturas o Cotizaciones.
+              Maestro corporativo de proveedores, condiciones de pago, datos bancarios y conceptos recurrentes.
             </p>
           </div>
         </div>
@@ -112,13 +120,13 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
         </button>
       </div>
 
-      {/* BARRA DE BÚSQUEDA ESPACIOSA Y CON SEPARACIÓN VISUAL */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm my-4 sm:my-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
-        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
+      {/* BARRA DE BÚSQUEDA */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 flex-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:ring-2 focus-within:ring-red-500/20 transition-all shadow-inner">
           <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <input
             type="text"
-            placeholder="Buscar proveedor por razón social, NIT, contacto o área..."
+            placeholder="Buscar por razón social, nombre comercial, NIT, contacto, ciudad o área..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-100 outline-none w-full placeholder:text-slate-400"
@@ -136,7 +144,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
 
         <button 
           onClick={() => setSearchTerm('')}
-          className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs cursor-pointer"
+          className="px-4 py-2 sm:py-2.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs cursor-pointer"
           title="Restablecer búsqueda"
         >
           <History className="w-3.5 h-3.5 text-slate-500" />
@@ -144,20 +152,19 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
         </button>
       </div>
 
-
-      {/* TABLA DE PROVEEDORES CON SEPARACIÓN GENEROSA */}
+      {/* TABLA DE PROVEEDORES */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[850px] text-left border-collapse text-xs">
+          <table className="w-full min-w-[900px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gradient-to-r from-red-600 via-red-600 to-red-700 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
                 <th className="px-4 py-3.5 w-12 text-center text-white">Ver</th>
                 <th className="px-4 py-3.5 text-white">NIT / RUT</th>
-                <th className="px-4 py-3.5 text-white">Razón Social</th>
-                <th className="px-4 py-3.5 text-white">Asesor Comercial</th>
-                <th className="px-4 py-3.5 text-white">Teléfono</th>
+                <th className="px-4 py-3.5 text-white">Proveedor / Razón Social</th>
+                <th className="px-4 py-3.5 text-white">Condiciones & Pago</th>
+                <th className="px-4 py-3.5 text-white">Contacto & Ciudad</th>
                 <th className="px-4 py-3.5 text-white">Conceptos / Mes</th>
-                <th className="px-4 py-3.5 text-white">Área Asignada</th>
+                <th className="px-4 py-3.5 text-center text-white">Estado</th>
                 <th className="px-4 py-3.5 text-center text-white">Acciones</th>
               </tr>
             </thead>
@@ -180,7 +187,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                   return (
                     <React.Fragment key={sup.id}>
                       <tr className={`hover:bg-red-50/20 dark:hover:bg-zinc-800/40 transition-colors ${isExpanded ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}>
-                        {/* TOGGLE EXPAND - Chevron original preferido por el usuario */}
+                        {/* TOGGLE EXPAND */}
                         <td className="px-4 py-3 text-center">
                           <button 
                             onClick={() => toggleExpand(sup.id)}
@@ -189,7 +196,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                 ? 'bg-red-600 text-white shadow-sm shadow-red-600/30' 
                                 : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'
                             }`}
-                            title={isExpanded ? "Ocultar conceptos" : "Desplegar conceptos recurrentes"}
+                            title={isExpanded ? "Ocultar conceptos y detalles" : "Desplegar conceptos recurrentes y datos bancarios"}
                           >
                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                           </button>
@@ -204,35 +211,55 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                             <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-red-600 to-red-700 text-white text-[10px] font-black flex items-center justify-center shadow-xs ring-1 ring-red-100 dark:ring-red-950 flex-shrink-0">
                               {(sup.name || 'PR').substring(0, 2).toUpperCase()}
                             </span>
-                            <span className="hover:text-red-600 transition-colors">{sup.name}</span>
+                            <div>
+                              <span className="hover:text-red-600 transition-colors block leading-tight">{sup.name}</span>
+                              {sup.tradeName && (
+                                <span className="text-[10px] font-semibold text-slate-400 block">{sup.tradeName}</span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
-                          {sup.contact || '—'}
+                        <td className="px-4 py-3">
+                          <div className="text-slate-900 dark:text-white font-bold">
+                            {sup.paymentConditions || 'Crédito 30 días'}
+                          </div>
+                          {sup.bankName && (
+                            <span className="text-[10px] font-mono text-slate-500 block">
+                              {sup.bankName} • {sup.bankAccountType || 'Ahorros'}
+                            </span>
+                          )}
                         </td>
 
-                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300 font-mono">
-                          {sup.phone || '—'}
+                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
+                          <div className="font-semibold text-slate-800 dark:text-zinc-200">
+                            {sup.contact || '—'}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                            {sup.city && <span>{sup.city} • </span>}
+                            <span>{sup.phone || sup.email || 'Sin teléfono'}</span>
+                          </div>
                         </td>
 
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs">
                             <Layers className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                            {activeCount} {activeCount === 1 ? 'concepto activo' : 'conceptos activos'}
+                            {activeCount} {activeCount === 1 ? 'concepto' : 'conceptos'}
                           </span>
                         </td>
 
-                        <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{sup.area || 'General'}</span>
-                          </div>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            sup.status === 'Inactivo'
+                              ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
+                              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+                          }`}>
+                            {sup.status || 'Activo'}
+                          </span>
                         </td>
 
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-1.5">
-                            {/* Icono de editar pen original preferido por el usuario */}
                             <button 
                               onClick={() => onEditSupplier(sup)}
                               className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 inline-flex items-center justify-center transition-colors border border-transparent hover:border-blue-200 cursor-pointer"
@@ -252,12 +279,31 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                         </td>
                       </tr>
 
-                      {/* SUBFILA DESPLEGABLE CON CONCEPTOS RECURRENTES MEJORADOS */}
+                      {/* SUBFILA DESPLEGABLE CON CONCEPTOS RECURRENTES Y DATOS BANCARIOS */}
                       {isExpanded && (
                         <tr>
                           <td colSpan={8} className="p-0 bg-slate-50/70 dark:bg-zinc-950/60">
-                            <div className="p-6 border-y border-slate-200 dark:border-zinc-800">
-                              <div className="flex items-center justify-between mb-4">
+                            <div className="p-5 sm:p-6 border-y border-slate-200 dark:border-zinc-800 space-y-4">
+                              
+                              {/* DATOS CORPORATIVOS & BANCARIOS EXPANDIDOS */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 text-xs">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-slate-400 block">Dirección & Ciudad</span>
+                                  <span className="font-bold text-slate-800 dark:text-zinc-200">{sup.address || 'No registrada'} {sup.city ? `(${sup.city})` : ''}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-slate-400 block">Condición Comercial</span>
+                                  <span className="font-bold text-slate-800 dark:text-zinc-200">{sup.paymentConditions || 'Crédito 30 días'} (Área: {sup.area || 'General'})</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-slate-400 block">Información Bancaria</span>
+                                  <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                                    {sup.bankName ? `${sup.bankName} • ${sup.bankAccountType || 'Ahorros'} No. ${sup.bankAccountNumber || 'N/A'}` : 'Sin cuenta registrada'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
                                 <div className="text-xs font-black text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center">
                                     <FileText className="w-3.5 h-3.5 text-red-600" />
@@ -298,7 +344,6 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                             <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-black flex items-center justify-center flex-shrink-0">
                                               #{sIdx + 1}
                                             </span>
-                                            {/* INPUT SEMIREDONDO HERMOSO */}
                                             <input 
                                               type="text"
                                               value={srv.serviceName || ''}
@@ -318,7 +363,6 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                         </div>
 
                                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800">
-                                          {/* TIPO: FACTURA O COTIZACION (PÍLDORA REDONDA) */}
                                           <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-full text-[10px] font-bold border border-slate-200/80 dark:border-zinc-700/80">
                                             <button 
                                               onClick={() => handleServiceTypeChange(sup, sIdx, 'factura')}
@@ -342,7 +386,6 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                             </button>
                                           </div>
 
-                                          {/* HABILITADO / DESHABILITADO (CONMUTADOR ELEGANTE) */}
                                           <button 
                                             onClick={() => handleToggleServiceEnable(sup, sIdx)}
                                             className={`w-12 h-6 rounded-full px-1 flex items-center transition-all cursor-pointer border ${

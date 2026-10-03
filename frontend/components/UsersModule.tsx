@@ -41,7 +41,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'superadmin' | 'admin' | 'viewer'>('admin');
+  const [role, setRole] = useState<'superadmin' | 'admin' | 'viewer' | 'supplier'>('admin');
   const [area, setArea] = useState('Tecnología (TI)');
   const [status, setStatus] = useState<'Activo' | 'Inactivo'>('Activo');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +82,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
         email: email.trim() || undefined,
         password: password ? password.trim() : undefined,
         role,
-        area: role === 'superadmin' ? 'Dirección General' : area,
+        area: role === 'superadmin' ? 'Dirección General' : role === 'supplier' ? 'Proveedores Externos' : area,
         status
       });
       setIsModalOpen(false);
@@ -100,6 +100,14 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40 flex items-center gap-1">
           <Shield className="w-3 h-3" />
           <span>Super Administrador</span>
+        </span>
+      );
+    }
+    if (r === 'supplier') {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40 flex items-center gap-1">
+          <Building2 className="w-3 h-3" />
+          <span>Proveedor</span>
         </span>
       );
     }
@@ -314,6 +322,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
                   >
                     <option value="admin">Admin de Área</option>
                     <option value="superadmin">Super Administrador</option>
+                    <option value="supplier">Proveedor Externo</option>
                     <option value="viewer">Visualizador</option>
                   </select>
                 </div>

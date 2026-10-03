@@ -8,12 +8,20 @@ export interface Supplier {
   id: string;
   nit: string;
   name: string;
+  tradeName?: string | null;
+  address?: string | null;
+  city?: string | null;
   contact?: string | null;
   phone?: string | null;
   monthlyCount?: number;
   area?: string;
   services?: SupplierService[];
   email?: string | null;
+  paymentConditions?: string | null;
+  bankName?: string | null;
+  bankAccountType?: string | null;
+  bankAccountNumber?: string | null;
+  status?: 'Activo' | 'Inactivo' | string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -107,6 +115,16 @@ export interface InternalInvoice {
   importedToMain?: number;
   mainInvoiceId?: string | null;
   uploadedBy?: string;
+  eventAcuse?: number;
+  eventAcuseDate?: string | null;
+  eventRecibo?: number;
+  eventReciboDate?: string | null;
+  eventAceptacion?: number;
+  eventAceptacionDate?: string | null;
+  eventRechazo?: number;
+  eventRechazoDate?: string | null;
+  eventStatus?: string;
+  eventNotification?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -199,8 +217,11 @@ export interface User {
   name: string;
   email?: string | null;
   password?: string | null;
-  role: 'superadmin' | 'admin' | 'viewer';
+  role: 'superadmin' | 'admin' | 'viewer' | 'supplier';
   area: string;
+  supplierNit?: string | null;
+  supplierId?: string | null;
+  phone?: string | null;
   status: 'Activo' | 'Inactivo';
   createdAt?: string;
 }

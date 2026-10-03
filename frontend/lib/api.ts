@@ -1,6 +1,6 @@
 import { Invoice, Supplier, DashboardMetrics } from '../app/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export const api = {
   // Invoices
@@ -510,10 +510,13 @@ export const api = {
   },
 
   // Facturas Internas / Portal Proveedores
-  async getInternalInvoices(folder: string = 'Todos', search?: string): Promise<any[]> {
+  async getInternalInvoices(folder: string = 'Todos', search?: string, supplierNit?: string): Promise<any[]> {
     let url = `${API_BASE_URL}/internal-invoices?folder=${encodeURIComponent(folder)}`;
     if (search && search.trim()) {
       url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    if (supplierNit && supplierNit.trim()) {
+      url += `&supplier_nit=${encodeURIComponent(supplierNit.trim())}`;
     }
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al obtener facturas internas');
@@ -535,6 +538,19 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Error al guardar factura interna');
+    }
+    return res.json();
+  },
+
+  async executeInternalInvoiceEvent(invoiceId: string, eventType: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/internal-invoices/${invoiceId}/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventType })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al ejecutar evento DIAN');
     }
     return res.json();
   },
@@ -577,7 +593,3 @@ export const api = {
     return res.json();
   }
 };
-
-
-
-

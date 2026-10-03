@@ -327,28 +327,48 @@ class MySQLRepository:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 sql = """
-                    INSERT INTO suppliers (id, nit, name, contact, phone, monthlyCount, area, services, email)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO suppliers (
+                        id, nit, name, tradeName, address, city, contact, phone, email,
+                        monthlyCount, area, paymentConditions, bankName, bankAccountType, bankAccountNumber,
+                        status, services
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         nit = VALUES(nit),
                         name = VALUES(name),
+                        tradeName = VALUES(tradeName),
+                        address = VALUES(address),
+                        city = VALUES(city),
                         contact = VALUES(contact),
                         phone = VALUES(phone),
+                        email = VALUES(email),
                         monthlyCount = VALUES(monthlyCount),
                         area = VALUES(area),
-                        services = VALUES(services),
-                        email = VALUES(email);
+                        paymentConditions = VALUES(paymentConditions),
+                        bankName = VALUES(bankName),
+                        bankAccountType = VALUES(bankAccountType),
+                        bankAccountNumber = VALUES(bankAccountNumber),
+                        status = VALUES(status),
+                        services = VALUES(services);
                 """
                 cursor.execute(sql, (
                     sup_id,
-                    data.get("nit", ""),
-                    data.get("name", ""),
+                    data.get("nit", "").strip(),
+                    data.get("name", "").strip(),
+                    data.get("tradeName", data.get("name", "")).strip(),
+                    data.get("address", ""),
+                    data.get("city", "Cali"),
                     data.get("contact", ""),
                     data.get("phone", ""),
+                    data.get("email", None),
                     int(data.get("monthlyCount", 1) or 1),
                     data.get("area", "General"),
-                    services_json,
-                    data.get("email", None)
+                    data.get("paymentConditions", "Crédito 30 días"),
+                    data.get("bankName", ""),
+                    data.get("bankAccountType", "Corriente"),
+                    data.get("bankAccountNumber", ""),
+                    data.get("status", "Activo"),
+                    services_json
                 ))
 
         # Sincronizar automáticamente con la tabla de Facturas / Cotizaciones
@@ -771,13 +791,13 @@ class MySQLRepository:
     def fetch_users(self) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT id, username, name, email, role, area, status, createdAt FROM users ORDER BY role ASC, name ASC")
+                cursor.execute("SELECT id, username, name, email, role, area, supplierNit, supplierId, phone, status, createdAt FROM users ORDER BY role ASC, name ASC")
                 return cursor.fetchall()
 
     def fetch_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT id, username, name, email, role, area, status, createdAt FROM users WHERE id = %s", (user_id,))
+                cursor.execute("SELECT id, username, name, email, role, area, supplierNit, supplierId, phone, status, createdAt FROM users WHERE id = %s", (user_id,))
                 return cursor.fetchone()
 
     def save_user(self, data: Dict[str, Any]) -> str:
@@ -789,8 +809,8 @@ class MySQLRepository:
             with conn.cursor() as cursor:
                 if hashed_pwd:
                     sql = """
-                        INSERT INTO users (id, username, name, email, password, role, area, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO users (id, username, name, email, password, role, area, supplierNit, supplierId, phone, status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
                             username = VALUES(username),
                             name = VALUES(name),
@@ -798,6 +818,9 @@ class MySQLRepository:
                             password = VALUES(password),
                             role = VALUES(role),
                             area = VALUES(area),
+                            supplierNit = VALUES(supplierNit),
+                            supplierId = VALUES(supplierId),
+                            phone = VALUES(phone),
                             status = VALUES(status)
                     """
                     cursor.execute(sql, (
@@ -808,18 +831,24 @@ class MySQLRepository:
                         hashed_pwd,
                         data.get("role", "admin"),
                         data.get("area", "General"),
+                        data.get("supplierNit"),
+                        data.get("supplierId"),
+                        data.get("phone"),
                         data.get("status", "Activo")
                     ))
                 else:
                     sql = """
-                        INSERT INTO users (id, username, name, email, password, role, area, status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO users (id, username, name, email, password, role, area, supplierNit, supplierId, phone, status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
                             username = VALUES(username),
                             name = VALUES(name),
                             email = VALUES(email),
                             role = VALUES(role),
                             area = VALUES(area),
+                            supplierNit = VALUES(supplierNit),
+                            supplierId = VALUES(supplierId),
+                            phone = VALUES(phone),
                             status = VALUES(status)
                     """
                     cursor.execute(sql, (
@@ -830,6 +859,9 @@ class MySQLRepository:
                         hash_password("123456"),
                         data.get("role", "admin"),
                         data.get("area", "General"),
+                        data.get("supplierNit"),
+                        data.get("supplierId"),
+                        data.get("phone"),
                         data.get("status", "Activo")
                     ))
                 return user_id
@@ -844,7 +876,7 @@ class MySQLRepository:
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, username, name, email, password, role, area, status, createdAt 
+                    SELECT id, username, name, email, password, role, area, supplierNit, supplierId, phone, status, createdAt 
                     FROM users 
                     WHERE (LOWER(username) = LOWER(%s) OR (email IS NOT NULL AND LOWER(email) = LOWER(%s)))
                 """, (username_or_email.strip(), username_or_email.strip()))
@@ -957,12 +989,19 @@ class MySQLRepository:
                 return cursor.fetchall()
 
     # --- FACTURAS INTERNAS / RADICACIÓN LOCAL DE PROVEEDORES ---
-    def fetch_internal_invoices(self, folder: Optional[str] = None, folder_type: Optional[str] = None, search: Optional[str] = None, limit: Optional[int] = 1000) -> List[Dict[str, Any]]:
+    def fetch_internal_invoices(self, folder: Optional[str] = None, folder_type: Optional[str] = None, search: Optional[str] = None, supplier_nit: Optional[str] = None, limit: Optional[int] = 1000) -> List[Dict[str, Any]]:
         target_folder = folder or folder_type
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
                 query = "SELECT * FROM internal_uploaded_invoices WHERE 1=1"
                 params = []
+
+                if supplier_nit and supplier_nit.strip():
+                    clean_nit = supplier_nit.strip()
+                    # Buscar coincidencia exacta o sin dígito de verificación
+                    nit_base = clean_nit.split('-')[0].strip()
+                    query += " AND (issuerNit = %s OR issuerNit LIKE %s)"
+                    params.extend([clean_nit, f"{nit_base}%"])
 
                 if target_folder and target_folder != "Todos":
                     if target_folder == "Recibidos" or target_folder == "Recibidos Crédito":
@@ -992,6 +1031,68 @@ class MySQLRepository:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT * FROM internal_uploaded_invoices WHERE id = %s OR documentNumber = %s", (doc_id, doc_id))
                 return cursor.fetchone()
+
+    def update_internal_invoice_event(self, doc_id: str, event_type: str) -> Dict[str, Any]:
+        """Registra la ejecución de eventos DIAN (030, 032, 033, 031) y notifica al proveedor."""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        event_code = str(event_type).strip()
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                if event_code in ["030", "acuse", "Acuse"]:
+                    sql = """
+                        UPDATE internal_uploaded_invoices
+                        SET eventAcuse = 1,
+                            eventAcuseDate = %s,
+                            eventStatus = 'Acusada (Evento 030 DIAN)',
+                            eventNotification = %s,
+                            updatedAt = NOW()
+                        WHERE id = %s OR documentNumber = %s
+                    """
+                    msg = f"Evento 030 (Acuse de Recibo) generado exitosamente por Alimentos Enriko el {now_str}."
+                    cursor.execute(sql, (now_str, msg, doc_id, doc_id))
+                elif event_code in ["032", "recibo", "Recibo"]:
+                    sql = """
+                        UPDATE internal_uploaded_invoices
+                        SET eventRecibo = 1,
+                            eventReciboDate = %s,
+                            eventStatus = 'Bienes / Servicios Recibidos (Evento 032 DIAN)',
+                            eventNotification = %s,
+                            updatedAt = NOW()
+                        WHERE id = %s OR documentNumber = %s
+                    """
+                    msg = f"Evento 032 (Recibo del Bien o Servicio) confirmado formalmente el {now_str}."
+                    cursor.execute(sql, (now_str, msg, doc_id, doc_id))
+                elif event_code in ["033", "aceptacion", "Aceptación", "Aceptacion"]:
+                    sql = """
+                        UPDATE internal_uploaded_invoices
+                        SET eventAceptacion = 1,
+                            eventAceptacionDate = %s,
+                            eventStatus = 'Aceptada Expresamente (Título Valor RADIAN 033)',
+                            eventNotification = %s,
+                            status = 'Aprobada',
+                            updatedAt = NOW()
+                        WHERE id = %s OR documentNumber = %s
+                    """
+                    msg = f"¡Factura Aceptada Expresamente! Constituida como título valor ante la DIAN el {now_str}."
+                    cursor.execute(sql, (now_str, msg, doc_id, doc_id))
+                elif event_code in ["031", "rechazo", "Rechazo", "reclamo"]:
+                    sql = """
+                        UPDATE internal_uploaded_invoices
+                        SET eventRechazo = 1,
+                            eventRechazoDate = %s,
+                            eventStatus = 'Reclamada / Rechazada (Evento 031 DIAN)',
+                            eventNotification = %s,
+                            status = 'Rechazada',
+                            updatedAt = NOW()
+                        WHERE id = %s OR documentNumber = %s
+                    """
+                    msg = f"Se registró reclamo (Evento 031 DIAN) sobre este documento el {now_str}."
+                    cursor.execute(sql, (now_str, msg, doc_id, doc_id))
+                else:
+                    raise ValueError(f"Tipo de evento {event_type} no reconocido.")
+
+                return {"success": True, "event": event_code, "executedAt": now_str, "message": msg}
 
     def save_internal_invoice(self, data: Dict[str, Any]) -> str:
         doc_num = data.get("documentNumber", "").strip()
