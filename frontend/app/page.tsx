@@ -751,6 +751,8 @@ export default function Home() {
           darkMode={darkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+          isCollapsed={isSidebarCollapsed}
           currentUser={currentUser}
           users={users}
           onSwitchUser={(u) => {

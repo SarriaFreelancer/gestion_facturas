@@ -8,7 +8,6 @@ import {
   Users, 
   BarChart3, 
   Bell, 
-  Menu, 
   X,
   Sparkles,
   Laptop,
@@ -17,7 +16,9 @@ import {
   Shield,
   Settings,
   Inbox,
-  FileCheck2
+  FileCheck2,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { User } from '../app/types';
 
@@ -118,23 +119,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Toggle buttons */}
-          <div className="absolute right-2 top-3 flex items-center gap-1">
-            <button 
-              className="hidden lg:flex w-6 h-6 rounded text-white/80 hover:text-white items-center justify-center bg-white/10 hover:bg-white/20 transition-all cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
-              title={isCollapsed ? "Expandir menú" : "Contraer menú"}
-            >
-              <Menu className="w-3.5 h-3.5" />
-            </button>
-            <button 
-              className="lg:hidden w-6 h-6 rounded text-white/80 hover:text-white flex items-center justify-center bg-white/10 cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); onClose(); }}
-              title="Cerrar menú"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* Botón de cerrar únicamente para móviles */}
+          <button 
+            className="lg:hidden absolute right-2 top-3 w-6 h-6 rounded text-white/80 hover:text-white flex items-center justify-center bg-white/10 cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            title="Cerrar menú"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* MENU ITEMS */}
@@ -171,6 +163,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+        </div>
+
+        {/* BOTÓN DEDICADO PARA CONTRAER / EXPANDIR MENÚ CON FLECHAS DOBLES << >> */}
+        <div className="px-3 pb-2 hidden lg:block">
+          <button
+            onClick={onToggleCollapse}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all cursor-pointer border border-slate-100 dark:border-zinc-800/80 shadow-2xs ${
+              isCollapsed ? 'justify-center px-0' : ''
+            }`}
+            title={isCollapsed ? "Expandir menú lateral" : "Contraer menú lateral"}
+          >
+            {isCollapsed ? (
+              <ChevronsRight className="w-4 h-4 text-slate-600 dark:text-zinc-300 flex-shrink-0" />
+            ) : (
+              <>
+                <ChevronsLeft className="w-4 h-4 text-slate-600 dark:text-zinc-300 flex-shrink-0" />
+                <span className="truncate">Contraer menú</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* PIE DE SIDEBAR: USUARIO ACTIVO */}

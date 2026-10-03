@@ -332,8 +332,7 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({
         <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-x-auto">
           {(isSupplier ? [
             { id: 'Todos', label: 'Todas mis Facturas' },
-            { id: 'Recibidos Crédito', label: 'Crédito' },
-            { id: 'Recibidos Contado', label: 'Contado' },
+            { id: 'Facturas de Venta', label: 'Facturas de Venta' },
             { id: 'Notas Crédito', label: 'Notas Crédito' }
           ] : [
             { id: 'Todos', label: 'Todas las Facturas' },

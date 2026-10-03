@@ -29,6 +29,8 @@ interface TopNavbarProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onToggleSidebar: () => void;
+  onToggleCollapse?: () => void;
+  isCollapsed?: boolean;
   currentUser?: User;
   users?: User[];
   onSwitchUser?: (user: User) => void;
@@ -49,6 +51,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   darkMode,
   onToggleDarkMode,
   onToggleSidebar,
+  onToggleCollapse,
+  isCollapsed,
   currentUser,
   users = [],
   onSwitchUser,
@@ -87,14 +91,26 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
     return name.substring(0, 2).toUpperCase();
   };
 
+  const handleToggleMenu = () => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      if (onToggleCollapse) {
+        onToggleCollapse();
+      } else {
+        onToggleSidebar();
+      }
+    } else {
+      onToggleSidebar();
+    }
+  };
+
   return (
     <header className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800/80 px-3 sm:px-7 py-2.5 sm:py-3 flex items-center justify-between sticky top-0 z-30">
       {/* SECCIÓN IZQUIERDA: IDENTIDAD & TOGGLE MENÚ */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button 
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700 shadow-2xs flex-shrink-0"
-          onClick={onToggleSidebar} 
-          title="Contraer / Expandir Menú Lateral"
+          onClick={handleToggleMenu} 
+          title={isCollapsed ? "Expandir Menú Lateral" : "Contraer Menú Lateral"}
         >
           <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
