@@ -54,7 +54,11 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   
   // AI Settings State
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [googleClientId, setGoogleClientId] = useState('');
+  const [googleClientSecret, setGoogleClientSecret] = useState('');
+  const [googleProjectId, setGoogleProjectId] = useState('facturacionenriko');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
   const [testingAi, setTestingAi] = useState(false);
   const [aiStatusMessage, setAiStatusMessage] = useState<string | null>(null);
 
@@ -112,6 +116,9 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         if (emailData.defaultClientName) setDefaultClientName(emailData.defaultClientName);
         if (emailData.defaultClientNit) setDefaultClientNit(emailData.defaultClientNit);
         if (emailData.geminiApiKey) setGeminiApiKey(emailData.geminiApiKey);
+        if (emailData.googleClientId) setGoogleClientId(emailData.googleClientId);
+        if (emailData.googleClientSecret) setGoogleClientSecret(emailData.googleClientSecret);
+        if (emailData.googleProjectId) setGoogleProjectId(emailData.googleProjectId);
       }
 
       if (factureData) {
@@ -241,9 +248,12 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         portalEnabled: portalEnabled ? 1 : 0,
         defaultClientName: defaultClientName.trim(),
         defaultClientNit: defaultClientNit.trim(),
-        geminiApiKey: geminiApiKey.trim()
+        geminiApiKey: geminiApiKey.trim(),
+        googleClientId: googleClientId.trim(),
+        googleClientSecret: googleClientSecret.trim(),
+        googleProjectId: googleProjectId.trim()
       });
-      notifySuccess('Inteligencia Artificial', 'Clave de API de Gemini guardada correctamente.');
+      notifySuccess('Inteligencia Artificial', 'Credenciales de Google Cloud y Gemini guardadas correctamente.');
       if (onSettingsUpdated) onSettingsUpdated();
     } catch (err: any) {
       notifyError('Error al guardar IA', err.message);
@@ -737,6 +747,64 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
               <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                 La API Key es utilizada para la extracción multimodal de ítems, cálculo discriminado de IVA, fechas de vencimiento y verificación de sumatorias de todas las páginas de los PDFs.
               </p>
+            </div>
+
+            {/* GOOGLE CLOUD OAUTH & PROJECT CONFIG */}
+            <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-4">
+              <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-xs">
+                <Shield className="w-4 h-4 text-purple-600" />
+                <span>Credenciales de Google Cloud Project (OAuth 2.0 / Vertex AI)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1">
+                    Google Cloud Project ID
+                  </label>
+                  <input
+                    type="text"
+                    value={googleProjectId}
+                    onChange={(e) => setGoogleProjectId(e.target.value)}
+                    placeholder="facturacionenriko"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1">
+                    Client ID de Google Cloud
+                  </label>
+                  <input
+                    type="text"
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    placeholder="1051659275483-....apps.googleusercontent.com"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1">
+                    Client Secret de Google Cloud
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showClientSecret ? 'text' : 'password'}
+                      value={googleClientSecret}
+                      onChange={(e) => setGoogleClientSecret(e.target.value)}
+                      placeholder="GOCSPX-..."
+                      className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowClientSecret(!showClientSecret)}
+                      className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {aiStatusMessage && (

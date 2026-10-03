@@ -156,7 +156,10 @@ class MySQLRepository:
                         "portalEnabled": 1,
                         "defaultClientName": "ALIMENTOS ENRIKO SAS",
                         "defaultClientNit": "890330035",
-                        "geminiApiKey": os.getenv("GEMINI_API_KEY", "")
+                        "geminiApiKey": os.getenv("GEMINI_API_KEY", ""),
+                        "googleClientId": os.getenv("GOOGLE_CLIENT_ID", ""),
+                        "googleClientSecret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+                        "googleProjectId": os.getenv("GOOGLE_PROJECT_ID", "facturacionenriko")
                     }
                 if row.get("ccEmails") is None:
                     row["ccEmails"] = ""
@@ -168,6 +171,12 @@ class MySQLRepository:
                     row["defaultClientNit"] = "890330035"
                 if not row.get("geminiApiKey"):
                     row["geminiApiKey"] = os.getenv("GEMINI_API_KEY", "")
+                if not row.get("googleClientId"):
+                    row["googleClientId"] = os.getenv("GOOGLE_CLIENT_ID", "")
+                if not row.get("googleClientSecret"):
+                    row["googleClientSecret"] = os.getenv("GOOGLE_CLIENT_SECRET", "")
+                if not row.get("googleProjectId"):
+                    row["googleProjectId"] = os.getenv("GOOGLE_PROJECT_ID", "facturacionenriko")
                 return row
 
     def save_email_settings(self, data: Dict[str, Any]) -> bool:
@@ -181,8 +190,9 @@ class MySQLRepository:
                     INSERT INTO email_settings (
                         id, recipientEmail, ccEmails, senderName, emailSubject, emailTemplate,
                         frequency, outlookIntegrationEnabled, smtpHost, smtpPort, smtpUser, smtpPassword,
-                        portalEnabled, defaultClientName, defaultClientNit, geminiApiKey
-                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        portalEnabled, defaultClientName, defaultClientNit, geminiApiKey,
+                        googleClientId, googleClientSecret, googleProjectId
+                    ) VALUES ('default', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         recipientEmail = VALUES(recipientEmail),
                         ccEmails = VALUES(ccEmails),
@@ -198,7 +208,10 @@ class MySQLRepository:
                         portalEnabled = VALUES(portalEnabled),
                         defaultClientName = VALUES(defaultClientName),
                         defaultClientNit = VALUES(defaultClientNit),
-                        geminiApiKey = VALUES(geminiApiKey)
+                        geminiApiKey = VALUES(geminiApiKey),
+                        googleClientId = VALUES(googleClientId),
+                        googleClientSecret = VALUES(googleClientSecret),
+                        googleProjectId = VALUES(googleProjectId)
                 """, (
                     data.get("recipientEmail", "contabilidad@alimentosenriko.com"),
                     data.get("ccEmails", ""),
@@ -214,7 +227,10 @@ class MySQLRepository:
                     int(data.get("portalEnabled", 1) if data.get("portalEnabled") is not None else 1),
                     data.get("defaultClientName", "ALIMENTOS ENRIKO SAS"),
                     data.get("defaultClientNit", "890330035"),
-                    gemini_key or None
+                    gemini_key or None,
+                    data.get("googleClientId", ""),
+                    data.get("googleClientSecret", ""),
+                    data.get("googleProjectId", "facturacionenriko")
                 ))
                 return True
 

@@ -56,6 +56,9 @@ export interface EmailSettings {
   defaultClientName?: string;
   defaultClientNit?: string;
   geminiApiKey?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  googleProjectId?: string;
   updatedAt?: string;
 }
 

@@ -572,7 +572,9 @@ class EmailSettingsPayload(BaseModel):
     portalEnabled: Optional[int] = 1
     defaultClientName: Optional[str] = "ALIMENTOS ENRIKO SAS"
     defaultClientNit: Optional[str] = "890330035"
-    geminiApiKey: Optional[str] = ""
+    googleClientId: Optional[str] = ""
+    googleClientSecret: Optional[str] = ""
+    googleProjectId: Optional[str] = "facturacionenriko"
 
 @router.get("/settings/email")
 def get_email_settings():
