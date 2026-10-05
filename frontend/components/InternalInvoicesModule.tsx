@@ -227,26 +227,26 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2 flex-wrap">
-              <span>{isSupplier ? 'Portal de Radicación y Facturación de Proveedores' : 'Bandeja de Facturación Directa / Proveedores'}</span>
+              <span>{isSupplier ? 'Radicar Facturas — Portal de Proveedores' : 'Bandeja de Facturas de Proveedores'}</span>
               <Sparkles className="w-4 h-4 text-emerald-500" />
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
               {isSupplier 
-                ? `Bienvenido, ${currentUser?.name || 'Proveedor'} (NIT: ${currentUser?.supplierNit || 'N/A'}). Radica tus facturas y consulta el estado de eventos DIAN / RADIAN en tiempo real.`
-                : 'Documentos radicados internamente con lectura IA de todas las páginas, desglose de IVA, vinculación y gestión de eventos DIAN.'}
+                ? `Bienvenido, ${currentUser?.name || 'Proveedor'} (NIT: ${currentUser?.supplierNit || 'N/A'}). Radica tus facturas y notas crédito para Alimentos Enriko S.A.S. y consulta los eventos DIAN en tiempo real.`
+                : 'Facturas y notas crédito radicadas por los proveedores autorizados. Revisa, ejecuta eventos DIAN y vincula a la contabilidad general.'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
-          {/* BOTÓN FACTURAR: Solo visible para proveedores y superadmin (Oculto para admins de área) */}
-          {(isSupplier || isSuperAdmin) && (
+          {/* BOTÓN FACTURAR / RADICAR: EXCLUSIVO PARA PROVEEDORES (Oculto para todos los usuarios de Alimentos Enriko) */}
+          {isSupplier && (
             <button
               onClick={() => setShowUploadModal(true)}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer transition-all"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Facturar / Radicar Factura</span>
+              <span>+ Radicar Factura / Nota Crédito</span>
             </button>
           )}
 

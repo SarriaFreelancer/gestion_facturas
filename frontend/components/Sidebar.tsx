@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems = isSupplier
     ? [
-        { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
+        { id: 'internal_invoices', label: 'Radicar Facturas', icon: FileCheck2 }
       ]
     : [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
