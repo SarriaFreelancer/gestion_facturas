@@ -697,7 +697,20 @@ class FactureService:
                 "rawDetail": ""
             }
 
-        # 1. Si no tenemos el PDF o se solicita forzar descarga, descargarlo vía Playwright
+        # 1. Verificar si el PDF existente en disco coincide realmente con esta factura
+        if os.path.exists(dest_pdf_path) and os.path.getsize(dest_pdf_path) > 100 and not force_download:
+            try:
+                pdf_text = InvoiceAIService.extract_text_from_pdf(dest_pdf_path)
+                clean_num_only = re.sub(r"^[A-Z\-_]+", "", clean_doc).strip()
+                # Si el PDF existente no contiene ni el código completo ni el número de la factura
+                if clean_doc.upper() not in pdf_text.upper() and (clean_num_only and clean_num_only not in pdf_text):
+                    print(f"⚠️ El PDF en disco {dest_pdf_path} no corresponde a la factura {clean_doc}. Eliminando archivo cruzado para re-descargar.")
+                    try: os.remove(dest_pdf_path)
+                    except Exception: pass
+            except Exception as e:
+                print(f"Error verificando PDF en disco: {e}")
+
+        # 2. Si no tenemos el PDF o se solicita forzar descarga, descargarlo vía Playwright
         if not os.path.exists(dest_pdf_path) or force_download or not doc_data.get("itemsJson"):
             creds = self.get_credentials()
             username = creds.get("username") or "TicsEnriko"
@@ -725,9 +738,35 @@ class FactureService:
                     await nit_input.fill(nit)
                     await page.locator('button:has-text("Enviar")').click()
 
-                    # Navegar y buscar documento
+                    # Navegar y buscar documento en su carpeta correspondiente o global
+                    folder_hint = (doc_data.get("folderType") or "Recibidos").lower()
                     await self._navigate_to_inbox_recibidos(page)
+
+                    found = False
+                    # Si la factura está marcada como Contado, ir a sección Contado
+                    if "contado" in folder_hint:
+                        contado_btn = page.locator('text="Contado"').first
+                        if await contado_btn.count() > 0:
+                            await contado_btn.click()
+                            await page.wait_for_timeout(2000)
+                        if "procesados" in folder_hint:
+                            proc_t = page.locator('button:has-text("PROCESADOS"), div:has-text("PROCESADOS")').last
+                            if await proc_t.count() > 0:
+                                await proc_t.click()
+                                await page.wait_for_timeout(1500)
+                    elif "procesados" in folder_hint:
+                        proc_t = page.locator('button:has-text("PROCESADOS"), div:has-text("PROCESADOS")').last
+                        if await proc_t.count() > 0:
+                            await proc_t.click()
+                            await page.wait_for_timeout(1500)
+
                     found = await self._find_and_open_invoice_with_pagination(page, clean_doc, max_pages=20)
+
+                    # Si no se encontró en la carpeta inicial, buscar en las demás pestañas
+                    if not found:
+                        await self._navigate_to_inbox_recibidos(page)
+                        found = await self._find_and_open_invoice_with_pagination(page, clean_doc, max_pages=15)
+
                     if found:
                         # Extraer detalles de mat-card
                         try:
