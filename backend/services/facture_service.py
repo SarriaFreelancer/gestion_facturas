@@ -875,30 +875,51 @@ class FactureService:
 
     async def _find_and_open_invoice_with_pagination(self, page, target_doc_number: str, max_pages: int = 15) -> bool:
         """
-        Busca un documento específico en la tabla de Recibidos.
+        Busca un documento específico en la tabla de Recibidos con COINCIDENCIA EXACTA.
         Si no se encuentra en la página actual, navega por el paginador hasta encontrarlo.
         """
         clean_target = target_doc_number.strip().upper()
         current_page_num = 1
 
         while current_page_num <= max_pages:
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(1500)
 
-            # 1. Intentar buscar fila con el número de documento
-            doc_link = page.locator(f'tr:has-text("{clean_target}") button, tr:has-text("{clean_target}") a, tr:has-text("{clean_target}")').first
-            if await doc_link.count() > 0 and await doc_link.is_visible():
-                self.add_audit_log(
-                    action_type="INVOICE_LOCATED",
-                    status="INFO",
-                    message=f"Documento {clean_target} localizado en la página {current_page_num} de Recibidos.",
-                    doc_number=clean_target
-                )
-                # Click para abrir el documento
-                await doc_link.click()
-                await page.wait_for_timeout(3000)
-                return True
+            # 1. Buscar filas de la tabla y comprobar coincidencia EXACTA del número de documento
+            rows = page.locator("mat-table mat-row, table tbody tr, tr")
+            row_count = await rows.count()
+            
+            for i in range(row_count):
+                row = rows.nth(i)
+                cells = row.locator("mat-cell, td")
+                cell_count = await cells.count()
+                matched = False
+                
+                for c in range(cell_count):
+                    try:
+                        txt = (await cells.nth(c).inner_text()).strip().upper()
+                        if txt == clean_target:
+                            matched = True
+                            break
+                    except Exception:
+                        pass
+                
+                if matched:
+                    self.add_audit_log(
+                        action_type="INVOICE_LOCATED",
+                        status="INFO",
+                        message=f"Documento {clean_target} localizado de forma exacta en la página {current_page_num} de Recibidos.",
+                        doc_number=clean_target
+                    )
+                    # Click en enlace o botón específico de la fila
+                    clickable = row.locator("a, button, [role='button'], mat-cell").first
+                    if await clickable.count() > 0 and await clickable.is_visible():
+                        await clickable.click()
+                    else:
+                        await row.click()
+                    await page.wait_for_timeout(3500)
+                    return True
 
-            # 2. Si no se encuentra, verificar botón de página siguiente
+            # 2. Si no se encuentra en la página actual, verificar botón de página siguiente
             next_page_btn = page.locator('button.mat-mdc-paginator-navigation-next, button[aria-label="Next page"], button[aria-label="Página siguiente"], button.mat-paginator-navigation-next').first
             
             if await next_page_btn.count() > 0:
@@ -909,7 +930,7 @@ class FactureService:
                 # Avanzar a la siguiente página
                 await next_page_btn.click()
                 current_page_num += 1
-                await page.wait_for_timeout(3000)
+                await page.wait_for_timeout(2500)
             else:
                 break
 

@@ -106,31 +106,31 @@ class InvoiceAIService:
                 from google.genai import types
                 client = genai.Client(api_key=gemini_api_key)
 
-                prompt = """
+                prompt = f"""
                 Eres un auditor contable experto en Facturación Electrónica DIAN de Colombia.
                 Analiza exhaustivamente TODAS las páginas de este documento PDF de Factura Electrónica y extrae un objeto JSON EXACTO con la siguiente estructura:
 
-                {
-                    "emisor": {
-                        "razonSocial": "Nombre o Razón Social del emisor/proveedor",
-                        "nit": "NIT con o sin dígito de verificación (ej: 890935900-6)",
+                {{
+                    "emisor": {{
+                        "razonSocial": "Nombre o Razón Social exacta del emisor/proveedor",
+                        "nit": "NIT con dígito de verificación (ej: 890935900-6)",
                         "telefono": "Teléfono de contacto",
                         "direccion": "Dirección fiscal",
                         "ciudad": "Ciudad / Departamento"
-                    },
-                    "receptor": {
+                    }},
+                    "receptor": {{
                         "razonSocial": "Nombre o Razón Social del comprador (ej: ALIMENTOS ENRIKO SAS)",
                         "nit": "NIT del comprador (ej: 890330035-2)",
                         "direccion": "Dirección fiscal o de entrega",
                         "ciudad": "Ciudad"
-                    },
-                    "numeroFactura": "Número o código de la factura (ej: FS-284740, FE-1092)",
-                    "numeroReferencia": "Número de referencia, orden de compra o pedido (ej: 7509)",
+                    }},
+                    "numeroFactura": "Número exacto de la factura que figura en el encabezado (ej: FS-284740, FE-1092)",
+                    "numeroReferencia": "Número de orden de compra, pedido o referencia (ej: 7509)",
                     "fechaEmision": "YYYY-MM-DD",
                     "horaEmision": "HH:MM",
                     "fechaVencimiento": "YYYY-MM-DD",
                     "formaPago": "Contado o Crédito",
-                    "condicionPago": "Términos de pago (ej: CREDITO 30 DIAS)",
+                    "condicionPago": "Términos de pago exactos (ej: CREDITO 30 DIAS)",
                     "medioPago": "Medio de pago (ej: TRANSFERENCIA, EFECTIVO, CHEQUE)",
                     "moneda": "COP",
                     "subtotalSinIva": 0.0,
@@ -141,19 +141,19 @@ class InvoiceAIService:
                     "itemsConIvaCount": 0,
                     "itemsSinIvaCount": 0,
                     "totalConIva": 0.0,
-                    "retenciones": {
+                    "retenciones": {{
                         "reteFuente": 0.0,
                         "reteIva": 0.0,
                         "reteIca": 0.0,
                         "totalRetenciones": 0.0
-                    },
+                    }},
                     "totalPagarNeto": 0.0,
                     "items": [
-                        {
+                        {{
                             "numeroItem": 1,
-                            "codigo": "Código del producto o servicio (ej: 30006030)",
-                            "descripcion": "Descripción detallada del ítem (ej: CROUTONS CAESAR SUSANITA X 360G (24 PAQUETES))",
-                            "unidadMedida": "UND, KG, PAQ, etc.",
+                            "codigo": "Código o referencia del producto o servicio tal cual aparece en el PDF",
+                            "descripcion": "Descripción LITERAL, COMPLETA Y EXACTA del ítem en el PDF (sin recortar, sin abreviar)",
+                            "unidadMedida": "UND, KG, PAQ, MTR, GLN, HORA, etc.",
                             "cantidad": 1.0,
                             "precioUnitario": 0.0,
                             "porcentajeIva": 0.0,
@@ -163,18 +163,20 @@ class InvoiceAIService:
                             "subtotal": 0.0,
                             "total": 0.0,
                             "tieneIva": false
-                        }
+                        }}
                     ],
-                    "conceptoPrincipalSugerido": "Nombre corto y representativo para el catálogo de proveedores de Alimentos Enriko",
-                    "resumenEjecutivo": "Resumen en una frase del contenido, emisor, ítems y montos totales"
-                }
+                    "conceptoPrincipalSugerido": "Nombre corto y representativo para el catálogo de proveedores",
+                    "resumenEjecutivo": "Resumen en una frase del emisor, ítems y montos totales"
+                }}
 
-                REGLAS CRÍTICAS:
-                1. Extrae CADA UNO de los ítems de la tabla de detalle sin omitir ninguno.
-                2. Extrae con precisión el % IVA de cada ítem (0% si es exento o excluido, 19%, 5%, etc.) y el valor monetario del IVA de cada ítem.
-                3. Cuenta cuántos ítems tienen IVA mayor a 0 (itemsConIvaCount) y cuántos son exentos/sin IVA (itemsSinIvaCount).
-                4. Extrae las fechas en formato ISO (YYYY-MM-DD).
-                5. Devuelve ÚNICAMENTE el bloque JSON válido, sin bloques de markdown extraños ni comentarios.
+                REGLAS CRÍTICAS Y OBLIGATORIAS:
+                1. AISLAMIENTO TOTAL: Analiza ÚNICA Y EXCLUSIVAMENTE este PDF específico. No mezcles datos con ninguna otra factura.
+                2. DESCRIPCIÓN EXACTA DE ÍTEMS: La descripción (`descripcion`) de cada ítem debe ser la MISMA descripción textual que aparece en el PDF, conservando marcas, gramajes, códigos y especificaciones técnicas completas sin resumir.
+                3. CANTIDADES EXACTAS: Extrae la cantidad exacta que figura en la columna 'Cantidad', 'Cant' o 'Qty'. Si la factura tiene 10 unidades, extrae 10.0; si tiene 2.5 unidades, extrae 2.5; si tiene 50 unidades, extrae 50.0. NUNCA pongas 1 por defecto si el PDF indica otra cantidad.
+                4. DISCRIMINACIÓN DE IVA: Extrae con precisión el % IVA de cada ítem (0% si es exento o excluido, 19%, 5%, etc.) y el valor monetario del IVA de cada ítem.
+                5. Extrae CADA UNO de los ítems de la tabla de detalle sin omitir ninguno.
+                6. Extrae las fechas en formato ISO (YYYY-MM-DD).
+                7. Devuelve ÚNICAMENTE el bloque JSON válido, sin bloques de markdown extraños ni comentarios.
                 """
 
                 contents = []
@@ -281,29 +283,59 @@ class InvoiceAIService:
         items = []
         lines = [line.strip() for line in text.split("\n") if line.strip()]
         
-        # Buscar patrones de líneas de detalle
+        # Buscar patrones de líneas de detalle en facturas DIAN
         for line in lines:
-            # Líneas con montos en pesos
-            amt_in_line = re.findall(r"\$\s*([0-9.,]+)|([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2}))", line)
-            if len(amt_in_line) >= 1 and len(line) > 10 and not any(k in line.lower() for k in ["total", "subtotal", "iva", "resoluci", "banco", "cuenta", "pagar"]):
+            # Descartar encabezados o pies de página
+            lower_l = line.lower()
+            if any(k in lower_l for k in ["subtotal", "total factura", "resoluci", "banco", "cuenta de ahorro", "cuenta corriente", "pág.", "pagina", "software"]):
+                continue
+
+            # Buscar montos en pesos en la línea
+            amt_matches = re.findall(r"\$\s*([0-9.,]+)|([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)", line)
+            if amt_matches and len(line) > 8:
+                # Intentar detectar cantidad: número al inicio o columna (ej: '2.00 UND', '10 KG', '5 PAQ', '12 X')
+                cant_m = re.search(r"\b(?:cant(?:idad)?\.?[:\s]*|qty[:\s]*)?([0-9]+(?:[.,][0-9]+)?)\s*(?:UND|KG|PAQ|MTR|GLN|GR|LT|UN|PZA|X\b|\b)", line, re.IGNORECASE)
+                item_cant = 1.0
+                if cant_m:
+                    try:
+                        raw_c = cant_m.group(1).replace(",", ".")
+                        parsed_c = float(raw_c)
+                        if 0 < parsed_c < 100000:
+                            item_cant = parsed_c
+                    except Exception:
+                        item_cant = 1.0
+
                 clean_desc = re.sub(r"[\$\d.,\-_/]{3,}", "", line).strip()
-                if len(clean_desc) >= 4:
-                    items.append({
-                        "descripcion": clean_desc,
-                        "cantidad": 1.0,
-                        "unidadMedida": "UND",
-                        "precioUnitario": subtotal or total_amount,
-                        "porcentajeIva": 19.0 if total_iva > 0 else 0.0,
-                        "valorIva": total_iva,
-                        "subtotal": subtotal or total_amount,
-                        "total": total_amount
-                    })
-                    break
+                # Limpiar prefijos de cantidades si quedaron
+                clean_desc = re.sub(r"^\d+\s*(UND|KG|PAQ|MTR|GLN|GR|LT|UN|PZA)?\s*", "", clean_desc, flags=re.IGNORECASE).strip()
+                
+                if len(clean_desc) >= 3:
+                    # Parsear el último monto como total del ítem
+                    last_amt_str = amt_matches[-1][0] or amt_matches[-1][1]
+                    item_total = cls._parse_currency_str(last_amt_str)
+                    if item_total > 0:
+                        unit_p = round(item_total / item_cant, 2) if item_cant > 0 else item_total
+                        items.append({
+                            "numeroItem": len(items) + 1,
+                            "codigo": f"ITM-{len(items)+1:02d}",
+                            "descripcion": clean_desc,
+                            "cantidad": item_cant,
+                            "unidadMedida": "UND",
+                            "precioUnitario": unit_p,
+                            "porcentajeIva": 19.0 if total_iva > 0 else 0.0,
+                            "valorIva": round(item_total * 0.19, 2) if total_iva > 0 else 0.0,
+                            "subtotal": item_total,
+                            "total": item_total
+                        })
+                    if len(items) >= 20: # Límite razonable para parser determinístico
+                        break
 
         if not items:
             # Crear un ítem por defecto representativo
             desc = basic.get("rawDetail") or f"Servicio / Suministro {issuer}"
             items.append({
+                "numeroItem": 1,
+                "codigo": "ITM-01",
                 "descripcion": desc,
                 "cantidad": 1.0,
                 "unidadMedida": "UND",
@@ -363,7 +395,7 @@ class InvoiceAIService:
 
     @classmethod
     def _normalize_analysis_result(cls, parsed: Dict[str, Any], basic: Dict[str, Any]) -> Dict[str, Any]:
-        """Asegura tipos numéricos y consistencia en el resultado de IA."""
+        """Asegura tipos numéricos y consistencia exacta en el resultado de IA."""
         subtotal = float(parsed.get("subtotalSinIva") or 0.0)
         total_iva = float(parsed.get("totalIva") or 0.0)
         total_con_iva = float(parsed.get("totalConIva") or basic.get("detailAmount") or 0.0)
@@ -372,13 +404,47 @@ class InvoiceAIService:
             total_con_iva = subtotal + total_iva
 
         items = parsed.get("items", [])
+        idx = 1
         for it in items:
-            it["cantidad"] = float(it.get("cantidad") or 1.0)
-            it["precioUnitario"] = float(it.get("precioUnitario") or 0.0)
-            it["subtotal"] = float(it.get("subtotal") or round(it["cantidad"] * it["precioUnitario"], 2))
-            it["valorIva"] = float(it.get("valorIva") or 0.0)
-            it["porcentajeIva"] = float(it.get("porcentajeIva") or (19.0 if it["valorIva"] > 0 else 0.0))
-            it["total"] = float(it.get("total") or round(it["subtotal"] + it["valorIva"], 2))
+            it["numeroItem"] = it.get("numeroItem") or idx
+            idx += 1
+            # Descripción exacta del producto
+            it["descripcion"] = str(it.get("descripcion") or it.get("nombre") or it.get("name") or f"Ítem {idx}").strip()
+            it["codigo"] = str(it.get("codigo") or it.get("code") or "").strip()
+            it["unidadMedida"] = str(it.get("unidadMedida") or it.get("unidad") or "UND").strip()
+
+            # Cantidad exacta
+            cant_val = it.get("cantidad") or it.get("cant") or it.get("quantity") or it.get("qty")
+            try:
+                it["cantidad"] = float(cant_val) if cant_val is not None else 1.0
+            except Exception:
+                it["cantidad"] = 1.0
+
+            try:
+                it["precioUnitario"] = float(it.get("precioUnitario") or 0.0)
+            except Exception:
+                it["precioUnitario"] = 0.0
+
+            try:
+                it["subtotal"] = float(it.get("subtotal") or round(it["cantidad"] * it["precioUnitario"], 2))
+            except Exception:
+                it["subtotal"] = 0.0
+
+            try:
+                it["valorIva"] = float(it.get("valorIva") or 0.0)
+            except Exception:
+                it["valorIva"] = 0.0
+
+            try:
+                it["porcentajeIva"] = float(it.get("porcentajeIva") or (19.0 if it["valorIva"] > 0 else 0.0))
+            except Exception:
+                it["porcentajeIva"] = 0.0
+
+            try:
+                it["total"] = float(it.get("total") or round(it["subtotal"] + it["valorIva"], 2))
+            except Exception:
+                it["total"] = it["subtotal"]
+
             it["tieneIva"] = it["valorIva"] > 0 or it["porcentajeIva"] > 0
 
         items_con_iva = sum(1 for it in items if it.get("tieneIva"))

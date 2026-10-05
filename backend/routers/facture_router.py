@@ -160,15 +160,35 @@ def get_invoice_pdf(document_number: str):
     clean_fname = f"Factura_{clean_doc.replace(' ', '_').replace('/', '_')}.pdf"
     file_path = os.path.join(UPLOADS_DIR, clean_fname)
 
+    # 1. Buscar en BD si tiene pdfPath registrado específicamente para esta factura
     if not os.path.exists(file_path):
-        # Intentar buscar por coincidencia segura en carpeta
+        try:
+            with service.repo.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT pdfPath FROM facture_inbox_documents WHERE documentNumber = %s OR id = %s",
+                        (clean_doc, f"facture-{clean_doc.replace(' ', '-').replace('/', '-')}")
+                    )
+                    row = cur.fetchone()
+                    if row and row.get("pdfPath") and os.path.exists(row["pdfPath"]):
+                        file_path = row["pdfPath"]
+        except Exception:
+            pass
+
+    # 2. Si no se encontró en BD, verificar nombres de archivo normalizados exactos
+    if not os.path.exists(file_path):
+        normalized_target = f"{clean_doc.replace(' ', '_').replace('/', '_')}".lower()
         for fname in os.listdir(UPLOADS_DIR):
-            if clean_doc.lower() in fname.lower() and fname.endswith(".pdf"):
+            f_norm = fname.lower()
+            if (f_norm == f"factura_{normalized_target}.pdf" or 
+                f_norm == f"{normalized_target}.pdf" or
+                f_norm == f"factura_{normalized_target}.zip" or
+                f_norm == f"{normalized_target}.zip"):
                 file_path = os.path.join(UPLOADS_DIR, fname)
                 break
 
     if not os.path.exists(file_path) or not is_safe_path(UPLOADS_DIR, file_path):
-        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado o acceso no autorizado.")
+        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado para este documento.")
 
     # Asegurar que si el archivo es un ZIP contenedor, se sirva el PDF real
     ensure_extracted_pdf(file_path)

@@ -83,6 +83,7 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
   const loadInvoiceInspection = async (docNum: string, forceDownload: boolean = false) => {
     try {
       setInspectingLoading(true);
+      setInspectionData(null);
       const res = await api.inspectAndReadFactureDoc(docNum, forceDownload);
       setInspectionData(res);
     } catch (err: any) {

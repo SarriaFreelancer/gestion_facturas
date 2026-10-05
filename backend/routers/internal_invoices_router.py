@@ -160,19 +160,25 @@ def get_internal_pdf(document_number: str):
     except Exception:
         pass
 
-    # 2. Si no se encontró por BD, buscar en UPLOADS_DIR por nombre exacto o coincidencia
+    # 2. Si no se encontró por BD, buscar por coincidencia exacta normalizada
     if not target_path or not os.path.exists(target_path):
         direct_path = os.path.join(UPLOADS_DIR, clean_doc)
         if os.path.exists(direct_path):
             target_path = direct_path
         else:
+            normalized_target = f"{clean_doc.replace(' ', '_').replace('/', '_')}".lower()
             for fname in os.listdir(UPLOADS_DIR):
-                if clean_doc.lower() in fname.lower() and (fname.endswith(".pdf") or fname.endswith(".zip")):
+                f_norm = fname.lower()
+                if (f_norm == f"factura_{normalized_target}.pdf" or 
+                    f_norm == f"{normalized_target}.pdf" or 
+                    f_norm == f"internal_{normalized_target}.pdf" or
+                    f_norm == f"factura_{normalized_target}.zip" or
+                    f_norm == f"{normalized_target}.zip"):
                     target_path = os.path.join(UPLOADS_DIR, fname)
                     break
 
     if not target_path or not os.path.exists(target_path) or not is_safe_path(UPLOADS_DIR, target_path):
-        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado")
+        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado para este documento.")
 
     from backend.services.facture_service import ensure_extracted_pdf
     ensure_extracted_pdf(target_path)
