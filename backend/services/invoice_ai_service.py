@@ -186,21 +186,26 @@ class InvoiceAIService:
                     contents.append(f"\n--- TEXTO EXTRAÍDO DEL DOCUMENTO ---\n{text[:15000]}")
                 contents.append(prompt)
 
-                # Intentar con modelos de alta disponibilidad de Google Gemini
+                # Intentar con modelos de alta disponibilidad y baja latencia de Google Gemini
                 candidate_models = [
-                    "gemini-3.8-flash", 
-                    "gemini-flash-latest", 
-                    "gemini-3.7-flash", 
-                    "gemini-3.5-flash", 
-                    "gemini-2.5-flash-lite", 
-                    "gemini-flash-lite-latest"
+                    "gemini-2.5-flash",
+                    "gemini-2.5-flash-lite",
+                    "gemini-2.0-flash",
+                    "gemini-flash-latest",
+                    "gemini-3.7-flash",
+                    "gemini-3.5-flash",
+                    "gemini-3.8-flash"
                 ]
                 raw_resp = None
                 for model_name in candidate_models:
                     try:
                         response = client.models.generate_content(
                             model=model_name,
-                            contents=contents
+                            contents=contents,
+                            config=types.GenerateContentConfig(
+                                temperature=0.1,
+                                response_mime_type="application/json"
+                            )
                         )
                         if response and response.text:
                             raw_resp = response.text.strip()
