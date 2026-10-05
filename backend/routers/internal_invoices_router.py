@@ -102,7 +102,14 @@ async def upload_and_analyze_pdf(file: UploadFile = File(...)):
         with open(dest_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Analizar con IA Multimodal
+        file_size = os.path.getsize(dest_path) if os.path.exists(dest_path) else 0
+        if file_size < 100:
+            if os.path.exists(dest_path):
+                try: os.remove(dest_path)
+                except Exception: pass
+            raise HTTPException(status_code=400, detail="El archivo está vacío o no es un PDF válido. Se canceló la lectura IA para evitar gasto de tokens.")
+
+        # Analizar con IA Multimodal (solo con PDF válido)
         analysis = InvoiceAIService.analyze_invoice_pdf(dest_path)
 
         return {
@@ -110,8 +117,11 @@ async def upload_and_analyze_pdf(file: UploadFile = File(...)):
             "filename": clean_name,
             "originalName": orig_name,
             "pdfPath": dest_path,
+            "pdfAvailable": True,
             "analysis": analysis
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analizando archivo con IA: {str(e)}")
 

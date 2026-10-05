@@ -775,7 +775,35 @@ class FactureService:
             except Exception as e:
                 print(f"Error descargando PDF en vivo: {e}")
 
-        # 2. Análisis con IA y extracción de texto
+        # 2. Validación de disponibilidad del PDF físico antes de llamar a la IA
+        pdf_exists = os.path.exists(dest_pdf_path) and os.path.getsize(dest_pdf_path) > 100
+
+        if not pdf_exists:
+            # Si el PDF no está disponible, NO consumimos tokens de Gemini AI
+            print(f"⚠️ Factura {clean_doc}: PDF no disponible. Omitiendo lectura con IA para no gastar tokens.")
+            analysis = InvoiceAIService._deterministic_invoice_parser("", doc_data)
+            analysis["aiSkipped"] = True
+            analysis["aiReason"] = "El visor no encontró el archivo PDF físico de la factura. Se omitió la llamada a IA para proteger tokens."
+
+            supplier_match = self.match_supplier_and_concept(
+                issuer_name=doc_data.get("issuerName") or "",
+                issuer_nit=doc_data.get("issuerNit") or "",
+                amount=float(doc_data.get("detailAmount") or 0.0),
+                raw_detail=doc_data.get("rawDetail") or ""
+            )
+
+            return {
+                "success": True,
+                "documentNumber": clean_doc,
+                "analysis": analysis,
+                "supplierMatch": supplier_match,
+                "pdfAvailable": False,
+                "aiSkipped": True,
+                "message": "El visor no encontró el archivo PDF de la factura. Se omitió la lectura con IA para no consumir tokens.",
+                "pdfUrl": None
+            }
+
+        # 2. Análisis con IA Multimodal (solo si el PDF existe y tiene contenido válido)
         analysis = InvoiceAIService.analyze_invoice_pdf(dest_pdf_path, doc_data)
 
         # 3. Matching de Proveedor y Concepto
@@ -817,7 +845,8 @@ class FactureService:
             "documentNumber": clean_doc,
             "analysis": analysis,
             "supplierMatch": supplier_match,
-            "pdfAvailable": os.path.exists(dest_pdf_path),
+            "pdfAvailable": True,
+            "aiSkipped": bool(analysis.get("aiSkipped", False)),
             "pdfUrl": f"/uploads/invoices/{expected_pdf_name}" if os.path.exists(dest_pdf_path) else None
         }
 

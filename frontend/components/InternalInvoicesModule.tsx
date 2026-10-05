@@ -712,12 +712,26 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({
             <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-0 overflow-y-auto lg:overflow-hidden">
               
               {/* VISOR DE PDF */}
-              <div className="lg:col-span-7 bg-slate-100 dark:bg-zinc-950 p-2 sm:p-4 flex flex-col h-[380px] sm:h-[480px] lg:h-full border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-zinc-800 flex-shrink-0">
-                <iframe
-                  src={`${API_BASE_URL}/internal-invoices/pdf/${encodeURIComponent(selectedInvoice.documentNumber)}`}
-                  className="w-full h-full rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-inner bg-white"
-                  title="Visor PDF Factura"
-                />
+              <div className="lg:col-span-7 bg-slate-100 dark:bg-zinc-950 p-2 sm:p-4 flex flex-col h-[380px] sm:h-[480px] lg:h-full border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-zinc-800 flex-shrink-0 justify-center items-center">
+                {selectedInvoice.pdfPath ? (
+                  <iframe
+                    src={`${API_BASE_URL}/internal-invoices/pdf/${encodeURIComponent(selectedInvoice.documentNumber)}`}
+                    className="w-full h-full rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-inner bg-white"
+                    title="Visor PDF Factura"
+                  />
+                ) : (
+                  <div className="p-6 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <p className="font-extrabold text-sm text-slate-800 dark:text-zinc-200">
+                      Sin archivo PDF adjunto
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm">
+                      Esta factura fue registrada sin adjuntar un archivo PDF físico. La lectura con IA se omitió para proteger tokens.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* DETALLES EXTRAÍDOS CON IA Y CONTROL DE EVENTOS */}

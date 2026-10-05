@@ -7,6 +7,7 @@ import {
   Search, 
   CheckCircle2, 
   AlertCircle, 
+  AlertTriangle,
   FileText, 
   Download, 
   Building2, 
@@ -967,14 +968,42 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                     </div>
                   </div>
 
-                  {/* VISOR DE PDF EMBEBIDO */}
-                  <div className="w-full h-[380px] sm:h-[500px] lg:h-[580px] rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden bg-slate-900 shadow-inner relative flex flex-col items-center justify-center">
-                    <iframe
-                      src={`http://127.0.0.1:8000/api/facture/pdf/${encodeURIComponent(targetDocNumber)}#toolbar=1&navpanes=0`}
-                      className="w-full h-full rounded-2xl border-0"
-                      title={`Visor PDF Factura ${targetDocNumber}`}
-                    />
-                  </div>
+                  {/* VISOR DE PDF EMBEBIDO O AVISO DE PDF NO DISPONIBLE */}
+                  {inspectionData && inspectionData.pdfAvailable === false ? (
+                    <div className="w-full h-[380px] sm:h-[500px] lg:h-[580px] rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20 p-6 flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-md">
+                        <AlertTriangle className="w-7 h-7" />
+                      </div>
+                      <div className="max-w-md space-y-2">
+                        <h4 className="text-base font-black text-slate-900 dark:text-white">
+                          Visor de PDF no disponible
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
+                          No se encontró el archivo PDF físico de esta factura en Facture.co ni en el almacenamiento local.
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold border border-emerald-300 dark:border-emerald-800">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Lectura IA omitida automáticamente (Tokens Protegidos)</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => loadInvoiceInspection(targetDocNumber, true)}
+                        className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-extrabold text-xs flex items-center gap-2 shadow-md hover:opacity-90 transition-all cursor-pointer"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${inspectingLoading ? 'animate-spin' : ''}`} />
+                        <span>Reintentar descarga desde Facture.co</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full h-[380px] sm:h-[500px] lg:h-[580px] rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden bg-slate-900 shadow-inner relative flex flex-col items-center justify-center">
+                      <iframe
+                        src={`http://127.0.0.1:8000/api/facture/pdf/${encodeURIComponent(targetDocNumber)}#toolbar=1&navpanes=0`}
+                        className="w-full h-full rounded-2xl border-0"
+                        title={`Visor PDF Factura ${targetDocNumber}`}
+                      />
+                    </div>
+                  )}
 
                   {/* PIE DE PÁGINA CON RESUMEN FINANCIERO RÁPIDO */}
                   {inspectionData?.analysis && (
@@ -1032,6 +1061,18 @@ export const FactureModule: React.FC<FactureModuleProps> = ({ onInvoicesUpdated 
                     </div>
                   ) : inspectionData?.analysis ? (
                     <>
+                      {/* AVISO DE PROTECCIÓN DE TOKENS SI SE OMITIÓ LA IA */}
+                      {(inspectionData?.aiSkipped || inspectionData?.pdfAvailable === false) && (
+                        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 flex items-start gap-3 text-xs text-amber-800 dark:text-amber-300">
+                          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <p className="font-black text-amber-900 dark:text-amber-200">Lectura con IA omitida — Protección de Tokens Activa</p>
+                            <p className="text-[11px] opacity-90 leading-relaxed">
+                              El visor no encontró el archivo PDF físico de este documento. Para no desperdiciar tokens de Google Gemini AI leyendo un archivo inexistente, se muestran únicamente los datos base del encabezado.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       {/* INFORMACIÓN DE ENCABEZADO: FECHAS, REFERENCIA Y EMISOR */}
                       <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                         <div>
