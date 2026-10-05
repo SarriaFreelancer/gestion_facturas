@@ -912,12 +912,24 @@ class FactureService:
             except Exception:
                 pass
 
+    @staticmethod
+    def _normalize_doc_id(val: str) -> str:
+        """Normaliza un identificador de documento para comparación exacta (ej: 'FAC-FS284740' -> 'FS284740', 'FS 284740' -> 'FS284740')."""
+        if not val:
+            return ""
+        clean = re.sub(r"[^A-Za-z0-9]", "", val).upper()
+        for prefix in ["FACTURADEVENTA", "FACTURA", "FAC", "NOTACREDITO", "NOTA", "NC"]:
+            if clean.startswith(prefix) and len(clean) > len(prefix):
+                clean = clean[len(prefix):]
+        return clean
+
     async def _find_and_open_invoice_with_pagination(self, page, target_doc_number: str, max_pages: int = 15) -> bool:
         """
-        Busca un documento específico en la tabla de Recibidos con COINCIDENCIA EXACTA.
+        Busca un documento específico en la tabla de Recibidos con COINCIDENCIA EXACTA NORMALIZADA.
         Si no se encuentra en la página actual, navega por el paginador hasta encontrarlo.
         """
         clean_target = target_doc_number.strip().upper()
+        target_norm = self._normalize_doc_id(clean_target)
         current_page_num = 1
 
         while current_page_num <= max_pages:
@@ -935,8 +947,9 @@ class FactureService:
                 
                 for c in range(cell_count):
                     try:
-                        txt = (await cells.nth(c).inner_text()).strip().upper()
-                        if txt == clean_target:
+                        cell_raw = (await cells.nth(c).inner_text()).strip()
+                        cell_norm = self._normalize_doc_id(cell_raw)
+                        if (cell_norm and cell_norm == target_norm) or (cell_raw.upper() == clean_target):
                             matched = True
                             break
                     except Exception:
@@ -946,7 +959,7 @@ class FactureService:
                     self.add_audit_log(
                         action_type="INVOICE_LOCATED",
                         status="INFO",
-                        message=f"Documento {clean_target} localizado de forma exacta en la página {current_page_num} de Recibidos.",
+                        message=f"Documento {clean_target} (norm: {target_norm}) localizado de forma exacta en la página {current_page_num} de Facture.",
                         doc_number=clean_target
                     )
                     # Click en enlace o botón específico de la fila
