@@ -72,7 +72,7 @@ class InvoiceAIService:
 
         # 0. Guardia de protección de tokens: Si el PDF no existe o está vacío, NO llamar a la IA
         if not pdf_path or not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100:
-            print(f"⚠️ PDF '{pdf_path}' no encontrado o vacío. Se cancela la invocación de Gemini AI para proteger tokens.")
+            print(f"[AVISO] PDF '{pdf_path}' no encontrado o vacío. Se cancela la invocación de Gemini AI para proteger tokens.")
             res = cls._deterministic_invoice_parser("", basic)
             res["aiSkipped"] = True
             res["aiReason"] = "No se encontró el archivo PDF físico en el visor. Se omitió la IA para ahorrar tokens."
@@ -82,7 +82,7 @@ class InvoiceAIService:
         text = cls.extract_text_from_pdf(pdf_path)
 
         if not pdf_bytes and not text.strip():
-            print(f"⚠️ El archivo PDF '{pdf_path}' no contiene bytes ni texto válido. Se omite llamada a Gemini AI.")
+            print(f"[AVISO] El archivo PDF '{pdf_path}' no contiene bytes ni texto válido. Se omite llamada a Gemini AI.")
             res = cls._deterministic_invoice_parser("", basic)
             res["aiSkipped"] = True
             res["aiReason"] = "El PDF no tiene páginas o texto legible. Se omitió la llamada a IA."

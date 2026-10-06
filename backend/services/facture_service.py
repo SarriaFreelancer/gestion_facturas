@@ -704,7 +704,7 @@ class FactureService:
                 clean_num_only = re.sub(r"^[A-Z\-_]+", "", clean_doc).strip()
                 # Si el PDF existente no contiene ni el código completo ni el número de la factura
                 if clean_doc.upper() not in pdf_text.upper() and (clean_num_only and clean_num_only not in pdf_text):
-                    print(f"⚠️ El PDF en disco {dest_pdf_path} no corresponde a la factura {clean_doc}. Eliminando archivo cruzado para re-descargar.")
+                    print(f"[AVISO] El PDF en disco {dest_pdf_path} no corresponde a la factura {clean_doc}. Eliminando archivo cruzado para re-descargar.")
                     try: os.remove(dest_pdf_path)
                     except Exception: pass
             except Exception as e:
@@ -819,7 +819,7 @@ class FactureService:
 
         if not pdf_exists:
             # Si el PDF no está disponible, NO consumimos tokens de Gemini AI
-            print(f"⚠️ Factura {clean_doc}: PDF no disponible. Omitiendo lectura con IA para no gastar tokens.")
+            print(f"[AVISO] Factura {clean_doc}: PDF no disponible. Omitiendo lectura con IA para no gastar tokens.")
             analysis = InvoiceAIService._deterministic_invoice_parser("", doc_data)
             analysis["aiSkipped"] = True
             analysis["aiReason"] = "El visor no encontró el archivo PDF físico de la factura. Se omitió la llamada a IA para proteger tokens."
