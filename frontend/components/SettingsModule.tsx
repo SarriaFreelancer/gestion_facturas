@@ -5,7 +5,6 @@ import {
   Settings, 
   Mail, 
   Save, 
-  Sparkles, 
   CheckCircle2, 
   Building2, 
   Shield, 
@@ -28,13 +27,15 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { notifySuccess, notifyError } from '../lib/alerts';
-import { EmailSettings } from '../app/types';
+import type { EmailSettings, User } from '../app/types';
 
 interface SettingsModuleProps {
   onSettingsUpdated?: () => void;
+  currentUser?: User | null;
 }
 
-export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdated }) => {
+export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdated, currentUser }) => {
+  const isSuperAdmin = currentUser?.role === 'superadmin';
   const [activeTab, setActiveTab] = useState<'email' | 'facture' | 'ai' | 'portal'>('email');
 
   // Email / SMTP Settings State
@@ -49,7 +50,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   const [outlookEnabled, setOutlookEnabled] = useState(true);
   const [smtpHost, setSmtpHost] = useState('smtp.office365.com');
   const [smtpPort, setSmtpPort] = useState('587');
-  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpUser, setSmtpUser] = useState('juan.cuero@enriko.com.co');
   const [smtpPassword, setSmtpPassword] = useState('');
   
   // AI Settings State
@@ -62,8 +63,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
   const [testingAi, setTestingAi] = useState(false);
   const [aiStatusMessage, setAiStatusMessage] = useState<string | null>(null);
 
-  // Portal Proveedores Settings State
+  // Portal Proveedores & Módulos TI Settings State
   const [portalEnabled, setPortalEnabled] = useState(true);
+  const [inventoryEnabled, setInventoryEnabled] = useState(true);
+  const [categoriesEnabled, setCategoriesEnabled] = useState(true);
   const [defaultClientName, setDefaultClientName] = useState('ALIMENTOS ENRIKO SAS');
   const [defaultClientNit, setDefaultClientNit] = useState('890330035');
 
@@ -88,6 +91,12 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    if (!isSuperAdmin && activeTab === 'ai') {
+      setActiveTab('email');
+    }
+  }, [isSuperAdmin, activeTab]);
+
   const loadSettings = async () => {
     try {
       setLoading(true);
@@ -111,7 +120,13 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
           setOutlookEnabled(Boolean(emailData.outlookIntegrationEnabled));
         }
         if (emailData.portalEnabled !== undefined) {
-          setPortalEnabled(Boolean(emailData.portalEnabled));
+          setPortalEnabled(Boolean(Number(emailData.portalEnabled)));
+        }
+        if (emailData.inventoryEnabled !== undefined) {
+          setInventoryEnabled(Boolean(Number(emailData.inventoryEnabled)));
+        }
+        if (emailData.categoriesEnabled !== undefined) {
+          setCategoriesEnabled(Boolean(Number(emailData.categoriesEnabled)));
         }
         if (emailData.defaultClientName) setDefaultClientName(emailData.defaultClientName);
         if (emailData.defaultClientNit) setDefaultClientNit(emailData.defaultClientNit);
@@ -159,6 +174,8 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         smtpUser: smtpUser.trim(),
         smtpPassword: smtpPassword.trim(),
         portalEnabled: portalEnabled ? 1 : 0,
+        inventoryEnabled: inventoryEnabled ? 1 : 0,
+        categoriesEnabled: categoriesEnabled ? 1 : 0,
         defaultClientName: defaultClientName.trim(),
         defaultClientNit: defaultClientNit.trim(),
         geminiApiKey: geminiApiKey.trim()
@@ -192,6 +209,8 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         smtpUser: smtpUser.trim(),
         smtpPassword: smtpPassword.trim(),
         portalEnabled: portalEnabled ? 1 : 0,
+        inventoryEnabled: inventoryEnabled ? 1 : 0,
+        categoriesEnabled: categoriesEnabled ? 1 : 0,
         defaultClientName: defaultClientName.trim(),
         defaultClientNit: defaultClientNit.trim(),
         geminiApiKey: geminiApiKey.trim()
@@ -246,6 +265,8 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         smtpUser: smtpUser.trim(),
         smtpPassword: smtpPassword.trim(),
         portalEnabled: portalEnabled ? 1 : 0,
+        inventoryEnabled: inventoryEnabled ? 1 : 0,
+        categoriesEnabled: categoriesEnabled ? 1 : 0,
         defaultClientName: defaultClientName.trim(),
         defaultClientNit: defaultClientNit.trim(),
         geminiApiKey: geminiApiKey.trim(),
@@ -298,14 +319,16 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         smtpUser: smtpUser.trim(),
         smtpPassword: smtpPassword.trim(),
         portalEnabled: portalEnabled ? 1 : 0,
+        inventoryEnabled: inventoryEnabled ? 1 : 0,
+        categoriesEnabled: categoriesEnabled ? 1 : 0,
         defaultClientName: defaultClientName.trim(),
         defaultClientNit: defaultClientNit.trim(),
         geminiApiKey: geminiApiKey.trim()
       });
-      notifySuccess('Portal de Proveedores', `Módulo de facturas internas ${portalEnabled ? 'HABILITADO' : 'INHABILITADO'} correctamente.`);
+      notifySuccess('Configuración de Módulos', 'Módulos y Portal de Proveedores actualizados correctamente.');
       if (onSettingsUpdated) onSettingsUpdated();
     } catch (err: any) {
-      notifyError('Error al guardar Portal', err.message);
+      notifyError('Error al guardar configuración', err.message);
     } finally {
       setSavingPortal(false);
     }
@@ -322,7 +345,6 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
           <div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2 flex-wrap">
               <span>Centro de Configuración Integral</span>
-              <Sparkles className="w-4 h-4 text-amber-500" />
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
               Administración de servicios de Correo, Facture.co DIAN, Inteligencia Artificial Multimodal y Portal de Proveedores.
@@ -366,17 +388,19 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
           <span>2. Facture.co & DIAN</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('ai')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
-            activeTab === 'ai'
-              ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-sm border border-slate-200/80 dark:border-zinc-700'
-              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Cpu className="w-4 h-4 text-purple-500" />
-          <span>3. Inteligencia Artificial (Gemini)</span>
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
+              activeTab === 'ai'
+                ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-sm border border-slate-200/80 dark:border-zinc-700'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Cpu className="w-4 h-4 text-purple-500" />
+            <span>3. Inteligencia Artificial (Superadmin)</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('portal')}
@@ -387,7 +411,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
           }`}
         >
           <FileCheck2 className="w-4 h-4 text-emerald-500" />
-          <span>4. Portal Proveedores & Radicación</span>
+          <span>4. Módulos & Portal Proveedores</span>
         </button>
       </div>
 
@@ -516,16 +540,30 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1">
-                    Usuario / Correo Remitente
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Correo Remitente Outlook / M365 <span className="text-red-500">*</span>
+                    </label>
+                    {smtpUser && smtpUser.includes('@') ? (
+                      <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/40">
+                        ✓ Configurado
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                        Falta remitente
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={smtpUser}
                     onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="notificaciones@alimentosenriko.com"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs font-mono"
+                    placeholder="juan.cuero@enriko.com.co"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs font-mono font-bold"
                   />
+                  <p className="text-[9.5px] text-slate-400 mt-1">
+                    Remitente oficial para envío directo desde el sistema vía Outlook: <strong>juan.cuero@enriko.com.co</strong>
+                  </p>
                 </div>
 
                 <div>
@@ -708,23 +746,36 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         </div>
       )}
 
-      {/* CONTENIDO DEL SUB-MÓDULO 3: INTELIGENCIA ARTIFICIAL (GEMINI) */}
-      {activeTab === 'ai' && (
+      {/* CONTENIDO DEL SUB-MÓDULO 3: INTELIGENCIA ARTIFICIAL (GEMINI) - EXCLUSIVO SUPERADMIN */}
+      {isSuperAdmin && activeTab === 'ai' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form onSubmit={handleSaveAi} className="lg:col-span-8 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm space-y-5">
             <div className="border-b border-slate-100 dark:border-zinc-800 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-sm">
                 <Cpu className="w-4 h-4 text-purple-600" />
-                <span>Motor de Inteligencia Artificial Multimodal (Google Gemini)</span>
+                <span>Motor de Inteligencia Artificial & Lectura de PDFs</span>
               </div>
               <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
-                Lectura Total de Páginas PDF
+                Solo Superadmin
               </span>
+            </div>
+
+            {/* BANNER EXCLUSIVO SUPERADMIN */}
+            <div className="p-4 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-start gap-3">
+              <Shield className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-black text-purple-950 dark:text-purple-200 block uppercase tracking-wide">
+                  Configuración Exclusiva de Superadmin — API Key de Lectura Inteligente
+                </span>
+                <p className="text-[11px] text-purple-900/80 dark:text-purple-300 mt-1 leading-relaxed">
+                  Esta es la API Key activa de <strong>Google Gemini</strong> que utiliza el sistema para la <strong>Lectura Inteligente de PDFs</strong> y el <strong>Consenso Multi-Lectura</strong> en segundo plano. Puedes cambiarla o actualizarla en cualquier momento aquí y hacer clic en <strong>Probar Conexión con IA</strong> antes de guardar.
+                </p>
+              </div>
             </div>
 
             <div className="space-y-3">
               <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
-                Google Gemini API Key <span className="text-purple-500">*</span>
+                Google Gemini API Key (Lectura Inteligente) <span className="text-purple-500">*</span>
               </label>
               
               <div className="relative">
@@ -821,8 +872,8 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
                 disabled={testingAi}
                 className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-bold text-xs flex items-center gap-2 cursor-pointer transition-all border border-purple-200 dark:border-purple-800"
               >
-                <Sparkles className={`w-3.5 h-3.5 ${testingAi ? 'animate-spin' : ''}`} />
-                <span>{testingAi ? 'Verificando con Gemini...' : 'Probar Conexión con IA'}</span>
+                <Cpu className={`w-3.5 h-3.5 ${testingAi ? 'animate-spin' : ''}`} />
+                <span>{testingAi ? 'Verificando motor IA...' : 'Probar Conexión con IA'}</span>
               </button>
 
               <button
@@ -852,32 +903,132 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ onSettingsUpdate
         </div>
       )}
 
-      {/* CONTENIDO DEL SUB-MÓDULO 4: PORTAL DE PROVEEDORES & RADICACIÓN */}
+      {/* CONTENIDO DEL SUB-MÓDULO 4: GESTIÓN DE MÓDULOS & PORTAL DE PROVEEDORES */}
       {activeTab === 'portal' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form onSubmit={handleSavePortal} className="lg:col-span-8 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm space-y-5">
             <div className="border-b border-slate-100 dark:border-zinc-800 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-sm">
                 <FileCheck2 className="w-4 h-4 text-emerald-600" />
-                <span>Portal de Radicación Interna de Proveedores</span>
+                <span>Gestión de Módulos del Sistema & Portal de Proveedores</span>
               </div>
-              <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md ${
-                portalEnabled 
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' 
-                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
-              }`}>
-                {portalEnabled ? 'Módulo Habilitado' : 'Módulo Inhabilitado'}
-              </span>
             </div>
 
-            {/* SWITCH HABILITAR / INHABILITAR */}
+            {/* SWITCHES EXCLUSIVOS PARA SUPERADMIN: INVENTARIO TI Y CATEGORÍAS TI */}
+            {isSuperAdmin && (
+              <div className="space-y-4 pt-1 pb-1">
+                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                  <Shield className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span className="leading-relaxed">
+                    <strong>Control Global Superadmin:</strong> Al inhabilitar estos módulos se ocultarán automáticamente en el menú lateral para <strong>todos los usuarios y roles</strong> del sistema.
+                  </span>
+                </div>
+
+                {/* SWITCH 1: INVENTARIO TI */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                        Módulo Inventario TI
+                      </h4>
+                      <span className={`text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded ${
+                        inventoryEnabled 
+                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' 
+                          : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                      }`}>
+                        {inventoryEnabled ? 'Habilitado' : 'Inhabilitado'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      Habilita o deshabilita en la barra lateral el acceso a inventario de activos tecnológicos, préstamos y seriales.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setInventoryEnabled(!inventoryEnabled)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                      inventoryEnabled 
+                        ? 'bg-emerald-600 text-white shadow-sm' 
+                        : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    {inventoryEnabled ? (
+                      <>
+                        <ToggleRight className="w-5 h-5" />
+                        <span>Habilitado</span>
+                      </>
+                    ) : (
+                      <>
+                        <ToggleLeft className="w-5 h-5" />
+                        <span>Inhabilitado</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* SWITCH 2: CATEGORÍAS TI */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                        Módulo Categorías TI
+                      </h4>
+                      <span className={`text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded ${
+                        categoriesEnabled 
+                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' 
+                          : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                      }`}>
+                        {categoriesEnabled ? 'Habilitado' : 'Inhabilitado'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      Habilita o deshabilita la administración de familias y categorías de tecnología.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setCategoriesEnabled(!categoriesEnabled)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                      categoriesEnabled 
+                        ? 'bg-emerald-600 text-white shadow-sm' 
+                        : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    {categoriesEnabled ? (
+                      <>
+                        <ToggleRight className="w-5 h-5" />
+                        <span>Habilitado</span>
+                      </>
+                    ) : (
+                      <>
+                        <ToggleLeft className="w-5 h-5" />
+                        <span>Inhabilitado</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* SWITCH 3: PORTAL DE RADICACIÓN DE PROVEEDORES */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700">
               <div>
-                <h4 className="text-xs font-black text-slate-900 dark:text-white">
-                  Habilitar Módulo y Subida de Facturas de Proveedores
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                    Portal de Radicación Interna de Proveedores
+                  </h4>
+                  <span className={`text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded ${
+                    portalEnabled 
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' 
+                      : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                  }`}>
+                    {portalEnabled ? 'Habilitado' : 'Inhabilitado'}
+                  </span>
+                </div>
                 <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                  Permite acceder a la Bandeja de Facturas Internas y subir Facturas de Venta o Notas Crédito (a crédito o contado).
+                  Permite acceder a la Bandeja de Facturas Internas y subir Facturas de Venta o Notas Crédito.
                 </p>
               </div>
 

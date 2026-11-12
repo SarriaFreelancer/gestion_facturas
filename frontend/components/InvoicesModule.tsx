@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FileText, 
   Search, 
@@ -15,12 +15,15 @@ import {
   Hash,
   Pencil,
   FileSpreadsheet,
-  Mail
+  Mail,
+  Users
 } from 'lucide-react';
-import { Invoice } from '../app/types';
+import { Invoice, Supplier, User } from '../app/types';
 
 interface InvoicesModuleProps {
   invoices: Invoice[];
+  suppliers?: Supplier[];
+  currentUser?: User;
   onUpdateField: (id: string, field: string, value: any) => void;
   onDeleteInvoice: (id: string) => void;
   onEditInvoice?: (invoice: Invoice) => void;
@@ -98,6 +101,8 @@ const ValueInputCell: React.FC<{
 
 export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   invoices,
+  suppliers = [],
+  currentUser,
   onUpdateField,
   onDeleteInvoice,
   onEditInvoice,
@@ -106,11 +111,49 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   selectedMonth,
   selectedYear
 }) => {
+  const isSuperAdmin = currentUser?.role === 'superadmin';
+  const userArea = currentUser?.area || 'General';
+  // Priorizar siempre mostrar primero la información de proveedores asociados a mi área
+  const [supplierScope, setSupplierScope] = useState<'my_area' | 'all'>(
+    !isSuperAdmin && userArea !== 'General' && userArea !== 'Dirección General' ? 'my_area' : 'all'
+  );
+
   const [currentTab, setCurrentTab] = useState<'Todos' | 'Facturas' | 'Cotizaciones'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+  // Filtro de estado de entrega: 'pendientes' (por defecto oculta las ya entregadas y enviadas), 'entregadas' o 'todas'
+  const [deliveryFilter, setDeliveryFilter] = useState<'pendientes' | 'entregadas' | 'todas'>('pendientes');
+
+  // Identifica si una factura ya fue entregada y además enviada por correo
+  const isDeliveredAndSent = (inv: Invoice) => {
+    return (inv.delivered || '').toUpperCase() === 'SÍ' && (inv.emailSent || '').toUpperCase() === 'SÍ';
+  };
 
   const deliveredCount = invoices.filter(i => (i.delivered || '').toUpperCase() === 'SÍ').length;
   const pendingEmailCount = invoices.filter(i => (i.delivered || '').toUpperCase() === 'SÍ' && (i.emailSent || '').toUpperCase() !== 'SÍ').length;
+
+  const myAreaInvoicesCount = useMemo(() => {
+    if (!userArea || userArea === 'General' || userArea === 'Dirección General') return invoices.length;
+    const userAreaLower = userArea.toLowerCase();
+    return invoices.filter(inv => {
+      const invArea = (inv.area || '').toLowerCase();
+      if (invArea && (invArea === userAreaLower || invArea.includes(userAreaLower))) return true;
+      return (suppliers || []).some(s => {
+        if ((s.name || '').toLowerCase() === (inv.supplier || '').toLowerCase()) {
+          const sArea = (s.area || '').toLowerCase();
+          return sArea.includes(userAreaLower) || sArea === 'general' || sArea === 'todas';
+        }
+        return false;
+      });
+    }).length;
+  }, [invoices, userArea, suppliers]);
+
+  const pendingCount = useMemo(() => {
+    return invoices.filter(i => !isDeliveredAndSent(i)).length;
+  }, [invoices]);
+
+  const deliveredAndSentCount = useMemo(() => {
+    return invoices.filter(i => isDeliveredAndSent(i)).length;
+  }, [invoices]);
 
   // Función utilitaria para fecha de hoy en formato YYYY-MM-DD
   const getTodayFormatted = () => {
@@ -139,10 +182,30 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   };
 
   const filteredInvoices = invoices.filter(inv => {
+    // Filtro de alcance de proveedores (Prioridad: Mi Área primero, luego Todos)
+    if (supplierScope === 'my_area' && userArea && userArea !== 'General' && userArea !== 'Dirección General') {
+      const invArea = (inv.area || '').toLowerCase();
+      const userAreaLower = userArea.toLowerCase();
+      const matchesArea = invArea && (invArea === userAreaLower || invArea.includes(userAreaLower));
+      const matchesSupplier = (suppliers || []).some(s => {
+        if ((s.name || '').toLowerCase() === (inv.supplier || '').toLowerCase()) {
+          const sArea = (s.area || '').toLowerCase();
+          return sArea.includes(userAreaLower) || sArea === 'general' || sArea === 'todas';
+        }
+        return false;
+      });
+      if (!matchesArea && !matchesSupplier) return false;
+    }
+
     // Filtro de Tab
     const isCot = (inv.invoiceNumber || '').toUpperCase().startsWith('COT') || (inv.service || '').toUpperCase().startsWith('COT');
     if (currentTab === 'Facturas' && isCot) return false;
     if (currentTab === 'Cotizaciones' && !isCot) return false;
+
+    // Filtro de Entrega y Envío por Correo (Oculta por defecto las facturas ya entregadas y enviadas)
+    const isFinished = isDeliveredAndSent(inv);
+    if (deliveryFilter === 'pendientes' && isFinished) return false;
+    if (deliveryFilter === 'entregadas' && !isFinished) return false;
 
     // Filtro de Búsqueda
     const term = searchTerm.toLowerCase();
@@ -210,24 +273,107 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
       </div>
 
       {/* TABS Y BUSCADOR */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6">
-        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-x-auto">
-          {(['Todos', 'Facturas', 'Cotizaciones'] as const).map(tab => (
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 sm:gap-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* SELECTOR DE ALCANCE: PROVEEDORES DE MI ÁREA PRIMERO, SEGUNDA OPCIÓN TODOS */}
+          {userArea && userArea !== 'General' && userArea !== 'Dirección General' && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-x-auto">
+              <button
+                onClick={() => setSupplierScope('my_area')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  supplierScope === 'my_area'
+                    ? 'bg-red-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title={`Mostrar primero las facturas de proveedores asociados a ${userArea}`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Proveedores de mi Área ({userArea})</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  supplierScope === 'my_area' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+                }`}>
+                  {myAreaInvoicesCount}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setSupplierScope('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  supplierScope === 'all'
+                    ? 'bg-red-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Mostrar facturas de todos los proveedores"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Todos los Proveedores</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  supplierScope === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+                }`}>
+                  {invoices.length}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* TABS TIPO DE DOCUMENTO */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-x-auto">
+            {(['Todos', 'Facturas', 'Cotizaciones'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setCurrentTab(tab)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer text-center whitespace-nowrap ${
+                  currentTab === tab 
+                    ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-sm shadow-red-600/20' 
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* FILTRO DE ESTADO DE ENTREGA Y ENVÍO POR CORREO */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-x-auto">
             <button
-              key={tab}
-              onClick={() => setCurrentTab(tab)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-black transition-all cursor-pointer text-center whitespace-nowrap ${
-                currentTab === tab 
-                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-sm shadow-red-600/20' 
+              onClick={() => setDeliveryFilter('pendientes')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                deliveryFilter === 'pendientes'
+                  ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
               }`}
+              title="Oculta las facturas que ya han sido entregadas y enviadas por correo"
             >
-              {tab}
+              <span>Pendientes ({pendingCount})</span>
             </button>
-          ))}
+
+            <button
+              onClick={() => setDeliveryFilter('entregadas')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                deliveryFilter === 'entregadas'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Muestra solo las facturas entregadas y enviadas por correo"
+            >
+              <span>Entregadas / Enviadas ({deliveredAndSentCount})</span>
+            </button>
+
+            <button
+              onClick={() => setDeliveryFilter('todas')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                deliveryFilter === 'todas'
+                  ? 'bg-slate-900 dark:bg-zinc-100 text-white dark:text-slate-900 shadow-sm'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Ver todo el listado sin ocultar ninguna"
+            >
+              <span>Todas ({invoices.length})</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 sm:py-2.5 w-full sm:w-80 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
+        <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 sm:py-2.5 w-full lg:w-80 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
           <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <input 
             type="text"
@@ -287,9 +433,16 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                         </div>
                       </td>
 
-                      {/* SERVICIO */}
-                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-300 max-w-[150px] truncate" title={inv.service || '—'}>
-                        {inv.service || '—'}
+                      {/* SERVICIO / CONCEPTO (RESUMEN CORTO AI) */}
+                      <td className="px-3 py-3 text-slate-700 dark:text-zinc-200 font-medium max-w-[200px]" title={inv.aiShortSummary || inv.service || '—'}>
+                        <div className="flex items-center gap-1.5 truncate">
+                          {inv.aiShortSummary && (
+                            <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          )}
+                          <span className="truncate">
+                            {inv.aiShortSummary || (inv.service && !inv.service.toUpperCase().includes('SE RECIBE DOCUMENTO') ? inv.service : 'Servicio Facturación')}
+                          </span>
+                        </div>
                       </td>
 
                       {/* N° FACTURA / COTIZACIÓN */}

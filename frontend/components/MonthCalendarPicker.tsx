@@ -5,7 +5,6 @@ import {
   Calendar as CalendarIcon, 
   ChevronLeft, 
   ChevronRight, 
-  Sparkles, 
   Check, 
   Layers,
   CalendarDays
@@ -170,7 +169,7 @@ export const MonthCalendarPicker: React.FC<MonthCalendarPickerProps> = ({
               onClick={handleSelectToday}
               className="py-1.5 px-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1"
             >
-              <Sparkles className="w-3 h-3 text-amber-500" />
+              <CalendarDays className="w-3 h-3 text-red-500" />
               <span>Hoy ({currentMonthName.substring(0,3)})</span>
             </button>
 

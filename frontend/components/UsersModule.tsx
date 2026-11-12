@@ -41,8 +41,9 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'superadmin' | 'admin' | 'viewer' | 'supplier'>('admin');
+  const [role, setRole] = useState<'superadmin' | 'admin' | 'aprobador_area' | 'viewer' | 'supplier'>('admin');
   const [area, setArea] = useState('Tecnología (TI)');
+  const [authorizedAreas, setAuthorizedAreas] = useState<string[]>([]);
   const [status, setStatus] = useState<'Activo' | 'Inactivo'>('Activo');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -54,6 +55,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
     setPassword('123456');
     setRole('admin');
     setArea(areas[0]?.name || 'Tecnología (TI)');
+    setAuthorizedAreas([areas[0]?.name || 'Tecnología (TI)']);
     setStatus('Activo');
     setIsModalOpen(true);
   };
@@ -66,6 +68,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
     setPassword('');
     setRole(u.role);
     setArea(u.area || 'General');
+    setAuthorizedAreas(u.authorizedAreas && u.authorizedAreas.length > 0 ? u.authorizedAreas : (u.area ? [u.area] : []));
     setStatus(u.status || 'Activo');
     setIsModalOpen(true);
   };
@@ -82,7 +85,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
         email: email.trim() || undefined,
         password: password ? password.trim() : undefined,
         role,
-        area: role === 'superadmin' ? 'Dirección General' : role === 'supplier' ? 'Proveedores Externos' : area,
+        area: role === 'superadmin' ? 'Dirección General' : role === 'supplier' ? 'Proveedores Externos' : (authorizedAreas[0] || area),
+        authorizedAreas: role === 'aprobador_area' ? authorizedAreas : (area ? [area] : []),
         status
       });
       setIsModalOpen(false);
@@ -100,6 +104,14 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900/40 flex items-center gap-1">
           <Shield className="w-3 h-3" />
           <span>Super Administrador</span>
+        </span>
+      );
+    }
+    if (r === 'aprobador_area') {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40 flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3 text-amber-600" />
+          <span>Aprobador de Área</span>
         </span>
       );
     }
@@ -321,6 +333,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white cursor-pointer font-bold"
                   >
                     <option value="admin">Admin de Área</option>
+                    <option value="aprobador_area">Aprobador de Área (Jefe)</option>
                     <option value="superadmin">Super Administrador</option>
                     <option value="supplier">Proveedor Externo</option>
                     <option value="viewer">Visualizador</option>
@@ -328,23 +341,65 @@ export const UsersModule: React.FC<UsersModuleProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
-                  Área Asignada {role === 'admin' && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  disabled={role === 'superadmin'}
-                  value={role === 'superadmin' ? 'Dirección General' : area}
-                  onChange={e => setArea(e.target.value)}
-                  className={`w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white cursor-pointer ${
-                    role === 'superadmin' ? 'opacity-60 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {areas.map(a => (
-                    <option key={a.id} value={a.name}>{a.name}</option>
-                  ))}
-                </select>
-              </div>
+              {role === 'aprobador_area' ? (
+                <div className="space-y-2 p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                      Áreas Autorizadas (Multi-área) <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                      {authorizedAreas.length} seleccionada(s)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {areas.map(a => {
+                      const isChecked = authorizedAreas.includes(a.name);
+                      return (
+                        <label 
+                          key={a.id} 
+                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-[11px] cursor-pointer transition-all ${
+                            isChecked 
+                              ? 'bg-amber-100/70 dark:bg-amber-900/40 border-amber-300 dark:border-amber-700 font-bold text-amber-900 dark:text-amber-100' 
+                              : 'bg-white dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setAuthorizedAreas(authorizedAreas.filter(x => x !== a.name));
+                              } else {
+                                setAuthorizedAreas([...authorizedAreas, a.name]);
+                              }
+                            }}
+                            className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                          />
+                          <span className="truncate">{a.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
+                    Área Asignada {role === 'admin' && <span className="text-red-500">*</span>}
+                  </label>
+                  <select
+                    disabled={role === 'superadmin'}
+                    value={role === 'superadmin' ? 'Dirección General' : area}
+                    onChange={e => setArea(e.target.value)}
+                    className={`w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white cursor-pointer ${
+                      role === 'superadmin' ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {areas.map(a => (
+                      <option key={a.id} value={a.name}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">

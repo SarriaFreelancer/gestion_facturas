@@ -9,7 +9,6 @@ import {
   EyeOff, 
   ArrowRight, 
   ShieldCheck, 
-  Sparkles,
   Building2,
   CheckCircle2,
   TrendingUp,
@@ -96,7 +95,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, darkMo
             </div>
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-wider text-amber-300 mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
               <span>Sistema Corporativo de Gestión</span>
             </div>
 

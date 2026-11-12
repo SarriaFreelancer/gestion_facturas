@@ -34,3 +34,8 @@ Thumbs.db
 *.db
 *.db-journal
 .cache/
+
+# Temporales y descargas locales de facturas
+scratch/
+uploads/invoices/*.pdf
+uploads/Internal_*.pdf

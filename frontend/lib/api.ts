@@ -2,6 +2,19 @@ import { Invoice, Supplier, DashboardMetrics } from '../app/types';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+export function parseApiError(err: any, fallback: string): string {
+  if (!err) return fallback;
+  if (typeof err.detail === 'string') return err.detail;
+  if (Array.isArray(err.detail)) {
+    return err.detail.map((d: any) => d.msg || (typeof d === 'string' ? d : JSON.stringify(d))).join(', ');
+  }
+  if (err.detail && typeof err.detail === 'object') {
+    return err.detail.message || JSON.stringify(err.detail);
+  }
+  if (typeof err.message === 'string') return err.message;
+  return fallback;
+}
+
 export const api = {
   // Invoices
   async getInvoices(): Promise<Invoice[]> {
@@ -70,10 +83,11 @@ export const api = {
   },
 
   // Dashboard Metrics
-  async getMetrics(month?: string, year?: string): Promise<DashboardMetrics> {
+  async getMetrics(month?: string, year?: string, area?: string): Promise<DashboardMetrics> {
     const params = new URLSearchParams();
     if (month && month !== 'Todos') params.append('month', month);
     if (year && year !== 'Todos') params.append('year', year);
+    if (area && area !== 'Todos' && area !== 'Dirección General') params.append('area', area);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`${API_BASE_URL}/dashboard/metrics${queryString}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al cargar métricas');
@@ -254,7 +268,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al iniciar sesión');
+      throw new Error(parseApiError(err, 'Error al iniciar sesión'));
     }
     const data = await res.json();
     if (typeof window !== 'undefined' && data.token) {
@@ -422,6 +436,19 @@ export const api = {
     return res.json();
   },
 
+  async autoMatchRecurrentInvoices(targetYear?: number, targetMonth?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (targetYear) params.append('target_year', String(targetYear));
+    if (targetMonth) params.append('target_month', String(targetMonth));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/facture/auto-match-recurrent${qs}`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al vincular facturas recurrentes de Facture');
+    }
+    return res.json();
+  },
+
   async getFactureInbox(folder: string = 'Todos', search?: string): Promise<any[]> {
     let url = `${API_BASE_URL}/facture/inbox?folder=${encodeURIComponent(folder)}`;
     if (search && search.trim()) {
@@ -438,11 +465,11 @@ export const api = {
     return res.json();
   },
 
-  async importFactureDocToMain(factureDocId: string): Promise<any> {
+  async importFactureDocToMain(factureDocId: string, area?: string): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/facture/import-to-invoices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ factureDocId })
+      body: JSON.stringify({ factureDocId, area })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -451,15 +478,78 @@ export const api = {
     return res.json();
   },
 
-  async inspectAndReadFactureDoc(documentNumber: string, forceDownload: boolean = false): Promise<any> {
-    const res = await fetch(`${API_BASE_URL}/facture/inspect-and-read`, {
+  async unlinkFactureDocument(documentNumber: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/unlink`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documentNumber, forceDownload })
+      body: JSON.stringify({ documentNumber })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al inspeccionar y leer la factura con IA');
+      throw new Error(err.detail || 'Error al desvincular factura');
+    }
+    return res.json();
+  },
+
+  async inspectAndReadFactureDoc(documentNumber: string, forceDownload: boolean = false, forceReanalysis: boolean = false): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/inspect-and-read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentNumber, forceDownload, forceReanalysis })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(parseApiError(err, 'Error al inspeccionar y leer la factura con IA'));
+    }
+    return res.json();
+  },
+
+  async batchDownloadFacturePdfs(limit: number = 50, folder: string = 'Recibidos'): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/batch-download-pdfs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit, folder })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(parseApiError(err, 'Error en descarga masiva de PDFs'));
+    }
+    return res.json();
+  },
+
+  async getDownloaderStatus(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/downloader/status`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al consultar estado del descargador automático');
+    return res.json();
+  },
+
+  async startDownloader(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/downloader/start`, { method: 'POST' });
+    if (!res.ok) throw new Error('Error al iniciar descargador automático');
+    return res.json();
+  },
+
+  async stopDownloader(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/downloader/stop`, { method: 'POST' });
+    if (!res.ok) throw new Error('Error al detener descargador automático');
+    return res.json();
+  },
+
+  async syncLocalPdfs(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/sync-local-pdfs`, { method: 'POST' });
+    if (!res.ok) throw new Error('Error al sincronizar PDFs locales');
+    return res.json();
+  },
+
+  async approveAiReading(documentNumber: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/facture/approve-ai-reading`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentNumber })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al aprobar lectura AI');
     }
     return res.json();
   },
@@ -591,5 +681,124 @@ export const api = {
       throw new Error(err.detail || 'Error al eliminar factura');
     }
     return res.json();
+  },
+
+  // Verificación de Duplicidad y Guardado con Contrato Habitual
+  async checkInvoiceDuplicate(invoiceNumber: string, supplierName?: string): Promise<{ isDuplicate: boolean; invoice?: any }> {
+    const res = await fetch(`${API_BASE_URL}/invoices/check-duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceNumber, supplierName })
+    });
+    if (!res.ok) throw new Error('Error al verificar duplicidad');
+    return res.json();
+  },
+
+  async saveHabitualContract(payload: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/save-habitual-contract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar contrato habitual');
+    }
+    return res.json();
+  },
+
+  // Aprobación de Jefes por Área
+  async getAreaApprovalInvoices(area?: string, status: string = 'Pendiente', userRole?: string, authorizedAreas?: string[]): Promise<any[]> {
+    let url = `${API_BASE_URL}/invoices/area-approval?status=${encodeURIComponent(status)}`;
+    if (area && area !== 'Todos') {
+      url += `&area=${encodeURIComponent(area)}`;
+    }
+    if (userRole) {
+      url += `&userRole=${encodeURIComponent(userRole)}`;
+    }
+    if (authorizedAreas && authorizedAreas.length > 0) {
+      url += `&authorizedAreas=${encodeURIComponent(JSON.stringify(authorizedAreas))}`;
+    }
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al cargar facturas para aprobación');
+    return res.json();
+  },
+
+  async updateDianEventsStatus(invoiceId: string, status: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/dian-events/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId, status })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al actualizar estado de eventos DIAN');
+    }
+    return res.json();
+  },
+
+  async approveInvoicesByArea(invoiceIds: string[], approverName: string = 'Jefe de Área'): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/area-approval/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceIds, approverName })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al aprobar facturas');
+    }
+    return res.json();
+  },
+
+  async rejectInvoicesByArea(invoiceIds: string[], rejectorName: string = 'Jefe de Área', reason?: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/invoices/area-approval/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceIds, rejectorName, reason: reason || '' })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al rechazar facturas');
+    }
+    return res.json();
+  },
+
+  // Plantilla SAP / Presolicitud de Compra (29 Campos Oficiales)
+  async getSapPresolicitud(invoiceId: string, userName?: string): Promise<any> {
+    const url = `${API_BASE_URL}/invoices/${encodeURIComponent(invoiceId)}/presolicitud?userName=${encodeURIComponent(userName || 'Usuario')}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al obtener presolicitud SAP');
+    }
+    return res.json();
+  },
+
+  async saveSapPresolicitud(invoiceId: string, rows: any[], userName?: string): Promise<any> {
+    const url = `${API_BASE_URL}/invoices/${encodeURIComponent(invoiceId)}/presolicitud`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows, userName })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al guardar presolicitud SAP');
+    }
+    return res.json();
+  },
+
+  async getSapPreview(invoiceId: string, userName?: string): Promise<any> {
+    const url = `${API_BASE_URL}/invoices/${encodeURIComponent(invoiceId)}/presolicitud?userName=${encodeURIComponent(userName || 'Usuario')}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al obtener datos de plantilla SAP');
+    }
+    return res.json();
+  },
+
+  getSapExcelDownloadUrl(invoiceId: string, userName?: string): string {
+    return `${API_BASE_URL}/invoices/${encodeURIComponent(invoiceId)}/presolicitud/excel?userName=${encodeURIComponent(userName || 'Usuario')}`;
   }
 };

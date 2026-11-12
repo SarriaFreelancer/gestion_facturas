@@ -21,7 +21,7 @@ import {
   Phone,
   Mail
 } from 'lucide-react';
-import { Supplier, SupplierService } from '../app/types';
+import { Supplier, SupplierService, User, CompanyArea } from '../app/types';
 
 interface SuppliersModuleProps {
   suppliers: Supplier[];
@@ -29,6 +29,8 @@ interface SuppliersModuleProps {
   onEditSupplier: (sup: Supplier) => void;
   onDeleteSupplier: (id: string) => void;
   onUpdateSupplierServices: (supId: string, services: SupplierService[]) => void;
+  currentUser?: User | null;
+  areas?: CompanyArea[];
 }
 
 export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
@@ -36,10 +38,26 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
   onAddSupplier,
   onEditSupplier,
   onDeleteSupplier,
-  onUpdateSupplierServices
+  onUpdateSupplierServices,
+  currentUser,
+  areas = []
 }) => {
   const [expandedSupplierId, setExpandedSupplierId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const isSuperAdmin = currentUser?.role === 'superadmin';
+  const userArea = currentUser?.area || 'General';
+  const [filterScope, setFilterScope] = useState<'all' | 'my_area'>(
+    !isSuperAdmin && userArea !== 'General' && userArea !== 'Dirección General' ? 'my_area' : 'all'
+  );
+
+  const myAreaCount = useMemo(() => {
+    if (!userArea || userArea === 'General' || userArea === 'Dirección General') return suppliers.length;
+    return suppliers.filter(s => {
+      const sArea = (s.area || '').toLowerCase();
+      return sArea.includes(userArea.toLowerCase()) || sArea === 'general';
+    }).length;
+  }, [suppliers, userArea]);
 
   const toggleExpand = (id: string) => {
     setExpandedSupplierId(expandedSupplierId === id ? null : id);
@@ -81,6 +99,13 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
 
   const filteredSuppliers = useMemo(() => {
     return suppliers.filter(s => {
+      if (filterScope === 'my_area' && userArea && userArea !== 'General' && userArea !== 'Dirección General') {
+        const sArea = (s.area || '').toLowerCase();
+        const matches = sArea.includes(userArea.toLowerCase()) || sArea === 'general';
+        if (!matches) return false;
+      }
+
+      if (!searchTerm.trim()) return true;
       const term = searchTerm.toLowerCase();
       return (
         (s.name || '').toLowerCase().includes(term) ||
@@ -91,7 +116,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
         (s.area || '').toLowerCase().includes(term)
       );
     });
-  }, [suppliers, searchTerm]);
+  }, [suppliers, searchTerm, filterScope, userArea]);
 
   return (
     <div className="w-full space-y-4 sm:space-y-6">
@@ -118,6 +143,50 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
           <Plus className="w-4 h-4 text-white" />
           <span>Registrar Proveedor</span>
         </button>
+      </div>
+
+      {/* SELECTOR DE ALCANCE: TODOS VS MI ÁREA */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-3 shadow-xs">
+        <div className="flex items-center gap-2">
+          {userArea && userArea !== 'General' && userArea !== 'Dirección General' && (
+            <button
+              onClick={() => setFilterScope('my_area')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+                filterScope === 'my_area'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Proveedores de mi Área ({userArea})</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                filterScope === 'my_area' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+              }`}>
+                {myAreaCount}
+              </span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setFilterScope('all')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+              filterScope === 'all'
+                ? 'bg-red-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+            }`}
+          >
+            <span>Todos los Proveedores</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              filterScope === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+            }`}>
+              {suppliers.length}
+            </span>
+          </button>
+        </div>
+
+        <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+          Mostrando <strong>{filteredSuppliers.length}</strong> de <strong>{suppliers.length}</strong> proveedores
+        </span>
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
@@ -161,6 +230,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                 <th className="px-4 py-3.5 w-12 text-center text-white">Ver</th>
                 <th className="px-4 py-3.5 text-white">NIT / RUT</th>
                 <th className="px-4 py-3.5 text-white">Proveedor / Razón Social</th>
+                <th className="px-4 py-3.5 text-white">Áreas Enriko</th>
                 <th className="px-4 py-3.5 text-white">Condiciones & Pago</th>
                 <th className="px-4 py-3.5 text-white">Contacto & Ciudad</th>
                 <th className="px-4 py-3.5 text-white">Conceptos / Mes</th>
@@ -171,7 +241,7 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-medium">
               {filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-16 text-slate-400 dark:text-zinc-500">
+                  <td colSpan={9} className="text-center py-16 text-slate-400 dark:text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Users className="w-8 h-8 text-slate-300 dark:text-zinc-600" />
                       <span>No se encontraron proveedores registrados.</span>
@@ -217,6 +287,29 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                 <span className="text-[10px] font-semibold text-slate-400 block">{sup.tradeName}</span>
                               )}
                             </div>
+                          </div>
+                        </td>
+
+                        {/* ÁREAS ASOCIADAS */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1 max-w-[190px]">
+                            {(sup.area || 'General').split(',').map(a => a.trim()).filter(Boolean).map((aName, aIdx) => {
+                              const isMyArea = userArea && aName.toLowerCase() === userArea.toLowerCase();
+                              return (
+                                <span 
+                                  key={aIdx} 
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                    isMyArea
+                                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
+                                  }`}
+                                  title={isMyArea ? `Proveedor asociado a tu departamento (${userArea})` : undefined}
+                                >
+                                  <Building2 className="w-2.5 h-2.5 opacity-70" />
+                                  <span>{aName}</span>
+                                </span>
+                              );
+                            })}
                           </div>
                         </td>
 
@@ -344,13 +437,22 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({
                                             <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-black flex items-center justify-center flex-shrink-0">
                                               #{sIdx + 1}
                                             </span>
-                                            <input 
-                                              type="text"
-                                              value={srv.serviceName || ''}
-                                              onChange={(e) => handleServiceNameChange(sup, sIdx, e.target.value)}
-                                              placeholder="Nombre del concepto o servicio"
-                                              className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-1 focus:ring-red-500/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none flex-1 transition-all shadow-2xs"
-                                            />
+                                            <div className="relative flex-1">
+                                              <input 
+                                                type="text"
+                                                value={
+                                                  (srv.serviceName && srv.serviceName.toUpperCase().includes('SE RECIBE DOCUMENTO')) 
+                                                    ? ((srv as any).aiShortSummary || (sup as any).aiShortSummary || 'Servicio Facturación') 
+                                                    : (srv.serviceName || (srv as any).aiShortSummary || '')
+                                                }
+                                                onChange={(e) => handleServiceNameChange(sup, sIdx, e.target.value)}
+                                                placeholder="Nombre de Items / Resumen AI (ej. Servicio de Backup NAS, Acronis y Nube)"
+                                                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 focus:border-red-500 focus:bg-white dark:focus:bg-zinc-800 focus:ring-1 focus:ring-red-500/20 rounded-xl pl-2.5 pr-8 py-1.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none transition-all shadow-2xs"
+                                              />
+                                              {Boolean((srv as any).aiShortSummary || (sup as any).aiShortSummary) && (
+                                                <FileText className="w-3.5 h-3.5 text-blue-500 absolute right-2.5 top-2.5 pointer-events-none" />
+                                              )}
+                                            </div>
                                           </div>
 
                                           <button 

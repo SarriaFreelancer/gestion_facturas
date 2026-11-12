@@ -5,7 +5,6 @@ import {
   X, 
   Upload, 
   FileText, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle, 
   Trash2, 
@@ -48,6 +47,7 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
   const [paymentType, setPaymentType] = useState<'Crédito' | 'Contado'>('Crédito');
   const [documentNumber, setDocumentNumber] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [contractNumber, setContractNumber] = useState('');
   
   // Proveedor / Emisor
   const [issuerName, setIssuerName] = useState('');
@@ -127,6 +127,9 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
         }
         if (a.ordenCompra || a.numeroReferencia) {
           setReferenceNumber(a.ordenCompra || a.numeroReferencia || '');
+        }
+        if (a.numeroContrato || a.contractNumber) {
+          setContractNumber(a.numeroContrato || a.contractNumber);
         }
         if (a.emisor) {
           if (a.emisor.razonSocial) setIssuerName(a.emisor.razonSocial);
@@ -277,11 +280,22 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
     try {
       setSaving(true);
 
+      // Verificación proactiva de duplicado en sistema
+      try {
+        const dupCheck = await api.checkInvoiceDuplicate(documentNumber.trim(), issuerName.trim());
+        if (dupCheck && dupCheck.isDuplicate) {
+          notifyWarning('Factura ya Existente', `El documento ${documentNumber} ya se encuentra registrado para este proveedor.`);
+        }
+      } catch (e) {
+        console.warn('Verificación de duplicado omitida:', e);
+      }
+
       const payload = {
         documentNumber: documentNumber.trim(),
         docType,
         paymentType,
         referenceNumber: referenceNumber.trim(),
+        contractNumber: contractNumber.trim() || undefined,
         issuerName: issuerName.trim(),
         issuerNit: issuerNit.trim(),
         clientName: clientName.trim() || defaultClientName,
@@ -332,7 +346,6 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
             <div>
               <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>Radicación & Facturación Directa de Proveedores</span>
-                <Sparkles className="w-4 h-4 text-emerald-500" />
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                 Sube tu Factura de Venta o Nota Crédito en PDF con lectura y extracción inteligente por IA.
@@ -411,7 +424,7 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
           </div>
 
           {/* DATOS PRINCIPALES DEL DOCUMENTO */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             
             {/* TIPO DE DOCUMENTO */}
             <div>
@@ -461,7 +474,7 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
             {/* NÚMERO DE REFERENCIA / OC */}
             <div>
               <label className="block text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
-                No. Referencia / Orden Compra
+                No. Referencia / OC
               </label>
               <input
                 type="text"
@@ -469,6 +482,25 @@ export const SupplierInvoiceUploadModal: React.FC<SupplierInvoiceUploadModalProp
                 onChange={(e) => setReferenceNumber(e.target.value)}
                 placeholder="ej: 75709"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none"
+              />
+            </div>
+
+            {/* NÚMERO DE CONTRATO */}
+            <div>
+              <label className="block text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>No. Contrato</span>
+                {contractNumber && (
+                  <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded">
+                    IA
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                value={contractNumber}
+                onChange={(e) => setContractNumber(e.target.value)}
+                placeholder="ej: CTR-2025-01"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>

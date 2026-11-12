@@ -9,7 +9,6 @@ import {
   BarChart3, 
   Bell, 
   X,
-  Sparkles,
   Laptop,
   Building2,
   Tag,
@@ -17,6 +16,7 @@ import {
   Settings,
   Inbox,
   FileCheck2,
+  CheckSquare,
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
@@ -32,6 +32,8 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   currentUser?: User;
   portalEnabled?: boolean;
+  inventoryEnabled?: boolean;
+  categoriesEnabled?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -43,28 +45,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   currentUser,
-  portalEnabled = true
+  portalEnabled = true,
+  inventoryEnabled = true,
+  categoriesEnabled = true
 }) => {
   const isSupplier = currentUser?.role === 'supplier';
   const isSuperAdmin = currentUser?.role === 'superadmin';
+  const isAreaApprover = currentUser?.role === 'aprobador_area';
+  const isPortalVisible = portalEnabled !== undefined ? Boolean(Number(portalEnabled)) : true;
+  const isInventoryVisible = inventoryEnabled !== undefined ? Boolean(Number(inventoryEnabled)) : true;
+  const isCategoriesVisible = categoriesEnabled !== undefined ? Boolean(Number(categoriesEnabled)) : true;
 
   const menuItems = isSupplier
     ? [
         { id: 'internal_invoices', label: 'Radicar Facturas', icon: FileCheck2 }
       ]
+    : isAreaApprover
+    ? [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'area_approvals', label: 'Aprobaciones Jefes', icon: CheckSquare }
+      ]
     : [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'invoices', label: 'Facturas / Cotizaciones', icon: FileText },
+        { id: 'area_approvals', label: 'Aprobaciones Jefes', icon: CheckSquare },
         { id: 'facture', label: 'Bandeja Facture.co', icon: Inbox },
-        ...(portalEnabled ? [
+        ...(isPortalVisible ? [
           { id: 'internal_invoices', label: 'Bandeja Proveedores', icon: FileCheck2 }
         ] : []),
         { id: 'suppliers', label: 'Proveedores', icon: Users },
-        { id: 'inventory', label: 'Inventario TI', icon: Laptop },
+        ...(isInventoryVisible ? [
+          { id: 'inventory', label: 'Inventario TI', icon: Laptop }
+        ] : []),
         { id: 'areas', label: 'Áreas Enriko', icon: Building2 },
         // Módulos exclusivos para Superadmin
         ...(isSuperAdmin ? [
-          { id: 'categories', label: 'Categorías TI', icon: Tag, superadminOnly: true },
+          ...(isCategoriesVisible ? [
+            { id: 'categories', label: 'Categorías TI', icon: Tag, superadminOnly: true }
+          ] : []),
           { id: 'users', label: 'Usuarios & Roles', icon: Shield, superadminOnly: true }
         ] : []),
         { id: 'settings', label: 'Configuración', icon: Settings }

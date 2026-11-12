@@ -43,6 +43,7 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
 
   // Form State
   const [name, setName] = useState('');
+  const [costCenterCode, setCostCenterCode] = useState('');
   const [director, setDirector] = useState('');
   const [headOrCoord, setHeadOrCoord] = useState('');
   const [email, setEmail] = useState('');
@@ -63,6 +64,7 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
   const handleOpenCreate = () => {
     setEditingArea(null);
     setName('');
+    setCostCenterCode('');
     setDirector('');
     setHeadOrCoord('');
     setEmail('');
@@ -74,6 +76,7 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
   const handleOpenEdit = (area: CompanyArea) => {
     setEditingArea(area);
     setName(area.name);
+    setCostCenterCode(area.costCenterCode || '');
     setDirector(area.director || '');
     setHeadOrCoord(area.headOrCoord || '');
     setEmail(area.email || '');
@@ -90,6 +93,7 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
       await onSaveArea({
         id: editingArea?.id,
         name: name.trim(),
+        costCenterCode: costCenterCode.trim() || undefined,
         director: director.trim() || undefined,
         headOrCoord: headOrCoord.trim() || undefined,
         email: email.trim() || undefined,
@@ -255,6 +259,14 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
                       <span className="truncate font-mono text-[11px]">{area.email}</span>
                     </div>
                   )}
+
+                  {/* CENTRO DE COSTOS SAP */}
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-[11px]">
+                    <span className="font-bold text-blue-700 dark:text-blue-300">Centro de Costo SAP:</span>
+                    <span className="font-mono font-extrabold text-blue-800 dark:text-blue-200 bg-white dark:bg-zinc-800 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                      {area.costCenterCode || 'Sin Asignar'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* MÉTRICAS DE PRESUPUESTO & GASTO */}
@@ -374,6 +386,19 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
+                    Código Centro de Costos SAP (OcrCode)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: CC-ADM, CC-LOG, CC-PROD, 10101..."
+                    value={costCenterCode}
+                    onChange={e => setCostCenterCode(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white font-mono font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
                     Correo Electrónico
                   </label>
                   <input
@@ -384,20 +409,20 @@ export const AreasModule: React.FC<AreasModuleProps> = ({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white font-medium"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
-                    Tope Presupuestal Mensual (COP)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="25000000"
-                    value={budgetLimit}
-                    onChange={e => setBudgetLimit(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white font-bold"
-                  />
-                </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-zinc-300 mb-1">
+                  Tope Presupuestal Mensual (COP)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="25000000"
+                  value={budgetLimit}
+                  onChange={e => setBudgetLimit(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:border-red-500 dark:text-white font-bold"
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2">

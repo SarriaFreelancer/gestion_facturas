@@ -41,6 +41,7 @@ class CredentialsPayload(BaseModel):
 
 class ImportPayload(BaseModel):
     factureDocId: str
+    area: Optional[str] = None
 
 @router.get("/status")
 def get_facture_status():
@@ -87,15 +88,26 @@ def get_facture_logs(limit: Optional[int] = 50):
 @router.post("/import-to-invoices")
 def import_to_main_invoices(payload: ImportPayload):
     try:
-        return service.import_to_main_invoices(payload.factureDocId)
+        return service.import_to_main_invoices(payload.factureDocId, area=payload.area)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class UnlinkPayload(BaseModel):
+    documentNumber: str
+
+@router.post("/unlink")
+def unlink_facture_document(payload: UnlinkPayload):
+    try:
+        return service.unlink_document(payload.documentNumber)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 class InspectPayload(BaseModel):
     documentNumber: str
     forceDownload: Optional[bool] = False
+    forceReanalysis: Optional[bool] = False
 
 @router.post("/inspect-and-read")
 def inspect_and_read_invoice(payload: InspectPayload):
@@ -103,9 +115,33 @@ def inspect_and_read_invoice(payload: InspectPayload):
         res = run_in_proactor_thread(
             service.inspect_and_analyze_invoice,
             target_doc_number=payload.documentNumber,
-            force_download=bool(payload.forceDownload)
+            force_download=bool(payload.forceDownload),
+            force_reanalysis=bool(payload.forceReanalysis)
         )
         return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ApproveAiReadingPayload(BaseModel):
+    documentNumber: str
+
+@router.post("/approve-ai-reading")
+def approve_ai_reading(payload: ApproveAiReadingPayload):
+    try:
+        return service.approve_ai_reading(payload.documentNumber)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AutoMatchRecurrentPayload(BaseModel):
+    targetYear: Optional[str] = "2026"
+    targetMonth: Optional[str] = "Noviembre"
+
+@router.post("/auto-match-recurrent")
+def auto_match_recurrent(payload: Optional[AutoMatchRecurrentPayload] = None):
+    try:
+        y = payload.targetYear if payload and payload.targetYear else "2026"
+        m = payload.targetMonth if payload and payload.targetMonth else "Noviembre"
+        return service.auto_match_and_link_recurrent_invoices(target_year=y, target_month=m)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -154,6 +190,55 @@ def process_invoice_workflow(payload: WorkflowPayload):
 from backend.utils.security import is_safe_path
 from backend.services.facture_service import ensure_extracted_pdf
 
+class BatchDownloadPayload(BaseModel):
+    limit: Optional[int] = 50
+    folder: Optional[str] = "Recibidos"
+
+@router.post("/batch-download-pdfs")
+def batch_download_pdfs(payload: BatchDownloadPayload):
+    try:
+        res = run_in_proactor_thread(
+            service.batch_download_inbox_pdfs,
+            max_docs=int(payload.limit or 50),
+            folder=payload.folder or "Recibidos"
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+from backend.services.auto_downloader import downloader
+
+@router.get("/downloader/status")
+def get_downloader_status():
+    try:
+        return downloader.get_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/downloader/start")
+def start_auto_downloader():
+    try:
+        downloader.start_worker()
+        return {"success": True, "message": "Descargador automático iniciado en segundo plano."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/downloader/stop")
+def stop_auto_downloader():
+    try:
+        downloader.stop_worker()
+        return {"success": True, "message": "Descargador automático detenido."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/sync-local-pdfs")
+def sync_local_pdfs():
+    try:
+        res = service.sync_local_pdfs_with_db()
+        return {"success": True, "result": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/pdf/{document_number}")
 def get_invoice_pdf(document_number: str):
     clean_doc = os.path.basename(document_number.strip())
@@ -170,22 +255,41 @@ def get_invoice_pdf(document_number: str):
                         (clean_doc, f"facture-{clean_doc.replace(' ', '-').replace('/', '-')}")
                     )
                     row = cur.fetchone()
-                    if row and row.get("pdfPath") and os.path.exists(row["pdfPath"]):
-                        file_path = row["pdfPath"]
+                    if row and row.get("pdfPath"):
+                        p = row["pdfPath"]
+                        cand = p if os.path.isabs(p) else os.path.abspath(p)
+                        if os.path.exists(cand):
+                            file_path = cand
+                        else:
+                            cand2 = os.path.join(UPLOADS_DIR, os.path.basename(p))
+                            if os.path.exists(cand2):
+                                file_path = cand2
         except Exception:
             pass
 
     # 2. Si no se encontró en BD, verificar nombres de archivo normalizados exactos
     if not os.path.exists(file_path):
         normalized_target = f"{clean_doc.replace(' ', '_').replace('/', '_')}".lower()
+        clean_num_only = re.sub(r"^(FAC|FE|NC|ND|DE)[\-_]?", "", clean_doc, flags=re.I).strip().lower()
         for fname in os.listdir(UPLOADS_DIR):
             f_norm = fname.lower()
             if (f_norm == f"factura_{normalized_target}.pdf" or 
                 f_norm == f"{normalized_target}.pdf" or
+                f_norm == f"factura_{clean_num_only}.pdf" or
+                f_norm == f"{clean_num_only}.pdf" or
+                f_norm == f"factura_fac-{clean_num_only}.pdf" or
                 f_norm == f"factura_{normalized_target}.zip" or
                 f_norm == f"{normalized_target}.zip"):
                 file_path = os.path.join(UPLOADS_DIR, fname)
                 break
+
+    if not os.path.exists(file_path) or not is_safe_path(UPLOADS_DIR, file_path):
+        try:
+            live_path = run_in_proactor_thread(service.download_single_pdf_live, clean_doc)
+            if live_path and os.path.exists(live_path):
+                file_path = live_path
+        except Exception as dl_err:
+            print(f"[get_invoice_pdf] No se pudo descargar en vivo {clean_doc}: {dl_err}")
 
     if not os.path.exists(file_path) or not is_safe_path(UPLOADS_DIR, file_path):
         raise HTTPException(status_code=404, detail="Archivo PDF no encontrado para este documento.")

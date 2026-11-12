@@ -4,34 +4,41 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Building2, 
-  User, 
+  User as UserIcon, 
   Phone, 
   Mail, 
   MapPin, 
   Hash, 
   Plus, 
   Trash2, 
-  CheckCircle2,
-  CreditCard,
-  Briefcase,
-  ShieldCheck
+  CheckCircle2, 
+  CreditCard, 
+  Briefcase, 
+  ShieldCheck 
 } from 'lucide-react';
-import { Supplier, SupplierService } from '../app/types';
+import type { Supplier, SupplierService, User, CompanyArea } from '../app/types';
 
 interface SupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (supplierData: Partial<Supplier>) => Promise<void>;
   initialSupplier?: Supplier | null;
+  currentUser?: User | null;
+  companyAreas?: CompanyArea[];
+  existingSuppliers?: Supplier[];
 }
 
 export const SupplierModal: React.FC<SupplierModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  initialSupplier
+  initialSupplier,
+  currentUser,
+  companyAreas = [],
+  existingSuppliers = []
 }) => {
   const [nit, setNit] = useState('');
+  const [sapCode, setSapCode] = useState('');
   const [name, setName] = useState('');
   const [tradeName, setTradeName] = useState('');
   const [contact, setContact] = useState('');
@@ -39,7 +46,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
-  const [area, setArea] = useState('General');
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [paymentConditions, setPaymentConditions] = useState('Crédito 30 días');
   const [bankName, setBankName] = useState('');
   const [bankAccountType, setBankAccountType] = useState('Ahorros');
@@ -52,6 +59,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
   useEffect(() => {
     if (initialSupplier) {
       setNit(initialSupplier.nit || '');
+      setSapCode(initialSupplier.sapCode || '');
       setName(initialSupplier.name || '');
       setTradeName(initialSupplier.tradeName || '');
       setContact(initialSupplier.contact || '');
@@ -59,7 +67,8 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       setEmail(initialSupplier.email || '');
       setAddress(initialSupplier.address || '');
       setCity(initialSupplier.city || '');
-      setArea(initialSupplier.area || 'General');
+      const rawAreas = (initialSupplier.area || 'General').split(',').map(a => a.trim()).filter(Boolean);
+      setSelectedAreas(rawAreas.length ? rawAreas : ['General']);
       setPaymentConditions(initialSupplier.paymentConditions || 'Crédito 30 días');
       setBankName(initialSupplier.bankName || '');
       setBankAccountType(initialSupplier.bankAccountType || 'Ahorros');
@@ -68,6 +77,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       setServices(initialSupplier.services || []);
     } else {
       setNit('');
+      setSapCode('');
       setName('');
       setTradeName('');
       setContact('');
@@ -75,7 +85,10 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       setEmail('');
       setAddress('');
       setCity('');
-      setArea('General');
+      const defaultArea = currentUser?.area && currentUser.area !== 'General' && currentUser.area !== 'Dirección General'
+        ? [currentUser.area]
+        : ['General'];
+      setSelectedAreas(defaultArea);
       setPaymentConditions('Crédito 30 días');
       setBankName('');
       setBankAccountType('Ahorros');
@@ -86,7 +99,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       ]);
     }
     setError(null);
-  }, [initialSupplier, isOpen]);
+  }, [initialSupplier, isOpen, currentUser]);
 
   if (!isOpen) return null;
 
@@ -116,12 +129,24 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       return;
     }
 
+    const cleanNit = nit.trim().toLowerCase();
+    const duplicate = (existingSuppliers || []).find(
+      s => (s.nit || '').trim().toLowerCase() === cleanNit && s.id !== initialSupplier?.id
+    );
+    if (duplicate) {
+      setError(`No se permite duplicidad: Ya existe el proveedor "${duplicate.name}" registrado con el NIT ${nit.trim()}.`);
+      return;
+    }
+
+    const areaString = selectedAreas.filter(Boolean).join(', ') || 'General';
+
     try {
       setIsSubmitting(true);
       setError(null);
       await onSave({
         id: initialSupplier?.id,
         nit: nit.trim(),
+        sapCode: sapCode.trim() || undefined,
         name: name.trim(),
         tradeName: tradeName.trim() || undefined,
         contact: contact.trim() || undefined,
@@ -129,7 +154,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         city: city.trim() || undefined,
-        area: area.trim() || 'General',
+        area: areaString,
         paymentConditions: paymentConditions.trim() || 'Crédito 30 días',
         bankName: bankName.trim() || undefined,
         bankAccountType: bankAccountType.trim() || 'Ahorros',
@@ -193,7 +218,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
               1. Identificación y Razón Social
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* NIT / RUT */}
               <div>
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
@@ -207,6 +232,22 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
                   onChange={e => setNit(e.target.value)}
                   placeholder="Ej. 900123456-1"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              {/* CÓDIGO SAP PROVEEDOR */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Código SAP (CardCode)</span>
+                </label>
+                <input
+                  type="text"
+                  value={sapCode}
+                  onChange={e => setSapCode(e.target.value)}
+                  placeholder="Ej. P900123456 / C100234"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  title="Código de socio de negocios / proveedor en SAP (diferente al NIT)"
                 />
               </div>
 
@@ -227,7 +268,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
               </div>
 
               {/* RAZON SOCIAL */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-red-600" />
                   <span>Razón Social Completa *</span>
@@ -243,7 +284,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
               </div>
 
               {/* NOMBRE COMERCIAL */}
-              <div>
+              <div className="sm:col-span-3">
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-red-600" />
                   <span>Nombre Comercial (Opcional)</span>
@@ -257,18 +298,76 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
                 />
               </div>
 
-              {/* ÁREA ENRIKO RESPONSABLE */}
-              <div>
-                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-red-600" />
-                  <span>Área Enriko Responsable</span>
-                </label>
+              {/* ÁREAS ENRIKO ASOCIADAS (UN PROVEEDOR PUEDE ATENDER VARIAS ÁREAS) */}
+              <div className="sm:col-span-3 bg-slate-50 dark:bg-zinc-800/60 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-red-600" />
+                    <span>Áreas Enriko Asociadas (Multiselección)</span>
+                  </label>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300">
+                    {selectedAreas.length} {selectedAreas.length === 1 ? 'área asignada' : 'áreas asignadas'}
+                  </span>
+                </div>
+                <p className="text-[10.5px] text-slate-500 dark:text-zinc-400">
+                  Haz clic en las áreas que este proveedor atiende en la empresa. También puedes agregar áreas adicionales separadas por coma.
+                </p>
+
+                {/* BOTONES / CHIPS DE ÁREAS */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {companyAreas.map(a => {
+                    const isSelected = selectedAreas.some(sa => sa.toLowerCase() === a.name.toLowerCase());
+                    return (
+                      <button
+                        type="button"
+                        key={a.id}
+                        onClick={() => {
+                          setSelectedAreas(prev => {
+                            const exists = prev.some(sa => sa.toLowerCase() === a.name.toLowerCase());
+                            if (exists) {
+                              const filtered = prev.filter(sa => sa.toLowerCase() !== a.name.toLowerCase());
+                              return filtered.length ? filtered : ['General'];
+                            } else {
+                              return [...prev.filter(sa => sa.toLowerCase() !== 'general'), a.name];
+                            }
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-red-600 text-white shadow-xs scale-100'
+                            : 'bg-white dark:bg-zinc-700/80 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-600 hover:border-red-400'
+                        }`}
+                      >
+                        <span>{a.name}</span>
+                        {isSelected && <span className="text-[10px]">✓</span>}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAreas(['General']);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                      selectedAreas.some(sa => sa.toLowerCase() === 'general')
+                        ? 'bg-slate-700 text-white dark:bg-zinc-200 dark:text-zinc-900 shadow-xs'
+                        : 'bg-white dark:bg-zinc-700/80 text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-600 hover:border-slate-400'
+                    }`}
+                  >
+                    <span>General (Todas)</span>
+                  </button>
+                </div>
+
+                {/* CAMPO TEXTO ASOCIACIÓN DIRECTA */}
                 <input
                   type="text"
-                  value={area}
-                  onChange={e => setArea(e.target.value)}
-                  placeholder="Ej. Compras, Producción, TI, Finanzas"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-red-500"
+                  value={selectedAreas.join(', ')}
+                  onChange={e => {
+                    const parts = e.target.value.split(',').map(p => p.trim()).filter(Boolean);
+                    setSelectedAreas(parts);
+                  }}
+                  placeholder="Áreas seleccionadas (ej: Tecnología (TI), Operaciones & Planta)"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-medium text-xs outline-none focus:ring-2 focus:ring-red-500 mt-1"
                 />
               </div>
             </div>
@@ -283,7 +382,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400" />
                   <span>Persona de Contacto</span>
                 </label>
                 <input

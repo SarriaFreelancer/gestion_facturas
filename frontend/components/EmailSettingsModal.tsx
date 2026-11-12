@@ -7,11 +7,11 @@ import {
   X, 
   CheckCircle2, 
   Save, 
-  Sparkles, 
   Building2, 
   Clock, 
   Send,
-  HelpCircle
+  HelpCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { notifySuccess, notifyError } from '../lib/alerts';
@@ -30,7 +30,8 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
 }) => {
   const [recipientEmail, setRecipientEmail] = useState('contabilidad@alimentosenriko.com');
   const [ccEmails, setCcEmails] = useState('');
-  const [senderName, setSenderName] = useState('Alimentos Enriko S.A.S. — Facturación');
+  const [senderName, setSenderName] = useState('Juan Cuero — Alimentos Enriko S.A.S.');
+  const [smtpUser, setSmtpUser] = useState('juan.cuero@enriko.com.co');
   const [emailSubject, setEmailSubject] = useState('Reporte de Facturas Entregadas — Alimentos Enriko S.A.S.');
   const [emailTemplate, setEmailTemplate] = useState(
     'Estimado equipo de Contabilidad y Pagos,\n\nAdjunto remitimos el reporte consolidado de las facturas que han sido radicadas y entregadas formalmente para su respectiva causación y trámite de pago.\n\nPor favor verificar el detalle en la tabla anexa a continuación.'
@@ -54,6 +55,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
         if (data.recipientEmail) setRecipientEmail(data.recipientEmail);
         if (data.ccEmails) setCcEmails(data.ccEmails);
         if (data.senderName) setSenderName(data.senderName);
+        if (data.smtpUser) setSmtpUser(data.smtpUser);
         if (data.emailSubject) setEmailSubject(data.emailSubject);
         if (data.emailTemplate) setEmailTemplate(data.emailTemplate);
         if (data.frequency) setFrequency(data.frequency);
@@ -74,6 +76,10 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
       notifyError('Campo requerido', 'Por favor ingresa el correo destinatario.');
       return;
     }
+    if (!smtpUser.trim()) {
+      notifyError('Remitente requerido', 'Por favor ingresa el correo remitente de Outlook (ej. juan.cuero@enriko.com.co).');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -81,6 +87,7 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
         recipientEmail: recipientEmail.trim(),
         ccEmails: ccEmails.trim(),
         senderName: senderName.trim(),
+        smtpUser: smtpUser.trim(),
         emailSubject: emailSubject.trim(),
         emailTemplate: emailTemplate.trim(),
         frequency,
@@ -113,10 +120,9 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
             <div>
               <h2 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                 <span>Configuración de Envío Outlook</span>
-                <Sparkles className="w-4 h-4 text-amber-300" />
               </h2>
               <p className="text-[11px] text-white/90">
-                Destinatarios, asunto y plantilla del reporte de facturas entregadas
+                Destinatarios, remitente institucional y plantilla del reporte de facturas entregadas
               </p>
             </div>
           </div>
@@ -131,6 +137,35 @@ export const EmailSettingsModal: React.FC<EmailSettingsModalProps> = ({
 
         {/* CONTENIDO FORMULARIO */}
         <form onSubmit={handleSave} className="p-5 space-y-4 text-xs overflow-y-auto flex-1">
+          {/* CORREO REMITENTE (OUTLOOK) */}
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700">
+            <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+              <label className="block text-xs font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
+                Correo Remitente (Outlook / Microsoft 365) <span className="text-red-500">*</span>
+              </label>
+              {smtpUser && smtpUser.includes('@') ? (
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-300 dark:border-emerald-800">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Configurado para envío directo
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                  Falta correo remitente
+                </span>
+              )}
+            </div>
+            <input
+              type="email"
+              value={smtpUser}
+              onChange={(e) => setSmtpUser(e.target.value)}
+              placeholder="juan.cuero@enriko.com.co"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white font-mono text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all"
+              required
+            />
+            <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-1">
+              Remitente institucional oficial. Los reportes se envían directamente desde el sistema usando este correo en Outlook.
+            </p>
+          </div>
+
           {/* CORREO DESTINATARIO */}
           <div>
             <label className="block text-xs font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">

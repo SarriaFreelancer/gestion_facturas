@@ -7,6 +7,7 @@ export interface SupplierService {
 export interface Supplier {
   id: string;
   nit: string;
+  sapCode?: string | null;
   name: string;
   tradeName?: string | null;
   address?: string | null;
@@ -29,20 +30,33 @@ export interface Supplier {
 export interface Invoice {
   id: string;
   supplier: string;
+  area?: string | null;
   service?: string;
   invoiceNumber?: string;
   emissionDate?: string;
   deliveryDate?: string | null;
+  dueDate?: string | null;
   value?: number;
   signed?: 'SÍ' | 'NO' | string;
+  approvalStatus?: 'Pendiente' | 'Aprobado' | 'Rechazado' | string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
   orderStd?: 'SÍ' | 'NO' | string;
   oc?: string;
+  contractNumber?: string | null;
   enFacture?: 'SÍ' | 'NO' | 'AÚN NO' | string;
   delivered?: 'SÍ' | 'NO' | string;
   pdfPath?: string | null;
   pdfOriginalName?: string | null;
+  itemsJson?: any;
+  sapExported?: number;
+  sapDocNum?: string | null;
   emailSent?: 'SÍ' | 'NO' | string;
   emailSentAt?: string | null;
+  aiShortSummary?: string | null;
+  dianEventsStatus?: string | null;
+  recurrentParentId?: string | null;
+  recurrentMatchReason?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -61,6 +75,8 @@ export interface EmailSettings {
   smtpUser?: string;
   smtpPassword?: string;
   portalEnabled?: boolean | number;
+  inventoryEnabled?: boolean | number;
+  categoriesEnabled?: boolean | number;
   defaultClientName?: string;
   defaultClientNit?: string;
   geminiApiKey?: string;
@@ -89,6 +105,7 @@ export interface InternalInvoice {
   docType?: 'FACTURA DE VENTA' | 'NOTA CRÉDITO' | string;
   paymentType?: 'Crédito' | 'Contado' | string;
   referenceNumber?: string;
+  contractNumber?: string | null;
   issuerName: string;
   issuerNit: string;
   clientName?: string;
@@ -125,6 +142,9 @@ export interface InternalInvoice {
   eventRechazoDate?: string | null;
   eventStatus?: string;
   eventNotification?: string | null;
+  aiReadingStatus?: 'PENDIENTE' | 'LEYENDO' | 'LECTURA REALIZADA' | 'APROBADA' | string;
+  aiShortSummary?: string | null;
+  dianEventsStatus?: 'PENDIENTE' | 'COMPLETADO' | string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -201,6 +221,7 @@ export interface InventoryCategory {
 export interface CompanyArea {
   id: string;
   name: string;
+  costCenterCode?: string | null;
   director?: string | null;
   headOrCoord?: string | null;
   email?: string | null;
@@ -211,14 +232,17 @@ export interface CompanyArea {
   updatedAt?: string;
 }
 
+export type UserRole = 'superadmin' | 'admin' | 'aprobador_area' | 'viewer' | 'supplier';
+
 export interface User {
   id: string;
   username: string;
   name: string;
   email?: string | null;
   password?: string | null;
-  role: 'superadmin' | 'admin' | 'viewer' | 'supplier';
+  role: UserRole;
   area: string;
+  authorizedAreas?: string[];
   supplierNit?: string | null;
   supplierId?: string | null;
   phone?: string | null;
@@ -237,7 +261,48 @@ export interface DashboardMetrics {
   pendingDeliveryCount: number;
   totalAmount: number;
   delayedCount: number;
+  pendingFactureAlerts?: any[];
+  factureReadyCount?: number;
+  factureReadyAlerts?: any[];
+  totalAlertsCount?: number;
   monthlyStats?: MonthlyStat[];
   weeklyReceivedDelivered?: WeeklyReceivedDelivered[];
   recurrenceStudy?: RecurrenceStudyItem[];
+}
+
+export interface SapPresolicitudRow {
+  id?: string;
+  invoiceId?: string;
+  docNumber?: string;
+  itemLine: number;
+  itemCode: string; // Número de artículo
+  docType: string; // Tipo Solicitud Compra
+  itemType: string; // Tipo_Item
+  itemDescription: string; // Descripción del artículo
+  additionalDescription: string; // Descripcion_Adic
+  requiredQuantity: number; // Cantidad Requerida
+  unit: string; // Nombre de unidad de medida
+  infoPrice: number; // Precio info
+  taxIndicator: string; // Indicador de impuestos
+  taxPercentage: number; // Impuesto %
+  discountPercentage: number; // % de descuento
+  warehouse: string; // Almacén
+  suggestedSupplier: string; // Proveedor Sugerido
+  requiredDate: string; // Fecha Requerida
+  costCenter: string; // Centro Costos
+  totalMl: number; // Total (ML)
+  requestedBy: string; // Solicitado por
+  observation: string; // Observación
+  motive?: string; // Motivo
+  urgency?: string; // Urgencia
+  originCountry?: string; // País/región de origen
+  foreignUnitPrice?: number; // Vlr_Unit_Extranj
+  transportRequestDate?: string; // Fecha_Solicitud_Serv_Transp
+  billingManagement?: string; // Gestion_Facturacion
+  donationNovelty?: string; // Novedad_Donacion
+  freeText?: string; // Texto libre
+  currency: string; // Moneda
+  donationNovelty2?: string; // Novedad_Donaciones
+  giftNovelty?: string; // Novedad_Obsequios
+  status?: string;
 }

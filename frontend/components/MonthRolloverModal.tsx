@@ -9,7 +9,6 @@ import {
   Layers, 
   AlertTriangle,
   Clock,
-  Sparkles,
   X
 } from 'lucide-react';
 
@@ -62,7 +61,6 @@ export const MonthRolloverModal: React.FC<MonthRolloverModalProps> = ({
             <div className="flex-1 min-w-0">
               <h2 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 flex-wrap">
                 <span>Inicio de Mes: {targetMonth} {targetYear}</span>
-                <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0" />
               </h2>
               <p className="text-[10px] sm:text-[11px] text-white/90 font-medium truncate">
                 Verificación oficial con fecha del servidor: {serverDateInfo?.serverDate ? serverDateInfo.serverDate.split(' ')[0] : 'Sincronizada'}

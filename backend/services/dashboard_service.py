@@ -26,9 +26,21 @@ class DashboardAnalyticsService:
                 continue
         return None
 
-    def get_dashboard_metrics(self, month: Optional[str] = None, year: Optional[str] = None) -> Dict[str, Any]:
+    def get_dashboard_metrics(self, month: Optional[str] = None, year: Optional[str] = None, area: Optional[str] = None) -> Dict[str, Any]:
         all_invoices = self.repo.fetch_all_invoices()
         suppliers = self.repo.fetch_all_suppliers()
+
+        # Filtrar por área si se especifica y no es superadmin/global
+        if area and area not in ["Todos", "Dirección General", "General", ""]:
+            target_area_lower = area.strip().lower()
+            all_invoices = [
+                i for i in all_invoices 
+                if (i.get("area") or "").strip().lower() == target_area_lower or target_area_lower in (i.get("area") or "").lower()
+            ]
+            suppliers = [
+                s for s in suppliers 
+                if target_area_lower in (s.get("area") or "").strip().lower()
+            ]
 
         # Filtrar facturas según mes y año si se especifican
         invoices = []
@@ -97,8 +109,12 @@ class DashboardAnalyticsService:
                 if (inv.get("delivered") or "").upper() == "SÍ":
                     weekly_received_delivered[weekday_idx]["delivered"] += 1
 
-        # 3. Estudio de Facturas y Servicios Recurrentes (Mapeo por proveedor)
+        # 3. Estudio de Facturas y Servicios Recurrentes & Alertas de Facturas Esperadas en Facture
+        now = datetime.now()
+        cur_day = now.day
         recurrence_study = []
+        pending_facture_alerts = []
+
         for sup in suppliers:
             services = sup.get("services") or []
             if isinstance(services, list):
@@ -112,6 +128,38 @@ class DashboardAnalyticsService:
             # Buscar cuántas facturas reales se registraron para este proveedor en el filtro
             registered_in_period = [i for i in invoices if (i.get("supplier") or "").strip().lower() == (sup.get("name") or "").strip().lower()]
             total_spent = sum(float(i.get("value") or 0) for i in registered_in_period)
+
+            # Verificar si algún concepto recurrente activo no ha llegado en Facture este mes
+            if isinstance(services, list):
+                for srv in services:
+                    if srv.get("enabled") == False or srv.get("type") != "factura":
+                        continue
+                    srv_name = srv.get("serviceName", "")
+                    contract_num = srv.get("contractNumber") or ""
+                    
+                    # Buscar si ya llegó en Facture para este mes
+                    arrived = any(
+                        (i.get("supplier", "").strip().lower() == (sup.get("name") or "").strip().lower()) and
+                        ((i.get("service") or "").strip().lower() == srv_name.lower() or (contract_num and (i.get("contractNumber") or "").strip().lower() == contract_num.lower())) and
+                        ((i.get("enFacture") or "").upper() == "SÍ")
+                        for i in registered_in_period
+                    )
+
+                    if not arrived:
+                        expected_day = int(srv.get("expectedDay") or 10)
+                        is_overdue = cur_day >= expected_day
+                        pending_facture_alerts.append({
+                            "supplierId": sup.get("id"),
+                            "supplierName": sup.get("name"),
+                            "supplierNit": sup.get("nit"),
+                            "serviceName": srv_name,
+                            "contractNumber": contract_num,
+                            "area": sup.get("area") or "General",
+                            "expectedDay": expected_day,
+                            "isOverdue": is_overdue,
+                            "status": "Pendiente en Facture",
+                            "message": f"Factura habitual '{srv_name}' de {sup.get('name')} {f'(Contrato {contract_num})' if contract_num else ''} pendiente por sincronizar en Facture.co (Día habitual: {expected_day})."
+                        })
 
             recurrence_study.append({
                 "supplierId": sup.get("id"),
@@ -128,6 +176,45 @@ class DashboardAnalyticsService:
                 "compliance": round((len(registered_in_period) / total_concepts * 100), 1) if total_concepts > 0 else 100.0
             })
 
+        # 4. Alertas de Facturas que YA llegaron en Facture (Listas para Acuse, Aceptación, Firma y Plantilla SAP)
+        facture_ready_alerts = []
+        for inv in invoices:
+            if (inv.get("enFacture") or "").upper() == "SÍ":
+                inv_num = inv.get("invoiceNumber") or "Sin número"
+                sup_n = inv.get("supplier") or "Proveedor"
+                val = float(inv.get("value") or 0.0)
+                is_signed = (inv.get("signed") or "").upper() == "SÍ"
+                is_delivered = (inv.get("delivered") or "").upper() == "SÍ"
+                dian_status = inv.get("dianEventsStatus") or "PENDIENTE"
+                
+                pending_actions = []
+                if dian_status != "ACEPTADO":
+                    pending_actions.append("Acuse DIAN")
+                if not is_signed:
+                    pending_actions.append("Firma")
+                if not is_delivered:
+                    pending_actions.append("Aceptación y Recibido")
+                pending_actions.append("Llenado de plantilla para SAP")
+
+                facture_ready_alerts.append({
+                    "id": f"alert-ready-{inv.get('id')}",
+                    "type": "FACTURE_READY",
+                    "invoiceId": inv.get("id"),
+                    "invoiceNumber": inv_num,
+                    "supplierName": sup_n,
+                    "area": inv.get("area") or "General",
+                    "amount": val,
+                    "service": inv.get("service") or "",
+                    "emissionDate": inv.get("emissionDate") or "",
+                    "enFacture": "SÍ",
+                    "signed": "SÍ" if is_signed else "NO",
+                    "delivered": "SÍ" if is_delivered else "NO",
+                    "dianEventsStatus": dian_status,
+                    "sapReady": True,
+                    "pendingActions": pending_actions,
+                    "message": f"Factura {inv_num} de {sup_n} (${val:,.2f}) ya está en Facture. Lista para proceder con: {', '.join(pending_actions)} (plantilla SAP lista para revisión)."
+                })
+
         return {
             "total": total,
             "facCount": fac_count,
@@ -138,7 +225,11 @@ class DashboardAnalyticsService:
             "deliveredCount": delivered_count,
             "pendingDeliveryCount": pending_delivery,
             "totalAmount": total_amount,
-            "delayedCount": 0,
+            "delayedCount": len(pending_facture_alerts),
+            "pendingFactureAlerts": pending_facture_alerts,
+            "factureReadyCount": len(facture_ready_alerts),
+            "factureReadyAlerts": facture_ready_alerts,
+            "totalAlertsCount": len(facture_ready_alerts) + len(pending_facture_alerts),
             "monthlyStats": monthly_stats,
             "weeklyReceivedDelivered": weekly_received_delivered,
             "recurrenceStudy": recurrence_study

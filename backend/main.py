@@ -43,6 +43,27 @@ app.include_router(invoices_router, prefix="/api")
 app.include_router(facture_router, prefix="/api")
 app.include_router(internal_invoices_router, prefix="/api")
 
+from backend.services.auto_downloader import downloader
+
+@app.on_event("startup")
+def startup_db_migrations():
+    try:
+        from backend.migrate_v6 import run_migration
+        run_migration()
+    except Exception as e:
+        print(f"Aviso en migración v6: {e}")
+    try:
+        downloader.start_worker()
+    except Exception as e:
+        print(f"Aviso iniciando auto_downloader: {e}")
+
+@app.on_event("shutdown")
+def shutdown_worker():
+    try:
+        downloader.stop_worker()
+    except Exception:
+        pass
+
 @app.get("/")
 def root():
     return {

@@ -11,7 +11,6 @@ import {
   Copy, 
   X, 
   Settings, 
-  Sparkles, 
   CheckCircle2, 
   Clock, 
   Search,
@@ -555,7 +554,11 @@ export const DeliveredInvoicesModal: React.FC<DeliveredInvoicesModalProps> = ({
         {/* PIE DE MODAL & BOTONES DE ACCIÓN */}
         <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 border-t border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs flex-shrink-0">
           {/* RESUMEN DE SELECCIÓN */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-800 text-[11px] text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700">
+              <Mail className="w-3.5 h-3.5 text-red-600" />
+              <span>Remitente: <strong>{emailSettings?.smtpUser || 'juan.cuero@enriko.com.co'}</strong></span>
+            </div>
             <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 font-bold">
               <span className="text-slate-400 mr-1">Seleccionadas:</span>
               <span className="text-slate-900 dark:text-white font-extrabold">{selectedIds.length}</span>

@@ -14,8 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="h-full antialiased">
-      <body className="min-h-full flex flex-col select-none">
-        <SecurityShield />
+      <body className="min-h-full flex flex-col">
+        {/* <SecurityShield /> deshabilitado temporalmente para permitir copiar texto y menú contextual */}
         {children}
       </body>
     </html>

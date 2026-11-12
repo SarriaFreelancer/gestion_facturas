@@ -17,22 +17,32 @@ class UpdateFieldRequest(BaseModel):
 class InvoicePayload(BaseModel):
     id: Optional[str] = None
     supplier: str
+    area: Optional[str] = "General"
     service: Optional[str] = ""
     invoiceNumber: Optional[str] = ""
     emissionDate: Optional[str] = ""
-    deliveryDate: Optional[str] = ""
+    deliveryDate: Optional[str] = None
+    dueDate: Optional[str] = None
     value: Optional[float] = 0.0
     signed: Optional[str] = "NO"
+    approvalStatus: Optional[str] = "Pendiente"
+    approvedBy: Optional[str] = None
+    approvedAt: Optional[str] = None
     orderStd: Optional[str] = "NO"
     oc: Optional[str] = ""
+    contractNumber: Optional[str] = ""
     enFacture: Optional[str] = "AÚN NO"
     delivered: Optional[str] = "NO"
     pdfPath: Optional[str] = None
     pdfOriginalName: Optional[str] = None
+    itemsJson: Optional[Any] = []
+    sapExported: Optional[int] = 0
+    sapDocNum: Optional[str] = None
 
 class SupplierPayload(BaseModel):
     id: Optional[str] = None
     nit: str
+    sapCode: Optional[str] = ""
     name: str
     tradeName: Optional[str] = None
     address: Optional[str] = ""
@@ -122,9 +132,9 @@ def delete_supplier(supplier_id: str):
 
 # --- DASHBOARD METRICS ---
 @router.get("/dashboard/metrics")
-def get_metrics(month: Optional[str] = None, year: Optional[str] = None):
+def get_metrics(month: Optional[str] = None, year: Optional[str] = None, area: Optional[str] = None):
     try:
-        return analytics_service.get_dashboard_metrics(month=month, year=year)
+        return analytics_service.get_dashboard_metrics(month=month, year=year, area=area)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -173,6 +183,12 @@ def get_system_date_status(month: Optional[str] = None, year: Optional[str] = No
     is_same_or_past_month = (target_year_val < cur_year) or (target_year_val == cur_year and target_month_idx <= cur_month_idx)
     # A partir del día 1 del mes destino es apto para inicializar en 0
     can_generate_zero_template = is_same_or_past_month and (cur_day >= 1)
+
+    if can_generate_zero_template:
+        try:
+            repo.generate_month_template(str(target_year_val), target_month_name.capitalize())
+        except Exception:
+            pass
 
     return {
         "serverDate": now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -338,6 +354,7 @@ def delete_inventory_category(cat_id: str):
 class AreaPayload(BaseModel):
     id: Optional[str] = None
     name: str
+    costCenterCode: Optional[str] = ""
     director: Optional[str] = ""
     headOrCoord: Optional[str] = ""
     email: Optional[str] = ""
@@ -586,8 +603,11 @@ class EmailSettingsPayload(BaseModel):
     smtpUser: Optional[str] = ""
     smtpPassword: Optional[str] = ""
     portalEnabled: Optional[int] = 1
+    inventoryEnabled: Optional[int] = 1
+    categoriesEnabled: Optional[int] = 1
     defaultClientName: Optional[str] = "ALIMENTOS ENRIKO SAS"
     defaultClientNit: Optional[str] = "890330035"
+    geminiApiKey: Optional[str] = ""
     googleClientId: Optional[str] = ""
     googleClientSecret: Optional[str] = ""
     googleProjectId: Optional[str] = "facturacionenriko"
@@ -798,6 +818,272 @@ def test_email_connection(payload: TestEmailPayload):
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fallo en la prueba de correo: {str(e)}")
+
+# --- DETECCIÓN DE DUPLICIDAD Y GUARDADO CON CONTRATO HABITUAL ---
+class CheckDuplicatePayload(BaseModel):
+    invoiceNumber: str
+    supplierName: Optional[str] = None
+
+@router.post("/invoices/check-duplicate")
+def check_invoice_duplicate(payload: CheckDuplicatePayload):
+    try:
+        dup = repo.check_invoice_duplicate(payload.invoiceNumber, payload.supplierName)
+        return {
+            "isDuplicate": dup is not None,
+            "invoice": dup
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class HabitualContractPayload(BaseModel):
+    invoiceNumber: str
+    supplier: str
+    supplierNit: Optional[str] = ""
+    contractNumber: str
+    service: Optional[str] = ""
+    area: Optional[str] = "General"
+    emissionDate: Optional[str] = ""
+    dueDate: Optional[str] = ""
+    value: Optional[float] = 0.0
+    itemsJson: Optional[Any] = []
+    pdfPath: Optional[str] = None
+    pdfOriginalName: Optional[str] = None
+    oc: Optional[str] = ""
+
+@router.post("/invoices/save-habitual-contract")
+def save_habitual_contract_endpoint(payload: HabitualContractPayload):
+    try:
+        res = repo.save_habitual_supplier_contract_and_invoice(payload.model_dump())
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- MÓDULO DE APROBACIÓN DE JEFES POR ÁREA ---
+class AreaApprovePayload(BaseModel):
+    invoiceIds: List[str]
+    approverName: Optional[str] = "Jefe de Área"
+
+class AreaRejectPayload(BaseModel):
+    invoiceIds: List[str]
+    rejectorName: Optional[str] = "Jefe de Área"
+    reason: Optional[str] = ""
+
+@router.get("/invoices/area-approval")
+def get_invoices_for_area_approval(
+    area: Optional[str] = None, 
+    status: Optional[str] = "Pendiente",
+    userRole: Optional[str] = None,
+    authorizedAreas: Optional[str] = None
+):
+    try:
+        auth_areas_list = []
+        if authorizedAreas:
+            try:
+                parsed = json.loads(authorizedAreas)
+                if isinstance(parsed, list):
+                    auth_areas_list = parsed
+                else:
+                    auth_areas_list = [str(parsed)]
+            except Exception:
+                auth_areas_list = [a.strip() for a in authorizedAreas.split(",") if a.strip()]
+
+        return repo.fetch_invoices_for_area_approval(
+            area=area, 
+            status=status,
+            user_role=userRole,
+            authorized_areas=auth_areas_list
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DianEventsPayload(BaseModel):
+    invoiceId: str
+    status: str
+
+@router.post("/invoices/dian-events/status")
+def update_dian_events_status_endpoint(payload: DianEventsPayload):
+    try:
+        repo.update_invoice_field(payload.invoiceId, "dianEventsStatus", payload.status)
+        return {"success": True, "invoiceId": payload.invoiceId, "dianEventsStatus": payload.status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/invoices/area-approval/approve")
+def approve_invoices_area_endpoint(payload: AreaApprovePayload):
+    try:
+        return repo.approve_invoices_by_area(payload.invoiceIds, payload.approverName or "Jefe de Área")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/invoices/area-approval/reject")
+def reject_invoices_area_endpoint(payload: AreaRejectPayload):
+    try:
+        return repo.reject_invoices_by_area(payload.invoiceIds, payload.rejectorName or "Jefe de Área", payload.reason or "")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- PREVISUALIZACIÓN Y EXPORTACIÓN A EXCEL PARA SAP ---
+import io
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from fastapi.responses import Response
+
+class SapPresolicitudSavePayload(BaseModel):
+    rows: List[Dict[str, Any]]
+    userName: Optional[str] = "Usuario"
+
+@router.get("/invoices/{invoice_id}/presolicitud")
+def get_sap_presolicitud_endpoint(invoice_id: str, userName: Optional[str] = "Usuario"):
+    try:
+        return repo.get_or_create_sap_presolicitud(invoice_id, current_user_name=userName or "Usuario")
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/invoices/{invoice_id}/presolicitud")
+def save_sap_presolicitud_endpoint(invoice_id: str, payload: SapPresolicitudSavePayload):
+    try:
+        success = repo.save_sap_presolicitud_rows(invoice_id, payload.rows, current_user_name=payload.userName or "Usuario")
+        return {"success": success, "message": "Presolicitud de compra SAP guardada exitosamente."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/invoices/{invoice_id}/sap-preview")
+def get_sap_preview_endpoint(invoice_id: str, userName: Optional[str] = "Usuario"):
+    try:
+        return repo.get_or_create_sap_presolicitud(invoice_id, current_user_name=userName or "Usuario")
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/invoices/{invoice_id}/presolicitud/excel")
+@router.get("/invoices/{invoice_id}/sap-excel")
+def export_sap_excel_endpoint(invoice_id: str, userName: Optional[str] = "Usuario"):
+    try:
+        presol_data = repo.get_or_create_sap_presolicitud(invoice_id, current_user_name=userName or "Usuario")
+        rows = presol_data.get("rows", [])
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Presolicitud_Compra"
+
+        # 29 Columnas Oficiales de la Plantilla de Presolicitud de Compra SAP
+        headers = [
+            "Número de artículo", "Tipo Solicitud Compra", "Tipo_Item", "Descripción del artículo",
+            "Descripcion_Adic", "Cantidad Requerida", "Nombre de unidad de medida", "Precio info",
+            "Indicador de impuestos", "Impuesto %", "% de descuento", "Almacén",
+            "Proveedor Sugerido", "Fecha Requerida", "Centro Costos", "Total (ML)",
+            "Solicitado por", "Observación", "Motivo", "Urgencia",
+            "País/región de origen", "Vlr_Unit_Extranj", "Fecha_Solicitud_Serv_Transp",
+            "Gestion_Facturacion", "Novedad_Donacion", "Texto libre", "Moneda",
+            "Novedad_Donaciones", "Novedad_Obsequios"
+        ]
+
+        thin_border = Border(
+            left=Side(style='thin', color='CBD5E1'),
+            right=Side(style='thin', color='CBD5E1'),
+            top=Side(style='thin', color='CBD5E1'),
+            bottom=Side(style='thin', color='CBD5E1')
+        )
+
+        header_font = Font(name="Arial", size=10, bold=True, color="000000")
+        header_fill_green = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid") # Verde distintivo de la plantilla
+        header_fill_default = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+
+        for col_idx, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_idx, value=h)
+            cell.font = header_font
+            cell.fill = header_fill_green if col_idx == 1 else header_fill_default
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = thin_border
+        ws.row_dimensions[1].height = 28
+
+        curr_row = 2
+        for r in rows:
+            ws.cell(row=curr_row, column=1, value=r.get("itemCode", "ISVVR00001")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=2, value=r.get("docType", "PEDIDO")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=3, value=r.get("itemType", "Servicios")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=4, value=r.get("itemDescription", "Accesorios Varios (51)"))
+            ws.cell(row=curr_row, column=5, value=r.get("additionalDescription", ""))
+            
+            c_qty = ws.cell(row=curr_row, column=6, value=float(r.get("requiredQuantity") or 1.0))
+            c_qty.number_format = '#,##0'
+            c_qty.alignment = Alignment(horizontal="center")
+
+            ws.cell(row=curr_row, column=7, value=r.get("unit", "Und")).alignment = Alignment(horizontal="center")
+
+            c_prc = ws.cell(row=curr_row, column=8, value=float(r.get("infoPrice") or 0.0))
+            c_prc.number_format = '$#,##0.00'
+            c_prc.alignment = Alignment(horizontal="right")
+
+            ws.cell(row=curr_row, column=9, value=r.get("taxIndicator", "IVAD33")).alignment = Alignment(horizontal="center")
+            
+            c_tax = ws.cell(row=curr_row, column=10, value=float(r.get("taxPercentage") or 19.0))
+            c_tax.number_format = '0'
+            c_tax.alignment = Alignment(horizontal="center")
+
+            c_desc = ws.cell(row=curr_row, column=11, value=float(r.get("discountPercentage") or 0.0))
+            c_desc.number_format = '0'
+            c_desc.alignment = Alignment(horizontal="center")
+
+            ws.cell(row=curr_row, column=12, value=r.get("warehouse", "Servic01")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=13, value=r.get("suggestedSupplier", "")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=14, value=r.get("requiredDate", "")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=15, value=r.get("costCenter", "AA0122")).alignment = Alignment(horizontal="center")
+
+            c_tot = ws.cell(row=curr_row, column=16, value=float(r.get("totalMl") or 0.0))
+            c_tot.number_format = '$#,##0.00'
+            c_tot.alignment = Alignment(horizontal="right")
+
+            ws.cell(row=curr_row, column=17, value=r.get("requestedBy", userName))
+            ws.cell(row=curr_row, column=18, value=r.get("observation", ""))
+            ws.cell(row=curr_row, column=19, value=r.get("motive", ""))
+            ws.cell(row=curr_row, column=20, value=r.get("urgency", ""))
+            ws.cell(row=curr_row, column=21, value=r.get("originCountry", "CO")).alignment = Alignment(horizontal="center")
+            
+            c_ext = ws.cell(row=curr_row, column=22, value=float(r.get("foreignUnitPrice") or 0.0))
+            c_ext.number_format = '$#,##0.00'
+            c_ext.alignment = Alignment(horizontal="right")
+
+            ws.cell(row=curr_row, column=23, value=r.get("transportRequestDate", ""))
+            ws.cell(row=curr_row, column=24, value=r.get("billingManagement", ""))
+            ws.cell(row=curr_row, column=25, value=r.get("donationNovelty", ""))
+            ws.cell(row=curr_row, column=26, value=r.get("freeText", ""))
+            ws.cell(row=curr_row, column=27, value=r.get("currency", "COP")).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=28, value=r.get("donationNovelty2", ""))
+            ws.cell(row=curr_row, column=29, value=r.get("giftNovelty", ""))
+
+            for col_idx in range(1, 30):
+                ws.cell(row=curr_row, column=col_idx).border = thin_border
+            ws.row_dimensions[curr_row].height = 20
+            curr_row += 1
+
+        # Auto-ajuste de anchos de columna
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = col[0].column_letter
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 14)
+
+        ws.column_dimensions["D"].width = 28 # Descripción del artículo
+        ws.column_dimensions["E"].width = 40 # Descripcion_Adic
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        clean_inv_num = str(invoice_id).replace('/', '_').replace(' ', '_')
+        filename = f"Presolicitud_Compra_SAP_{clean_inv_num}.xlsx"
+        return Response(
+            content=output.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

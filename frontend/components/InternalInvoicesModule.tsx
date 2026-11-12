@@ -6,7 +6,6 @@ import {
   Search, 
   RefreshCw, 
   FileText, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle, 
   Eye, 
@@ -228,7 +227,6 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({
           <div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-2 flex-wrap">
               <span>{isSupplier ? 'Radicar Facturas — Portal de Proveedores' : 'Bandeja de Facturas de Proveedores'}</span>
-              <Sparkles className="w-4 h-4 text-emerald-500" />
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-1">
               {isSupplier 
@@ -836,8 +834,8 @@ export const InternalInvoicesModule: React.FC<InternalInvoicesModuleProps> = ({
                 <div className="p-4 rounded-2xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/40 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-black text-purple-900 dark:text-purple-300">
-                      <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span>Extracción de Ítems e Impuestos (IA)</span>
+                      <FileText className="w-4 h-4 text-purple-600" />
+                      <span>Extracción de Ítems e Impuestos</span>
                     </div>
                     <span className="text-xs font-black font-mono text-purple-700 dark:text-purple-300">
                       {selectedItems.length} {selectedItems.length === 1 ? 'producto' : 'productos'}

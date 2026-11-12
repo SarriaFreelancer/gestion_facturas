@@ -21,6 +21,7 @@ import { EmailSettingsModal } from '../components/EmailSettingsModal';
 import { SettingsModule } from '../components/SettingsModule';
 import { FactureModule } from '../components/FactureModule';
 import { InternalInvoicesModule } from '../components/InternalInvoicesModule';
+import { AreaApprovalsModule } from '../components/AreaApprovalsModule';
 import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { api } from '../lib/api';
 import { 
@@ -42,27 +43,35 @@ import {
   User,
   EmailSettings
 } from './types';
-import { Trash2, AlertCircle, Sparkles, Filter, CheckCircle2, Calendar, Shield, Building2 } from 'lucide-react';
+import { Trash2, AlertCircle, Filter, CheckCircle2, Calendar, Shield, Building2, Laptop, Tag } from 'lucide-react';
 
 export default function Home() {
-  // Usuario Activo (Por defecto SuperAdmin de Alimentos Enriko)
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 'usr-superadmin',
-    username: 'superadmin',
-    name: 'David Sarria (Superadmin)',
-    email: 'superadmin@alimentosenriko.com',
-    role: 'superadmin',
-    area: 'Dirección General',
-    status: 'Activo'
+  // Usuario Activo (inicializado desde sesión guardada o Admin de Tecnología por defecto)
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ae_auth_user');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      id: 'usr-admin-ti',
+      username: 'admin.ti',
+      name: 'Ing. Carlos Mendoza (Admin TI)',
+      email: 'admin.ti@alimentosenriko.com',
+      role: 'admin',
+      area: 'Tecnología (TI)',
+      status: 'Activo'
+    };
   });
 
-  const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'facture' | 'internal_invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
+  const [currentView, setCurrentViewState] = useState<'dashboard' | 'invoices' | 'area_approvals' | 'facture' | 'internal_invoices' | 'suppliers' | 'inventory' | 'areas' | 'categories' | 'users' | 'settings' | 'reports' | 'alerts'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Sincronizador de vistas con la URL del navegador
   const setCurrentView = useCallback((view: string) => {
-    const validViews = ['dashboard', 'invoices', 'facture', 'internal_invoices', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
+    const validViews = ['dashboard', 'invoices', 'area_approvals', 'facture', 'internal_invoices', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
     let target = (validViews.includes(view) ? view : 'dashboard') as any;
     if (currentUser?.role === 'supplier') {
       target = 'internal_invoices';
@@ -86,7 +95,7 @@ export default function Home() {
     setMounted(true);
 
     // Leer vista desde la URL si viene en la query (?view=invoices o ?tab=suppliers o #facture)
-    const validViews = ['dashboard', 'invoices', 'facture', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
+    const validViews = ['dashboard', 'invoices', 'area_approvals', 'facture', 'internal_invoices', 'suppliers', 'inventory', 'areas', 'categories', 'users', 'settings', 'reports', 'alerts'];
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view') || params.get('tab') || window.location.hash.replace('#', '');
     if (viewParam && validViews.includes(viewParam)) {
@@ -176,9 +185,12 @@ export default function Home() {
     });
   }, []);
 
-  // Filtros Globales de Mes y Año (Sincronizados con la fecha actual del día)
-  const [selectedMonth, setSelectedMonth] = useState('Septiembre');
-  const [selectedYear, setSelectedYear] = useState('2026');
+  // Filtros Globales de Mes y Año (Sincronizados dinámicamente con la fecha actual del día)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return monthNames[new Date().getMonth()];
+  });
+  const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
 
   // Estado de Datos Principales
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -214,10 +226,11 @@ export default function Home() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const areaParam = currentUser?.role !== 'superadmin' ? currentUser?.area : undefined;
       const [invs, sups, mets, invt, movs, cats, ars, usrs, srvDate, mailSet] = await Promise.all([
         api.getInvoices().catch(() => []),
         api.getSuppliers().catch(() => []),
-        api.getMetrics(selectedMonth, selectedYear).catch(() => null),
+        api.getMetrics(selectedMonth, selectedYear, areaParam).catch(() => null),
         api.getInventory().catch(() => []),
         api.getInventoryMovements().catch(() => []),
         api.getInventoryCategories().catch(() => []),
@@ -238,20 +251,14 @@ export default function Home() {
 
       if (srvDate) {
         setServerDateInfo(srvDate);
-        setRolloverPreviousMonth(srvDate.previousMonth || 'Septiembre');
-      }
-
-      // Si hay usuarios cargados y el usuario actual aún no tiene datos completos del servidor
-      if (usrs.length > 0 && currentUser.id === 'usr-superadmin') {
-        const foundSuper = usrs.find((u: User) => u.role === 'superadmin');
-        if (foundSuper) setCurrentUser(foundSuper);
+        setRolloverPreviousMonth(srvDate.previousMonth || 'Octubre');
       }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, currentUser?.role, currentUser?.area]);
 
   // Sincronización con fecha de hoy al iniciar la sesión
   useEffect(() => {
@@ -378,7 +385,13 @@ export default function Home() {
 
   const scopedSuppliers = useMemo(() => {
     if (isSuperAdmin) return suppliers;
-    return suppliers.filter(s => (s.area || '').toLowerCase() === userArea.toLowerCase());
+    const lowerUserArea = userArea.toLowerCase();
+    return suppliers.filter(s => {
+      const sArea = (s.area || '').toLowerCase();
+      if (!sArea || sArea === 'general' || sArea === 'todas' || sArea === 'todos') return true;
+      const areaList = sArea.split(',').map(a => a.trim());
+      return areaList.some(a => a === lowerUserArea || a.includes(lowerUserArea) || lowerUserArea.includes(a));
+    });
   }, [suppliers, isSuperAdmin, userArea]);
 
   const scopedSupplierNames = useMemo(() => {
@@ -394,13 +407,7 @@ export default function Home() {
     };
 
     return invoices.filter(inv => {
-      // Alcance por área para Admin de Área
-      if (!isSuperAdmin) {
-        const matchesSupplier = scopedSupplierNames.includes((inv.supplier || '').toLowerCase());
-        if (!matchesSupplier) return false;
-      }
-
-      // Si el id contiene explícitamente el mes y año (ej: rec-sup-1-0-2026-octubre)
+      // Si el id contiene explícitamente el mes y año (ej: rec-sup-1-0-2026-octubre o rec-...-noviembre)
       if (selectedMonth !== 'Todos') {
         const monthTag = `${selectedYear}-${selectedMonth.toLowerCase()}`;
         if (inv.id && inv.id.toLowerCase().includes(monthTag)) {
@@ -429,7 +436,7 @@ export default function Home() {
       }
       return true;
     });
-  }, [invoices, selectedMonth, selectedYear, isSuperAdmin, scopedSupplierNames]);
+  }, [invoices, selectedMonth, selectedYear]);
 
   // Actualización rápida de campo inline en tabla de facturas
   const handleUpdateInvoiceField = async (id: string, field: string, value: any) => {
@@ -448,10 +455,17 @@ export default function Home() {
   // Guardar Proveedor (Crear o Editar)
   const handleSaveSupplier = async (supplierData: Partial<Supplier>) => {
     try {
-      // Si el usuario es admin de área, auto-asigna su área
+      let finalArea = supplierData.area || '';
+      if (!isSuperAdmin) {
+        const areaList = finalArea.split(',').map(a => a.trim()).filter(Boolean);
+        if (!areaList.some(a => a.toLowerCase() === userArea.toLowerCase())) {
+          areaList.push(userArea);
+        }
+        finalArea = areaList.join(', ');
+      }
       const dataToSave = {
         ...supplierData,
-        area: !isSuperAdmin ? userArea : (supplierData.area || 'General')
+        area: finalArea || 'General'
       };
       await api.createOrUpdateSupplier(dataToSave);
       notifySuccess('Proveedor Guardado', 'Los datos del proveedor se actualizaron correctamente.');
@@ -736,7 +750,9 @@ export default function Home() {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         currentUser={currentUser}
-        portalEnabled={emailSettings?.portalEnabled !== undefined ? Boolean(emailSettings.portalEnabled) : true}
+        portalEnabled={emailSettings?.portalEnabled !== undefined ? Boolean(Number(emailSettings.portalEnabled)) : true}
+        inventoryEnabled={emailSettings?.inventoryEnabled !== undefined ? Boolean(Number(emailSettings.inventoryEnabled)) : true}
+        categoriesEnabled={emailSettings?.categoriesEnabled !== undefined ? Boolean(Number(emailSettings.categoriesEnabled)) : true}
       />
 
       {/* CONTENIDO PRINCIPAL CON AJUSTE COMPLETO Y SCROLL SUAVE */}
@@ -755,6 +771,9 @@ export default function Home() {
           isCollapsed={isSidebarCollapsed}
           currentUser={currentUser}
           users={users}
+          metrics={metrics}
+          onNavigateView={(view: string) => setCurrentView(view)}
+          onRefreshMetrics={loadData}
           onSwitchUser={(u) => {
             setCurrentUser(u);
             localStorage.setItem('ae_auth_user', JSON.stringify(u));
@@ -770,42 +789,6 @@ export default function Home() {
         />
 
         <main className="p-3 sm:p-7 flex-1 max-w-full overflow-x-hidden">
-          {/* BANNER AVISO SI ES ADMIN DE ÁREA CON BOTÓN RÁPIDO PARA VOLVER */}
-          {!isSuperAdmin && currentUser?.role !== 'supplier' && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in duration-150">
-              <div className="flex items-center gap-2 min-w-0">
-                <Building2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="truncate">
-                  Estás navegando como <strong>Admin de Área ({userArea})</strong>. Solo puedes gestionar proveedores y facturas correspondientes a tu departamento.
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => {
-                    const superAdmin = users.find(u => u.role === 'superadmin') || {
-                      id: 'usr-superadmin',
-                      username: 'superadmin',
-                      name: 'David Sarria (Superadmin)',
-                      email: 'superadmin@alimentosenriko.com',
-                      role: 'superadmin',
-                      area: 'Dirección General',
-                      status: 'Activo'
-                    };
-                    setCurrentUser(superAdmin);
-                    notifySuccess('Sesión Restaurada', 'Has vuelto al perfil de Superadministrador con control global.');
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                  title="Regresar al usuario Super Administrador"
-                >
-                  <span>↩ Volver a Superadmin</span>
-                </button>
-                <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2 py-1 rounded-lg">
-                  Vista Filtrada
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* VISTA DASHBOARD */}
           {currentView === 'dashboard' && currentUser?.role !== 'supplier' && (
             <div>
@@ -852,6 +835,8 @@ export default function Home() {
           {currentView === 'invoices' && currentUser?.role !== 'supplier' && (
             <InvoicesModule 
               invoices={filteredInvoicesByDate}
+              suppliers={suppliers}
+              currentUser={currentUser}
               onUpdateField={handleUpdateInvoiceField}
               onDeleteInvoice={handleDeleteInvoice}
               onEditInvoice={handleEditInvoice}
@@ -865,9 +850,22 @@ export default function Home() {
             />
           )}
 
+          {/* VISTA APROBACIONES DE JEFES POR ÁREA */}
+          {currentView === 'area_approvals' && currentUser?.role !== 'supplier' && (
+            <AreaApprovalsModule 
+              currentUser={currentUser}
+              companyAreas={areas}
+              onInvoicesUpdated={loadData}
+            />
+          )}
+
           {/* VISTA BANDEJA FACTURE.CO & TRAZABILIDAD */}
           {currentView === 'facture' && currentUser?.role !== 'supplier' && (
-            <FactureModule onInvoicesUpdated={loadData} />
+            <FactureModule 
+              onInvoicesUpdated={loadData} 
+              currentUser={currentUser}
+              companyAreas={areas}
+            />
           )}
 
           {/* VISTA BANDEJA DE FACTURACIÓN INTERNA / PROVEEDORES */}
@@ -878,7 +876,7 @@ export default function Home() {
           {/* VISTA PROVEEDORES */}
           {currentView === 'suppliers' && (
             <SuppliersModule 
-              suppliers={scopedSuppliers}
+              suppliers={suppliers}
               onAddSupplier={() => {
                 setSelectedSupplierForEdit(null);
                 setIsSupplierModalOpen(true);
@@ -889,20 +887,38 @@ export default function Home() {
               }}
               onDeleteSupplier={handleDeleteSupplier}
               onUpdateSupplierServices={handleUpdateSupplierServices}
+              currentUser={currentUser}
+              areas={areas}
             />
           )}
 
           {/* VISTA INVENTARIO TI */}
           {currentView === 'inventory' && (
-            <TechInventoryModule 
-              inventory={inventory}
-              movements={movements}
-              categories={categories}
-              onSaveItem={handleSaveInventoryItem}
-              onLoanItem={handleLoanInventoryItem}
-              onReturnMovement={handleReturnInventoryMovement}
-              onDeleteItem={handleDeleteInventoryItem}
-            />
+            (emailSettings?.inventoryEnabled !== undefined && !Boolean(Number(emailSettings.inventoryEnabled))) ? (
+              <div className="p-8 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm text-center my-6">
+                <Laptop className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+                <h3 className="text-base font-black text-slate-800 dark:text-white">Módulo de Inventario TI Inhabilitado</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
+                  Este módulo ha sido temporalmente inhabilitado globalmente por el Superadministrador en la configuración del sistema.
+                </p>
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className="mt-4 px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-all cursor-pointer"
+                >
+                  Volver al Dashboard
+                </button>
+              </div>
+            ) : (
+              <TechInventoryModule 
+                inventory={inventory}
+                movements={movements}
+                categories={categories}
+                onSaveItem={handleSaveInventoryItem}
+                onLoanItem={handleLoanInventoryItem}
+                onReturnMovement={handleReturnInventoryMovement}
+                onDeleteItem={handleDeleteInventoryItem}
+              />
+            )
           )}
 
           {/* VISTA ÁREAS CORPORATIVAS */}
@@ -919,11 +935,27 @@ export default function Home() {
 
           {/* VISTA CATEGORÍAS TI (SOLO SUPERADMIN) */}
           {currentView === 'categories' && isSuperAdmin && (
-            <CategoriesModule 
-              categories={categories}
-              onSaveCategory={handleSaveCategory}
-              onDeleteCategory={handleDeleteCategory}
-            />
+            (emailSettings?.categoriesEnabled !== undefined && !Boolean(Number(emailSettings.categoriesEnabled))) ? (
+              <div className="p-8 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm text-center my-6">
+                <Tag className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+                <h3 className="text-base font-black text-slate-800 dark:text-white">Módulo de Categorías TI Inhabilitado</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
+                  Este módulo ha sido temporalmente inhabilitado en la configuración del sistema.
+                </p>
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className="mt-4 px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-all cursor-pointer"
+                >
+                  Volver al Dashboard
+                </button>
+              </div>
+            ) : (
+              <CategoriesModule 
+                categories={categories}
+                onSaveCategory={handleSaveCategory}
+                onDeleteCategory={handleDeleteCategory}
+              />
+            )
           )}
 
           {/* VISTA USUARIOS & ROLES (SOLO SUPERADMIN) */}
@@ -938,7 +970,7 @@ export default function Home() {
 
           {/* VISTA CONFIGURACIONES DEL SISTEMA & CORREO OUTLOOK */}
           {currentView === 'settings' && (
-            <SettingsModule onSettingsUpdated={loadData} />
+            <SettingsModule onSettingsUpdated={loadData} currentUser={currentUser} />
           )}
         </main>
       </div>
@@ -952,6 +984,9 @@ export default function Home() {
         }}
         onSave={handleSaveSupplier}
         initialSupplier={selectedSupplierForEdit}
+        currentUser={currentUser}
+        companyAreas={areas}
+        existingSuppliers={suppliers}
       />
 
       {/* MODAL PARA CREACIÓN / EDICIÓN DE FACTURAS O COTIZACIONES NO RECURRENTES */}
