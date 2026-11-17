@@ -226,10 +226,10 @@ class InvoiceAIService:
                 if pdf_bytes:
                     contents.append(types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"))
                 if text.strip():
-                    contents.append(f"\n--- TEXTO DEL DOCUMENTO ---\n{text[:25000]}")
+                    contents.append(f"\n--- TEXTO DEL DOCUMENTO (TODAS LAS PÁGINAS) ---\n{text[:100000]}")
                 contents.append(prompt)
 
-                for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+                for model_name in ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-flash-latest"]:
                     try:
                         response = client.models.generate_content(
                             model=model_name,
@@ -297,7 +297,8 @@ class InvoiceAIService:
         raw_lines = [l.strip() for l in text.split("\n") if l.strip()]
         lines = []
         for l in raw_lines:
-            if lines and re.match(r"^\d{1,4}$", l) and re.search(r"[0-9.,]+$", lines[-1]):
+            # Solo concatenar si la línea anterior terminó en un separador decimal o punto huérfano (ej: '5.739.' y luego '613')
+            if lines and re.search(r"[.,]$", lines[-1]) and re.match(r"^\d{1,4}$", l):
                 lines[-1] = lines[-1] + l
             else:
                 lines.append(l)
@@ -319,36 +320,62 @@ class InvoiceAIService:
 
         seen_codes = set()
 
-        # 1. Detectar patrón Siigo (Bloque vertical: Indice -> Código -> Descripción -> UND/KGM -> Cantidad -> Precio -> Total)
+        # 1. Detectar patrón Siigo / Facturación de Servicios (Bloque vertical: Índice -> Código -> Descripción [multilínea] -> [U/M opcional] -> Cantidad -> Precio -> Total)
         i = 0
         while i < len(lines):
             line = lines[i]
-            if re.match(r"^\d{1,3}$", line) and i + 5 < len(lines):
+            if re.match(r"^\d{1,3}$", line) and i + 3 < len(lines):
                 item_num = int(line)
                 code = lines[i+1]
-                desc = lines[i+2]
-                um = lines[i+3]
-                if re.match(r"^(UND|KGM|KG|GLN|LT|MTR|PAQ|CJ|BOLSA|PZA|UN)$", um, re.I):
-                    qty = cls._parse_currency_str(lines[i+4])
-                    price = cls._parse_currency_str(lines[i+5])
-                    tot = cls._parse_currency_str(lines[i+6]) if i + 6 < len(lines) else 0.0
-                    if qty > 0 and (price > 0 or tot > 0) and not is_excluded(desc):
-                        dedup_key = f"{code}_{desc}_{qty}_{tot}"
-                        if dedup_key not in seen_codes:
-                            seen_codes.add(dedup_key)
-                            items.append({
-                                "numeroItem": len(items) + 1,
-                                "codigo": code,
-                                "descripcion": desc,
-                                "unidadMedida": um.upper(),
-                                "cantidad": qty,
-                                "precioUnitario": price or round(tot / qty, 2),
-                                "subtotal": tot,
-                                "porcentajeIva": 19.0 if tot < expected_total else 0.0,
-                                "valorIva": 0.0,
-                                "total": tot
-                            })
-                        i += 7
+                desc_parts = [lines[i+2]]
+                curr_idx = i + 3
+
+                # Si la siguiente línea no es U/M ni número de cantidad, es continuación de la descripción multilínea
+                while curr_idx < len(lines) and not re.match(r"^(UND|KGM|KG|GLN|LT|MTR|PAQ|CJ|BOLSA|PZA|UN)$", lines[curr_idx], re.I) and not (re.match(r"^\d+(?:[.,]\d+)?$", lines[curr_idx]) and curr_idx + 1 < len(lines) and cls._parse_currency_str(lines[curr_idx+1]) > 0):
+                    if is_excluded(lines[curr_idx]) or re.match(r"^\d{1,3}$", lines[curr_idx]):
+                        break
+                    desc_parts.append(lines[curr_idx])
+                    curr_idx += 1
+
+                desc = " ".join(desc_parts).strip()
+                um = "UND"
+                qty = 0.0
+                price = 0.0
+                tot = 0.0
+                stride = 0
+
+                if curr_idx < len(lines):
+                    # Caso A: con U/M explícito (UND, KGM, etc.)
+                    if re.match(r"^(UND|KGM|KG|GLN|LT|MTR|PAQ|CJ|BOLSA|PZA|UN)$", lines[curr_idx], re.I) and curr_idx + 2 < len(lines):
+                        um = lines[curr_idx].upper()
+                        qty = cls._parse_currency_str(lines[curr_idx+1])
+                        price = cls._parse_currency_str(lines[curr_idx+2])
+                        tot = cls._parse_currency_str(lines[curr_idx+3]) if curr_idx + 3 < len(lines) else 0.0
+                        stride = (curr_idx + 4) - i
+                    # Caso B: sin U/M (servicios/tecnología: directamente cantidad seguida de precio)
+                    elif re.match(r"^\d+(?:[.,]\d+)?$", lines[curr_idx]) and curr_idx + 1 < len(lines):
+                        um = "UND"
+                        qty = cls._parse_currency_str(lines[curr_idx])
+                        price = cls._parse_currency_str(lines[curr_idx+1])
+                        tot = cls._parse_currency_str(lines[curr_idx+2]) if curr_idx + 2 < len(lines) else 0.0
+                        stride = (curr_idx + 3) - i
+
+                if stride > 0 and qty > 0 and (price > 0 or tot > 0) and not is_excluded(desc):
+                    # Evitar duplicados por páginas de contabilidad repetidas (si item_num reinicia a 1)
+                    if item_num == len(items) + 1 or item_num > len(items):
+                        items.append({
+                            "numeroItem": len(items) + 1,
+                            "codigo": code,
+                            "descripcion": desc,
+                            "unidadMedida": um,
+                            "cantidad": qty,
+                            "precioUnitario": price or round(tot / qty, 2),
+                            "subtotal": tot,
+                            "porcentajeIva": 19.0 if tot < expected_total else 0.0,
+                            "valorIva": round(tot * 0.19, 2) if tot < expected_total else 0.0,
+                            "total": tot
+                        })
+                        i += stride
                         continue
             i += 1
 
